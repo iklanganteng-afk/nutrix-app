@@ -5636,3 +5636,639 @@ body {
         font-size: 0.75rem;
     }
 }
+
+/* ==============================================================================
+   6. MOBILE & TABLET PERFORMANCE OPTIMIZATION
+   Optimizes rendering, touch UX, scroll perf, and layout for phones/tablets
+   without breaking the existing desktop design.
+   ============================================================================== */
+
+/* ---------- 6.1 Global Performance Fundamentals ---------- */
+
+/* Smooth, momentum-based scrolling for all devices */
+html {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Prevent horizontal overflow globally (common mobile issue) */
+html, body {
+    overflow-x: hidden;
+    max-width: 100vw;
+}
+
+/* Font rendering optimizations */
+body {
+    text-rendering: optimizeSpeed;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* GPU-accelerated transforms for frequently animated elements */
+.metric-card,
+.bento-card,
+.sticky-card,
+.quick-action-btn,
+.btn-connect-node,
+.btn-action-trigger,
+.web3-toast,
+.notification-panel,
+.account-panel,
+.workspace-stat {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+}
+
+/* Content-visibility for off-screen heavy sections (huge paint savings) */
+.stacking-cards-container,
+.topo-section,
+.faq-section,
+.workspace-activity,
+.sim-section {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 600px;
+}
+
+/* ---------- 6.2 Touch Target & Interaction ---------- */
+
+/* Ensure all interactive elements meet 44×44px minimum touch target */
+@media (pointer: coarse) {
+    .nav-link,
+    .theme-menu-button,
+    .notification-btn,
+    .btn-connect-node,
+    .btn-action-trigger,
+    .auth-tab,
+    .dropdown-item,
+    .language-btn,
+    .theme-btn,
+    .faq-question,
+    .workspace-nav-link,
+    .quick-action-btn {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    /* Prevent double-tap zoom on buttons */
+    button, a, input, select, textarea {
+        touch-action: manipulation;
+    }
+
+    /* Larger tap area for small icon buttons */
+    .notification-btn,
+    .btn-close-custom,
+    #accountAvatarBtn {
+        padding: 8px;
+    }
+
+    /* Disable hover effects on touch (prevents sticky hover states) */
+    .metric-card:hover::before,
+    .sticky-card:hover::before,
+    .bento-card:hover::before {
+        opacity: 0;
+    }
+
+    .metric-card:hover {
+        transform: none;
+    }
+
+    /* Active state instead of hover for touch */
+    .metric-card:active {
+        transform: scale(0.98);
+        transition-duration: 0.1s;
+    }
+
+    .bento-card:active,
+    .quick-action-btn:active {
+        transform: scale(0.97);
+        transition-duration: 0.1s;
+    }
+}
+
+/* ---------- 6.3 Tablet Landscape & Portrait (768px - 1024px) ---------- */
+
+@media (min-width: 768px) and (max-width: 1024px) {
+    /* Navbar spacing for tablet */
+    .web3-navbar .container-fluid {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .navbar-nav .nav-link {
+        font-size: 0.78rem;
+        letter-spacing: 0.5px;
+    }
+
+    /* Card grids for tablet */
+    .standalone-dashboard .row .col-md-3 {
+        flex: 0 0 50%;
+        max-width: 50%;
+    }
+
+    /* Sticky cards less padding on tablet */
+    .sticky-card {
+        padding: 40px 32px;
+    }
+
+    /* Modal sizing for tablet */
+    .web3-modal-box {
+        max-width: 460px;
+    }
+
+    .swap-modal-box {
+        max-width: 440px;
+    }
+
+    /* Topology on tablet */
+    .topo-body {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+}
+
+/* ---------- 6.4 Phone Screens (<= 767px) ---------- */
+
+@media (max-width: 767.98px) {
+    /* --- Navbar compact --- */
+    .web3-navbar {
+        padding: 10px 12px !important;
+    }
+
+    .web3-navbar .container-fluid {
+        padding-left: 8px;
+        padding-right: 8px;
+        gap: 6px;
+    }
+
+    .navbar-brand {
+        font-size: 1.1rem !important;
+        gap: 4px !important;
+    }
+
+    .brand-icon {
+        font-size: 1.2rem;
+    }
+
+    .nav-actions {
+        gap: 6px !important;
+    }
+
+    .theme-menu-button {
+        padding: 6px 10px;
+        font-size: 0.78rem;
+    }
+
+    .theme-menu-button span {
+        display: none;
+    }
+
+    /* --- Toast on mobile: full-width bottom --- */
+    .web3-toast {
+        left: 12px;
+        right: 12px !important;
+        bottom: calc(16px + var(--sab, 0px));
+        width: auto;
+        border-radius: 14px;
+        padding: 12px 16px;
+        gap: 12px;
+    }
+
+    .web3-toast.show {
+        right: 12px !important;
+    }
+
+    /* --- Notification panel full-width on phone --- */
+    .notification-panel {
+        position: fixed !important;
+        top: 56px !important;
+        left: 8px !important;
+        right: 8px !important;
+        width: auto !important;
+        max-height: calc(70vh - var(--sat, 0px));
+        border-radius: 16px;
+    }
+
+    /* --- Account panel full-width on phone --- */
+    .account-panel {
+        position: fixed !important;
+        top: 56px !important;
+        right: 8px !important;
+        left: auto;
+        width: min(320px, calc(100vw - 16px)) !important;
+    }
+
+    /* --- Modals: full-screen feel on phones --- */
+    .web3-modal-box {
+        width: calc(100vw - 24px) !important;
+        max-width: none !important;
+        max-height: calc(90vh - var(--sat, 0px) - var(--sab, 0px));
+        padding: 20px 16px !important;
+        border-radius: 20px;
+    }
+
+    .modal-overlay.active .web3-modal-box {
+        transform: translate(-50%, -50%);
+    }
+
+    /* --- Metric cards: 2-column grid on phones --- */
+    .standalone-dashboard .metric-card {
+        min-height: 130px;
+        padding: 16px;
+        border-radius: 18px;
+    }
+
+    .metric-value {
+        font-size: 1.8rem;
+    }
+
+    .metric-value small {
+        font-size: 0.95rem;
+    }
+
+    .metric-header {
+        font-size: 0.75rem;
+        margin-bottom: 6px;
+    }
+
+    /* --- Workspace stats compact --- */
+    .workspace-stat {
+        min-height: 90px;
+        padding: 14px;
+        border-radius: 14px;
+    }
+
+    .workspace-stat strong {
+        font-size: 1.5rem;
+    }
+
+    .workspace-stat i {
+        font-size: 1.5rem;
+        right: 12px;
+        bottom: 12px;
+    }
+
+    .workspace-stat-label {
+        font-size: 0.7rem;
+    }
+
+    /* --- Quick action buttons compact grid --- */
+    .quick-action-btn .action-icon-circle {
+        width: 42px;
+        height: 42px;
+        font-size: 1rem;
+    }
+
+    .quick-action-btn span:last-child {
+        font-size: 0.68rem;
+    }
+
+    /* --- AI Insight card compact --- */
+    .ai-insight-card {
+        padding: 20px 16px;
+        border-radius: 18px;
+    }
+
+    /* --- Activity list compact --- */
+    .workspace-activity-item {
+        gap: 8px;
+        padding: 10px 0;
+    }
+
+    .workspace-activity-item strong {
+        font-size: 0.82rem;
+    }
+
+    .workspace-activity-status {
+        font-size: 0.65rem;
+    }
+
+    /* --- Section panels --- */
+    .section-panel,
+    .sensor-config-summary,
+    .hardware-wiring-guide,
+    .device-status-panel {
+        padding: 14px 12px;
+        border-radius: 16px;
+    }
+
+    /* --- Portfolio dashboard on phone --- */
+    .portfolio-dashboard {
+        padding: 16px !important;
+        border-radius: 18px !important;
+    }
+
+    /* --- Bento cards compact on phone --- */
+    .bento-card {
+        padding: 24px 16px;
+        border-radius: 22px;
+    }
+
+    /* --- Farm detail page --- */
+    .farm-back-link {
+        font-size: 0.78rem;
+    }
+
+    /* --- Farm detail page --- */
+    .farm-detail-context {
+        font-size: 0.65rem;
+    }
+
+    /* --- Sensor connection banner & hardware guide --- */
+    .sensor-connection-banner {
+        padding: 10px 12px;
+        font-size: 0.75rem;
+        border-radius: 12px;
+    }
+
+    .hardware-guide-grid {
+        grid-template-columns: 1fr !important;
+        gap: 10px !important;
+    }
+
+    .hardware-guide-card {
+        padding: 12px 14px;
+        border-radius: 14px;
+    }
+
+    .device-status-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+    }
+
+    .device-status-card {
+        padding: 10px 12px !important;
+    }
+
+    .device-status-card strong {
+        font-size: 0.88rem !important;
+    }
+
+    .sensor-connection-panel {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .sensor-connection-row {
+        padding: 8px 12px;
+        font-size: 0.8rem;
+    }
+
+    /* --- Swap/Remote Action modal compact --- */
+    .custom-select-trigger {
+        padding: 10px 14px;
+    }
+
+    .swap-arrow {
+        margin: 8px 0;
+    }
+
+    /* --- Scrollbar thin on mobile (for modal/panel scrolls) --- */
+    ::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: var(--border-glass);
+        border-radius: 4px;
+    }
+}
+
+/* ---------- 6.5 Compact Phones (<= 390px) e.g. iPhone SE, Galaxy A --- */
+
+@media (max-width: 390px) {
+    .navbar-brand {
+        font-size: 0.95rem !important;
+    }
+
+    .nav-actions {
+        gap: 4px !important;
+    }
+
+    .theme-menu-button {
+        padding: 5px 8px;
+    }
+
+    .theme-menu-button i {
+        font-size: 0.85rem;
+    }
+
+    .standalone-dashboard.dashboard-section {
+        margin-top: 62px;
+        padding: 0.75rem 0.35rem;
+    }
+
+    .workspace-heading h2 {
+        font-size: 1.2rem;
+    }
+
+    .metric-value {
+        font-size: 1.5rem;
+    }
+
+    .workspace-stat strong {
+        font-size: 1.25rem;
+    }
+
+    .web3-modal-box {
+        padding: 16px 12px !important;
+        border-radius: 16px;
+    }
+
+    .auth-input {
+        padding: 10px 12px;
+        font-size: 0.88rem;
+    }
+
+    .btn-connect-node,
+    .btn-action-trigger {
+        padding: 9px 16px;
+        font-size: 0.82rem;
+    }
+
+    /* Bento team cards */
+    .team-avatar,
+    .avatar-placeholder {
+        width: 80px;
+        height: 80px;
+        font-size: 30px;
+    }
+
+    .bento-card h5 {
+        font-size: 0.95rem;
+    }
+}
+
+/* ---------- 6.6 Ultra-Compact (<= 320px) e.g. iPhone 5/SE 1st gen --- */
+
+@media (max-width: 320px) {
+    .web3-modal-box {
+        padding: 12px 10px !important;
+    }
+
+    .metric-card {
+        padding: 12px;
+        border-radius: 14px;
+    }
+
+    .metric-value {
+        font-size: 1.3rem;
+    }
+
+    .workspace-stat {
+        min-height: 76px;
+        padding: 10px;
+    }
+
+    .workspace-stat strong {
+        font-size: 1.1rem;
+        margin-top: 4px;
+    }
+
+    .workspace-stat i {
+        font-size: 1.2rem;
+    }
+}
+
+/* ---------- 6.7 Landscape Phone Fix ---------- */
+
+@media (max-height: 500px) and (orientation: landscape) {
+    .web3-navbar {
+        padding: 6px 12px !important;
+    }
+
+    .split-hero {
+        min-height: auto;
+    }
+
+    .split-hero-inner {
+        min-height: auto;
+        padding-top: 60px;
+    }
+
+    /* Modals smaller in landscape */
+    .web3-modal-box {
+        max-height: 80vh;
+    }
+
+    /* Fixed hero not useful in landscape */
+    .hero-kinetic-text {
+        position: relative;
+        top: auto;
+    }
+}
+
+/* ---------- 6.8 Animation Performance on Mobile ---------- */
+
+@media (max-width: 768px) {
+    /* Reduce expensive shadow/blur animations */
+    .card-shadow,
+    .ai-insight-card,
+    .split-hero-sensor-card {
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Reduce backdrop-filter intensity (expensive on mobile GPU) */
+    .web3-navbar {
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+    }
+
+    .split-hero-sensor-card {
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+    }
+
+    /* Disable 3D perspective tilt on cards (saves GPU) */
+    .metric-card:hover {
+        transform: none !important;
+    }
+
+    /* Simplify glow effects on mobile */
+    .split-hero-visual::before {
+        display: none;
+    }
+
+    /* Fewer sparkline bars transition simultaneously */
+    .metric-sparkline .bar {
+        transition-duration: 0.2s;
+    }
+
+    /* Reduce heavy keyframe animations */
+    .ai-icon-pulse {
+        animation-duration: 3s;
+    }
+
+    .live-dot,
+    .split-hero-live-dot,
+    .topo-pulse-dot {
+        animation-duration: 2.5s;
+    }
+
+    /* Disable radial gradient glow effects on card hover */
+    .metric-card::before,
+    .sticky-card::before,
+    .bento-card::before {
+        display: none;
+    }
+}
+
+/* ---------- 6.9 iOS-Specific Fixes ---------- */
+
+/* Fix iOS Safari 100vh issue */
+@supports (-webkit-touch-callout: none) {
+    .hero-wrapper,
+    .split-hero {
+        min-height: -webkit-fill-available;
+    }
+
+    .modal-overlay {
+        height: -webkit-fill-available;
+    }
+
+    /* Prevent iOS rubber-band bounce when modal is open */
+    .modal-overlay.active {
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Fix iOS input zoom (font must be >= 16px) */
+    .auth-input,
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    select,
+    textarea {
+        font-size: max(16px, 1em);
+    }
+}
+
+/* ---------- 6.10 Print-Friendly Optimization ---------- */
+
+@media print {
+    .web3-navbar,
+    .web3-toast,
+    .modal-overlay,
+    .notification-wrapper,
+    .quiz-mascot-wrapper {
+        display: none !important;
+    }
+
+    body {
+        background: white;
+        color: black;
+    }
+
+    .metric-card,
+    .bento-card,
+    .sticky-card {
+        break-inside: avoid;
+        box-shadow: none;
+        border: 1px solid #ddd;
+    }
+}

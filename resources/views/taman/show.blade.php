@@ -83,20 +83,20 @@
 
         <div class="sensor-connection-panel">
             <div class="sensor-connection-row">
-                <span data-i18n="detail-board-controller">Board controller</span>
+                <span data-i18n="detail-board-controller">Board Controller</span>
                 <strong>{{ $controller }}</strong>
             </div>
             <div class="sensor-connection-row">
-                <span data-i18n="detail-laptop-port">Port laptop</span>
-                <strong>{{ $computerPort }}</strong>
+                <span data-i18n="detail-network-mode">Mode Jaringan</span>
+                <strong>WiFi 2.4 GHz (Hotspot GG)</strong>
             </div>
             <div class="sensor-connection-row">
-                <span data-i18n="detail-device-port">Port alat</span>
-                <strong>{{ $devicePort }}</strong>
+                <span data-i18n="detail-ingest-endpoint">Endpoint Telemetri</span>
+                <strong>/api/iot/telemetry</strong>
             </div>
             <div class="sensor-connection-row">
-                <span data-i18n="detail-note">Catatan</span>
-                <strong>{{ $connectionNote }}</strong>
+                <span data-i18n="detail-note">Catatan Sinkronisasi</span>
+                <strong>{{ $taman->sensor_connected ? 'Telemetri nirkabel aktif setiap 5 detik' : 'Nyalakan ESP32 untuk transmisi cloud' }}</strong>
             </div>
         </div>
     </div>
@@ -197,37 +197,37 @@
         </div>
 
         <div class="mt-3 p-3 rounded border border-secondary" style="background: rgba(7, 14, 11, 0.8);">
-            <div class="d-flex align-items-center justify-content-between mb-3">
+            <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
                 <div class="d-flex align-items-center gap-2">
                     <i class="bi bi-terminal text-mint"></i>
-                    <strong class="text-white" data-i18n="detail-serial-monitor">USB serial monitor</strong>
+                    <strong class="text-white" data-i18n="detail-serial-monitor">Wireless telemetry & serial monitor</strong>
                 </div>
-                <span class="small text-muted">{{ $controllerName }} / {{ $computerPort }}</span>
+                <span class="small text-muted">{{ $controllerName }} / Cloud Ingest</span>
             </div>
             <div class="d-flex gap-2 mb-3 flex-wrap">
                 <button type="button" class="btn btn-sm btn-outline-secondary" id="btnAutoDetectUsbPort">
-                    <i class="bi bi-search"></i> <span data-i18n="detail-detect-port">Detect port automatically</span>
+                    <i class="bi bi-wifi"></i> <span data-i18n="detail-detect-port">Periksa Node Wireless</span>
                 </button>
                 <button type="button" class="btn btn-sm btn-outline-secondary" id="btnSimulateUsbRefresh">
-                    <i class="bi bi-arrow-clockwise"></i> <span data-i18n="detail-refresh-log">Refresh log</span>
+                    <i class="bi bi-arrow-clockwise"></i> <span data-i18n="detail-refresh-log">Refresh log telemetry</span>
                 </button>
             </div>
             <div class="d-grid gap-2" id="usbConsoleList" style="font-size: .78rem; color: var(--text-muted);">
-                <div class="py-1"><span class="text-mint">&gt;</span> board ready on {{ $computerPort }}</div>
-                <div class="py-1"><span class="text-mint">&gt;</span> waiting for sensor id...</div>
+                <div class="py-1"><span class="text-mint">&gt;</span> endpoint /api/iot/telemetry siap menerima data</div>
+                <div class="py-1"><span class="text-mint">&gt;</span> node {{ $controllerName }} terkonfigurasi ke SSID Hotspot [GG]</div>
             </div>
         </div>
 
         <div class="mt-3 p-3 rounded border border-secondary" style="background: rgba(9, 16, 15, 0.72);">
             <div class="d-flex align-items-center gap-2 mb-2">
                 <i class="bi bi-check2-circle text-mint"></i>
-                <strong class="text-white" data-i18n="detail-checklist">USB setup checklist</strong>
+                <strong class="text-white" data-i18n="detail-checklist">IoT setup checklist</strong>
             </div>
             <div class="small text-muted d-grid gap-2">
-                <div class="d-flex align-items-center gap-2"><i class="bi bi-check-circle-fill text-mint"></i> Cable USB terhubung ke laptop dan board.</div>
-                <div class="d-flex align-items-center gap-2"><i class="bi bi-check-circle-fill text-mint"></i> Board {{ $controllerName }} terlihat pada port {{ $computerPort }}.</div>
-                <div class="d-flex align-items-center gap-2"><i class="bi bi-check-circle-fill text-mint"></i> Sensor ID valid sebelum klik Hubungkan sensor.</div>
-                <div class="d-flex align-items-center gap-2"><i class="bi bi-check-circle-fill text-mint"></i> Data akan mulai tervalidasi setelah koneksi berhasil.</div>
+                <div class="d-flex align-items-center gap-2"><i class="bi bi-check-circle-fill text-mint"></i> Catu daya ESP32 aktif (adaptor 5V / powerbank terpasang).</div>
+                <div class="d-flex align-items-center gap-2"><i class="bi bi-check-circle-fill text-mint"></i> Hotspot "GG" aktif atau WiFi terhubung.</div>
+                <div class="d-flex align-items-center gap-2"><i class="bi bi-check-circle-fill text-mint"></i> Node mengirim paket JSON telemetry ke /api/iot/telemetry.</div>
+                <div class="d-flex align-items-center gap-2"><i class="bi bi-check-circle-fill text-mint"></i> Data sensor terbarui otomatis pada kartu indikator & grafik.</div>
             </div>
         </div>
 
@@ -270,10 +270,10 @@
                 <span class="badge bg-success text-white" id="liveTelemetryStatus" data-i18n="detail-stream-active">Stream active</span>
             </div>
             <div class="small text-muted">
-                <span data-i18n="detail-stream-description">Telemetry dari board {{ $controllerName }} diteruskan melalui port {{ $computerPort }} secara real-time setelah pairing berhasil.</span>
+                <span data-i18n="detail-stream-description">Telemetri dari node {{ $controllerName }} diteruskan secara nirkabel via HTTP POST ke endpoint cloud secara real-time.</span>
             </div>
             <div class="row g-2 mt-2 small">
-                <div class="col-12 col-md-6 text-muted"><span data-i18n="detail-source">Sumber data</span>: <strong class="text-white" id="telemetryDataSource">USB serial stream</strong></div>
+                <div class="col-12 col-md-6 text-muted"><span data-i18n="detail-source">Sumber data</span>: <strong class="text-white" id="telemetryDataSource">Wireless HTTP Ingest</strong></div>
                 <div class="col-12 col-md-6 text-muted"><span data-i18n="detail-last-update">Pembaruan terakhir</span>: <strong class="text-white" id="telemetryLastUpdated">Menunggu data</strong></div>
             </div>
         </div>
