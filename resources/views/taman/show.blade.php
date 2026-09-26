@@ -104,41 +104,41 @@
     <div class="hardware-wiring-guide mt-4 section-panel">
         <div class="sensor-config-header">
             <div>
-                <span class="badge-web3" data-i18n="detail-wiring">Panduan kabel</span>
-                <h3 class="mb-0 mt-2" data-i18n="detail-wiring">Panduan kabel dan status koneksi</h3>
+                <span class="badge-web3" data-i18n="detail-wireless-node">Wireless IoT Architecture</span>
+                <h3 class="mb-0 mt-2" data-i18n="detail-wireless-status">Status Koneksi Node & Topologi Nirkabel</h3>
             </div>
         </div>
 
         <div class="hardware-guide-grid">
             <div class="hardware-guide-card">
                 <div class="guide-card-header">
-                    <span class="guide-chip">Laptop</span>
-                    <strong>{{ $computerPort }}</strong>
+                    <span class="guide-chip"><i class="bi bi-wifi me-1"></i> Jaringan</span>
+                    <strong>WiFi 2.4 GHz</strong>
                 </div>
-                <p>Hubungkan kabel {{ $computerPort }} dari laptop ke port komputer yang terdeteksi pada {{ $controllerName }}.</p>
+                <p>ESP32 terhubung via hotspot <strong>GG</strong> atau konfigurasi mandiri melalui Captive Portal <strong>NUTRIX-ESP32-SETUP</strong>.</p>
             </div>
 
             <div class="hardware-guide-card">
                 <div class="guide-card-header">
-                    <span class="guide-chip">Board</span>
+                    <span class="guide-chip"><i class="bi bi-cpu me-1"></i> Controller</span>
                     <strong>{{ $controllerName }}</strong>
                 </div>
-                <p>Gunakan port {{ $devicePort }} pada perangkat sensor agar data dapat dibaca secara stabil oleh board.</p>
+                <p>Membaca sensor kelembapan pada <strong>GPIO 34</strong> dan mengendalikan relay keran air pada <strong>GPIO 26</strong>.</p>
             </div>
 
             <div class="hardware-guide-card guide-status-card">
                 <div class="guide-card-header">
-                    <span class="guide-chip status-chip">Status</span>
-                    <strong>{{ $taman->sensor_connected ? 'TERHUBUNG' : 'MENUNGGU KONEKSI' }}</strong>
+                    <span class="guide-chip status-chip">Cloud Sync</span>
+                    <strong class="text-white">{{ $taman->sensor_connected ? 'ONLINE / SYNCD' : 'MENUNGGU TELEMETRI' }}</strong>
                 </div>
-                <p>{{ $connectionStatusText }}</p>
+                <p>{{ $taman->sensor_connected ? 'Data telemetri realtime diterima secara nirkabel dari ESP32.' : 'Alat belum mengirimkan paket data. Nyalakan daya ESP32.' }}</p>
             </div>
         </div>
 
         <div class="guide-step-list">
-            <div class="guide-step-item"><span>1</span> Pasang kabel USB dari laptop ke board yang dipilih.</div>
-            <div class="guide-step-item"><span>2</span> Hubungkan sensor ke port {{ $devicePort }} sesuai jenis modul yang dipilih.</div>
-            <div class="guide-step-item"><span>3</span> Pastikan {{ $controllerName }} terlihat di sistem komputer sebelum klik tombol Hubungkan sensor.</div>
+            <div class="guide-step-item"><span>1</span> Nyalakan daya ESP32 (colok adaptor charger HP atau powerbank).</div>
+            <div class="guide-step-item"><span>2</span> Pastikan hotspot HP <strong>GG</strong> aktif atau koneksikan WiFi melalui portal <strong>NUTRIX-ESP32-SETUP</strong>.</div>
+            <div class="guide-step-item"><span>3</span> Data telemetri tanah akan langsung terkirim otomatis setiap 5 detik ke cloud Railway.</div>
         </div>
     </div>
 
@@ -146,50 +146,52 @@
         <div class="sensor-config-header">
             <div>
                 <span class="badge-web3" data-i18n="detail-device-status">Status perangkat</span>
-                <h3 class="mb-0 mt-2" data-i18n="detail-device-status">Status perangkat</h3>
+                <h3 class="mb-0 mt-2" data-i18n="detail-device-status">Status Perangkat Nirkabel</h3>
             </div>
         </div>
 
         <div class="device-status-grid">
             <div class="device-status-card">
                 <span class="device-status-label">Sensor ID</span>
-                <strong>{{ $sensorId }}</strong>
+                <strong class="text-mint">{{ $sensorId }}</strong>
             </div>
             <div class="device-status-card">
-                <span class="device-status-label">Koneksi</span>
-                <strong>{{ $taman->sensor_connected ? 'Online' : 'Offline' }}</strong>
+                <span class="device-status-label">Status Cloud</span>
+                <strong class="{{ $taman->sensor_connected ? 'text-mint' : 'text-muted' }}">{{ $taman->sensor_connected ? 'Cloud Online' : 'Offline' }}</strong>
             </div>
             <div class="device-status-card">
-                <span class="device-status-label">Board</span>
+                <span class="device-status-label">Board Controller</span>
                 <strong>{{ $controllerName }}</strong>
             </div>
             <div class="device-status-card">
-                <span class="device-status-label">USB</span>
-                <strong id="usbBoardStatus">{{ $taman->sensor_connected ? 'Terdeteksi' : 'Menunggu board' }}</strong>
+                <span class="device-status-label">Aktuator Keran (Relay)</span>
+                <strong id="relayStatusDisplay" class="text-white">SIAP (STANDBY)</strong>
             </div>
             <div class="device-status-card">
-                <span class="device-status-label">Port</span>
-                <strong>{{ $computerPort }} → {{ $devicePort }}</strong>
+                <span class="device-status-label">Metode Koneksi</span>
+                <strong>WiFi / Cloud API</strong>
             </div>
         </div>
 
         <div class="mt-3 p-3 rounded border border-secondary" style="background: rgba(11, 20, 17, 0.72);">
             <div class="d-flex align-items-center justify-content-between mb-2">
                 <div class="d-flex align-items-center gap-2">
-                    <i class="bi bi-usb-port text-mint"></i>
-                    <strong class="text-white" data-i18n="detail-usb-detection">USB Device Detection</strong>
+                    <i class="bi bi-broadcast text-mint"></i>
+                    <strong class="text-white" data-i18n="detail-wireless-detection">Wireless Telemetry Stream</strong>
                 </div>
                 <span id="usbBoardPill" class="badge {{ $taman->sensor_connected ? 'bg-success' : 'bg-secondary' }} text-white">
-                    {{ $taman->sensor_connected ? 'Board Ready' : 'Awaiting Board' }}
+                    {{ $taman->sensor_connected ? 'Sync Live' : 'Awaiting Telemetry' }}
                 </span>
             </div>
-            <div class="small text-muted mb-3" id="usbDetectionText">{{ $taman->sensor_connected ? 'Board ' . $controllerName . ' terdeteksi pada port ' . $computerPort . '.' : 'Hubungkan board ' . $controllerName . ' ke port ' . $computerPort . ' sebelum pairing dimulai.' }}</div>
+            <div class="small text-muted mb-3" id="usbDetectionText">
+                {{ $taman->sensor_connected ? 'ESP32 aktif mengirim data ke endpoint /api/iot/telemetry.' : 'Nyalakan ESP32 untuk mulai mengirimkan telemetri ke server Railway.' }}
+            </div>
             <div class="d-flex gap-2 flex-wrap">
-                <button type="button" class="btn btn-sm btn-connect-node" id="btnDetectUsbBoard">
-                    <i class="bi bi-signpost-split"></i> <span data-i18n="detail-detect-usb">Detect USB board</span>
+                <button type="button" class="btn btn-sm btn-connect-node" id="btnSyncDataDirect">
+                    <i class="bi bi-arrow-repeat"></i> <span>Refresh Telemetri</span>
                 </button>
-                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnDisconnectUsbBoard">
-                    <i class="bi bi-plug"></i> <span data-i18n="detail-disconnect-board">Disconnect board</span>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnTriggerWaterManual">
+                    <i class="bi bi-droplet-fill text-mint"></i> <span>Uji Keran / Pompa</span>
                 </button>
             </div>
         </div>
@@ -1196,9 +1198,34 @@ document.addEventListener('visibilitychange', () => {
         if (usbDeviceConnected) startTelemetryStream();
     }
 });
+document.getElementById('btnTriggerWaterManual')?.addEventListener('click', async () => {
+    try {
+        showToast('Mengirim instruksi buka keran (Relay) ke ESP32...');
+        const res = await apiFetch(`/taman/${TAMAN.id}/actions/water`, 'POST', { duration_sec: 10 });
+        const relayDisplay = document.getElementById('relayStatusDisplay');
+        if (relayDisplay) {
+            relayDisplay.textContent = 'KERAN TERBUKA (10 DETIK)';
+            relayDisplay.className = 'text-mint animate-pulse';
+            setTimeout(() => {
+                relayDisplay.textContent = 'SIAP (STANDBY)';
+                relayDisplay.className = 'text-white';
+            }, 10000);
+        }
+        showToast('Instruksi keran air berhasil dikirim!');
+        loadLatestTelemetry();
+    } catch (err) {
+        showToast(err.message || 'Gagal mengirim instruksi keran', 'error');
+    }
+});
+
+document.getElementById('btnSyncDataDirect')?.addEventListener('click', () => {
+    loadLatestTelemetry();
+    showToast('Data telemetri diperbarui.');
+});
+
 setInterval(() => {
     if (!document.hidden) loadLatestTelemetry();
-}, 7000);
+}, 5000);
 
 const sensorConfigModal = document.getElementById('sensorConfigModal');
 const configForm = document.getElementById('sensorConfigForm');
