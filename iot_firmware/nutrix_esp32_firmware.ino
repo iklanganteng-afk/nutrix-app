@@ -29,6 +29,10 @@ const char* serverUrl = "https://nutrix-app-production.up.railway.app/api/iot/te
 char custom_taman_id[8] = "1";
 char custom_sensor_id[32] = "ESP32-NUTRIX-01";
 
+// Hotspot Cadangan Default Langsung Konek
+const char* DEFAULT_SSID = "GG";
+const char* DEFAULT_PASS = "celino96969";
+
 // Waktu interval pengiriman data ke server (misal tiap 5 detik)
 unsigned long previousMillis = 0;
 const long interval = 5000; 
