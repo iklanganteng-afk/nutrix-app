@@ -374,9 +374,11 @@ document.addEventListener("DOMContentLoaded", function () {
             const fadeThreshold = Math.max(1, heroHeight - window.innerHeight);
             const fadeProgress = Math.min(1, Math.max(0, (scrollY - fadeThreshold) / Math.max(1, window.innerHeight * 0.65)));
 
-            if (heroText) {
-                const horizontalDirection = window.currentLanguage === 'ar' ? 1 : -1;
-                heroText.style.transform = `translate(${horizontalDirection * scrollY * 0.4}px, -${scrollY * 0.1}px)`;
+            if (heroText && window.innerWidth > 992) {
+                const subtleY = Math.min(60, scrollY * 0.15);
+                heroText.style.transform = `translateY(-${subtleY}px)`;
+            } else if (heroText) {
+                heroText.style.transform = 'none';
             }
 
             targetScale = 1 + (scrollY * 0.0008);

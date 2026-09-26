@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 
 <html lang="id" data-theme="emerald">
 
@@ -682,9 +682,9 @@
 
             .welcome-brand {
 
-                width: 100%;
+                width: auto;
 
-                justify-content: center;
+                font-size: 1.15rem;
 
             }
 
@@ -692,9 +692,9 @@
 
             .welcome-nav {
 
-                padding-left: 1rem;
+                padding: 0.75rem 1rem;
 
-                padding-right: 1rem;
+                flex-wrap: nowrap;
 
             }
 
@@ -702,7 +702,9 @@
 
             .welcome-nav > .d-flex.align-items-center.gap-3 {
 
-                gap: 0.75rem;
+                gap: 0.45rem !important;
+
+                flex-wrap: nowrap;
 
             }
 
@@ -712,9 +714,11 @@
 
             #welcomeSignUpBtn {
 
-                flex: 1 1 150px;
+                padding: 6px 12px !important;
 
-                justify-content: center;
+                font-size: 0.82rem !important;
+
+                white-space: nowrap;
 
             }
 
@@ -1502,12 +1506,6 @@
 
             </svg>
 
-            <div class="scroll-indicator mt-5">
-
-                <span class="mouse"><span class="wheel" style="background: var(--color-accent-highlight);"></span></span>
-
-            </div>
-
         </div>
 
                 <div class="split-hero-sensor-card">
@@ -1734,7 +1732,7 @@
 
                     </div>
 
-                    <div class="col-lg-5 text-center d-none d-lg-block">
+                    <div class="col-md-5 col-lg-5 text-center d-none d-md-block mt-3 mt-md-0">
 
                         <i class="bi bi-cpu display-1 opacity-50" style="color: var(--color-accent-highlight);"></i>
 
@@ -1750,7 +1748,7 @@
 
                 <div class="row align-items-center h-100">
 
-                    <div class="col-lg-7">
+                    <div class="col-md-7 col-lg-7">
 
                         <span class="badge-web3 mb-3" style="background: var(--bg-primary); color: var(--text-muted); border-color: var(--border-subtle);" data-i18n="arch-hardware-badge">Hardware</span>
 
@@ -1762,7 +1760,7 @@
 
                     </div>
 
-                    <div class="col-lg-5 text-center d-none d-lg-block">
+                    <div class="col-md-5 col-lg-5 text-center d-none d-md-block mt-3 mt-md-0">
 
                         <i class="bi bi-router display-1 opacity-50" style="color: var(--color-accent-highlight);"></i>
 

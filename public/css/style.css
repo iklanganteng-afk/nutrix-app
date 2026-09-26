@@ -323,24 +323,26 @@ body {
 /* --- 3. HERO SECTION (Teks Solid Bercahaya) --- */
 .hero-wrapper {
     position: relative;
-    height: 250vh;
+    min-height: 100vh;
     background: radial-gradient(circle at 50% 30%, var(--glow-ambient) 0%, var(--bg-obsidian) 50%);
     overflow: clip;
 }
 
 .split-hero {
-    min-height: 220vh;
-    padding: 0 clamp(1.25rem, 6vw, 8%);
+    min-height: 100vh;
+    padding: clamp(5.5rem, 9vw, 7.5rem) clamp(1.25rem, 6vw, 8%) clamp(2rem, 5vw, 4rem);
+    display: flex;
+    align-items: center;
 }
 
 .split-hero-inner {
-    position: sticky;
-    top: 0;
-    min-height: 100vh;
+    position: relative;
+    width: 100%;
+    min-height: auto;
     display: grid;
     grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);
     align-items: center;
-    gap: clamp(2rem, 7vw, 8rem);
+    gap: clamp(2rem, 7vw, 6rem);
     max-width: 1500px;
     margin: 0 auto;
 }
@@ -523,19 +525,25 @@ body {
 
 
 @media (max-width: 900px) {
+    .split-hero {
+        min-height: auto;
+        padding-top: 6.5rem;
+        padding-bottom: 3rem;
+    }
+
     .split-hero-inner {
         grid-template-columns: 1fr;
-        gap: 1rem;
-        padding-top: 5rem;
+        gap: 2rem;
     }
 
     .split-hero-copy {
         text-align: center;
-        padding-top: 2rem;
+        padding-top: 1rem;
     }
 
     .split-hero-copy .hero-kinetic-text {
         text-align: center;
+        font-size: clamp(2.6rem, 10vw, 4.4rem);
     }
 
     .split-hero-description {
@@ -544,17 +552,7 @@ body {
     }
 
     .split-hero-visual {
-        min-height: 560px;
-    }
-}
-
-@media (max-width: 520px) {
-    .split-hero {
-        min-height: 190vh;
-    }
-
-    .split-hero-copy .hero-kinetic-text {
-        font-size: clamp(3rem, 15vw, 5rem);
+        min-height: auto;
     }
 
     .split-hero-visual .hero-center-card {
@@ -562,9 +560,38 @@ body {
     }
 
     .split-hero-sensor-card {
-        right: 50%;
-        bottom: 2%;
-        transform: translateX(50%);
+        position: relative;
+        right: auto;
+        bottom: auto;
+        transform: none;
+        width: min(100%, 380px);
+        margin: 1.5rem auto 0;
+    }
+}
+
+@media (max-width: 520px) {
+    .split-hero {
+        min-height: auto;
+        padding-top: 5.5rem;
+        padding-bottom: 2rem;
+    }
+
+    .split-hero-copy .hero-kinetic-text {
+        font-size: clamp(2.1rem, 11vw, 3.2rem);
+    }
+
+    .split-hero-visual .hero-center-card {
+        margin-left: 0;
+    }
+
+    .split-hero-sensor-card {
+        position: relative;
+        right: auto;
+        bottom: auto;
+        transform: none;
+        width: 100%;
+        max-width: 330px;
+        margin: 1.25rem auto 0;
     }
 }
 
@@ -575,9 +602,9 @@ body {
 
 /* PERBAIKAN: Teks sangat tebal (chunky), line-height rapat, mirip WHERE YOUR MONEY LIVES */
 .hero-kinetic-text {
-    position: fixed;
-    top: 25vh;
-    left: 0;
+    position: relative;
+    top: auto;
+    left: auto;
     width: 100%;
     text-align: center;
     font-size: clamp(3.5rem, 11vw, 9.5rem);
@@ -1173,29 +1200,49 @@ body {
 /* --- 5. STICKY STACKING CARDS --- */
 .stacking-cards-container {
     position: relative;
-    padding-top: 50px;
+    padding-top: 20px;
+    padding-bottom: clamp(60px, 12vh, 140px);
 }
 
 .sticky-card {
+    position: -webkit-sticky;
     position: sticky;
     background: var(--bg-secondary);
     border: 1px solid var(--border-subtle);
     border-radius: 32px;
-    padding: 60px;
-    min-height: 350px;
-    margin-bottom: 40px;
+    padding: clamp(2rem, 5vw, 4rem);
+    min-height: auto;
+    margin-bottom: clamp(2rem, 4vw, 3.5rem);
     box-shadow: var(--card-shadow);
     backdrop-filter: blur(20px);
+    overflow: hidden;
 }
 
-.sticky-card:nth-child(1) {
-    top: 120px;
-    z-index: 10;
+@media (min-width: 992px) {
+    .sticky-card:nth-child(1) {
+        top: 110px;
+        z-index: 10;
+    }
+
+    .sticky-card:nth-child(2) {
+        top: 145px;
+        z-index: 11;
+    }
 }
 
-.sticky-card:nth-child(2) {
-    top: 150px;
-    z-index: 11;
+@media (max-width: 991.98px) {
+    .stacking-cards-container {
+        padding-top: 10px;
+        padding-bottom: 20px;
+    }
+
+    .sticky-card {
+        position: relative;
+        top: auto !important;
+        padding: 2rem 1.5rem;
+        margin-bottom: 1.5rem;
+        border-radius: 24px;
+    }
 }
 
 /* --- 6. TEAM BENTO GRID (Anti Giant Image Bug) --- */
@@ -2447,9 +2494,12 @@ body {
 /* ==========================================
    CURSOR-TRACKING GLOW & MAGNETIC BUTTONS
    ========================================== */
-.sticky-card,
 .bento-card {
     position: relative;
+    overflow: hidden;
+}
+
+.sticky-card {
     overflow: hidden;
 }
 
@@ -3908,42 +3958,6 @@ body[data-dashboard-state="setup"] .telemetry-content {
     right: 0;
 }
 
-.scroll-progress {
-    position: fixed;
-    top: 0;
-    left: 0;
-    height: 3px;
-    width: 0%;
-    background: var(--color-accent-highlight);
-    box-shadow: 0 0 10px var(--color-accent-highlight);
-    z-index: 10000;
-    transition: width 0.1s linear;
-    pointer-events: none;
-}
-
-[dir="rtl"] .scroll-progress {
-    left: auto;
-    right: 0;
-}
-
-.scroll-progress {
-    position: fixed;
-    top: 0;
-    left: 0;
-    height: 3px;
-    width: 0%;
-    background: var(--color-accent-highlight);
-    box-shadow: 0 0 10px var(--color-accent-highlight);
-    z-index: 10000;
-    transition: width 0.1s linear;
-    pointer-events: none;
-}
-
-[dir="rtl"] .scroll-progress {
-    left: auto;
-    right: 0;
-}
-
 /* ============================================================
    TEAM FLIP CARDS
    ============================================================ */
@@ -4016,6 +4030,7 @@ body[data-dashboard-state="setup"] .telemetry-content {
     height: 120px;
     border-radius: 50%;
     object-fit: cover;
+    display: block;
     margin: 0 auto 1.25rem;
     border: 3px solid color-mix(in srgb, var(--color-accent-highlight) 40%, transparent);
     box-shadow: 0 8px 24px color-mix(in srgb, var(--color-accent-highlight) 20%, transparent);
@@ -5679,8 +5694,7 @@ body {
     backface-visibility: hidden;
 }
 
-/* Content-visibility for off-screen heavy sections (huge paint savings) */
-.stacking-cards-container,
+/* Content-visibility for off-screen heavy sections (excluding stacking cards to preserve sticky behavior) */
 .topo-section,
 .faq-section,
 .workspace-activity,
