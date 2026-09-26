@@ -5443,3 +5443,196 @@ body[data-dashboard-state="setup"] .telemetry-content {
         transition: none !important;
     }
 }
+
+/* ==============================================================================
+   5. COMPREHENSIVE RESPONSIVE DESIGN (HP, IPHONE, SAMSUNG, TABLET & DESKTOP)
+   ============================================================================== */
+
+/* Safe Area Inset untuk iPhone Notch & Dynamic Island */
+:root {
+    --sat: env(safe-area-inset-top, 0px);
+    --sar: env(safe-area-inset-right, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+    --sal: env(safe-area-inset-left, 0px);
+}
+
+body {
+    padding-top: var(--sat);
+    padding-bottom: var(--sab);
+    padding-left: var(--sal);
+    padding-right: var(--sar);
+    -webkit-tap-highlight-color: transparent;
+    text-size-adjust: 100%;
+    -webkit-text-size-adjust: 100%;
+}
+
+/* TABLET & IPAD (<= 1024px) */
+@media (max-width: 1024px) {
+    .split-hero-inner {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+        padding-top: 4.5rem;
+    }
+
+    .split-hero-copy {
+        text-align: center;
+        padding-top: 1rem;
+    }
+
+    .split-hero-copy .hero-kinetic-text {
+        text-align: center;
+        margin-left: auto;
+        margin-right: auto;
+        font-size: clamp(2.8rem, 7vw, 5rem);
+    }
+
+    .split-hero-description {
+        margin: 0 auto 2rem;
+    }
+
+    .split-hero-cta {
+        justify-content: center;
+    }
+
+    .split-hero-visual {
+        min-height: 480px;
+    }
+
+    .dashboard-section {
+        padding: 2rem 1.5rem;
+        border-radius: 24px;
+    }
+
+    .hardware-guide-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* SMARTPHONE: SAMSUNG GALAXY, GOOGLE PIXEL & IPHONE STANDAR (<= 768px) */
+@media (max-width: 768px) {
+    /* Navbar Mobile */
+    .web3-navbar {
+        padding: 12px 16px;
+    }
+
+    .navbar-brand {
+        font-size: 1.15rem;
+    }
+
+    /* Split Hero Mobile */
+    .split-hero {
+        min-height: auto;
+        padding-bottom: 3rem;
+    }
+
+    .split-hero-inner {
+        padding-top: 3.5rem;
+    }
+
+    .split-hero-copy .hero-kinetic-text {
+        font-size: clamp(2.3rem, 11vw, 3.8rem);
+        line-height: 0.95;
+        letter-spacing: -0.02em;
+    }
+
+    .split-hero-description {
+        font-size: 0.95rem;
+        padding: 0 10px;
+    }
+
+    .split-hero-visual {
+        min-height: 400px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .split-hero-visual .hero-center-card {
+        margin-left: 0;
+        transform: scale(0.85);
+    }
+
+    .split-hero-sensor-card {
+        position: relative;
+        right: auto;
+        bottom: auto;
+        width: 100%;
+        max-width: 320px;
+        margin-top: 1rem;
+        transform: none;
+    }
+
+    /* Modal Web3 Responsive di HP */
+    .web3-modal-box {
+        width: 95vw !important;
+        max-width: 95vw !important;
+        margin: 10px auto;
+        padding: 1.25rem !important;
+        max-height: 88vh;
+        overflow-y: auto;
+    }
+
+    /* Dashboard Widgets di HP */
+    .standalone-dashboard.dashboard-section {
+        margin-top: 70px;
+        padding: 1rem 0.5rem;
+    }
+
+    .sensor-connection-panel {
+        grid-template-columns: 1fr;
+    }
+
+    .hardware-guide-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Tombol Aksi HP */
+    .btn-action-trigger,
+    .btn-connect-node {
+        padding: 10px 18px;
+        font-size: 0.88rem;
+    }
+}
+
+/* COMPACT SMARTPHONES: IPHONE SE, SAMSUNG GALAXY A/Z FOLD (<= 480px) */
+@media (max-width: 480px) {
+    .split-hero-copy .hero-kinetic-text {
+        font-size: clamp(2rem, 12vw, 3.2rem);
+    }
+
+    .split-hero-cta {
+        flex-direction: column;
+        width: 100%;
+        gap: 10px;
+    }
+
+    .split-hero-cta a,
+    .split-hero-cta button {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .split-hero-tabs {
+        flex-wrap: wrap;
+    }
+
+    .split-hero-tab {
+        font-size: 0.72rem;
+        padding: 0.4rem;
+    }
+
+    .bento-card {
+        padding: 1.25rem;
+    }
+
+    /* Wizard Step Bar di Layar Kecil */
+    .wizard-progress {
+        gap: 4px;
+    }
+
+    .wizard-progress-step {
+        width: 28px;
+        height: 28px;
+        font-size: 0.75rem;
+    }
+}
