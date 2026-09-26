@@ -415,4 +415,81 @@ class TelemetryController extends Controller
             'health_status' => $status,
         ];
     }
+
+    /**
+     * POST /api/iot/telemetry
+     * Endpoint publik yang dipanggil oleh ESP32 (Wireless WiFi).
+     */
+    public function ingestDeviceTelemetry(Request $request)
+    {
+        $validated = $request->validate([
+            'taman_id'  => ['required', 'integer', 'exists:tamans,id'],
+            'sensor_id' => ['nullable', 'string', 'max:64'],
+            'moisture'  => ['required', 'numeric', 'min:0', 'max:100'],
+            'temperature' => ['nullable', 'numeric', 'min:-10', 'max:60'],
+            'ph'        => ['nullable', 'numeric', 'min:0', 'max:14'],
+            'ec'        => ['nullable', 'numeric', 'min:0', 'max:10'],
+        ]);
+
+        $taman = Taman::find($validated['taman_id']);
+
+        // Update status sensor taman menjadi aktif/online
+        $taman->update([
+            'sensor_connected' => true,
+            'sensor_connected_at' => now(),
+            'sensor_id' => $validated['sensor_id'] ?? $taman->sensor_id ?? ('ESP32-' . $taman->id),
+        ]);
+
+        $telemetryData = [
+            'moisture' => (float) $validated['moisture'],
+            'temperature' => isset($validated['temperature']) ? (float) $validated['temperature'] : null,
+            'ph' => isset($validated['ph']) ? (float) $validated['ph'] : null,
+            'ec' => isset($validated['ec']) ? (float) $validated['ec'] : null,
+        ];
+
+        // Otak Sistem: Hitung analisa kesehatan via TelemetryDecisionEngine
+        $analysis = $this->decisionEngine->evaluate($telemetryData, $taman->type, $taman->soil_type);
+
+        $record = SensorTelemetry::create([
+            'taman_id' => $taman->id,
+            'ph' => $telemetryData['ph'],
+            'moisture' => $telemetryData['moisture'],
+            'temperature' => $telemetryData['temperature'],
+            'ec' => $telemetryData['ec'],
+            'moisture_unit' => 'vwc_pct',
+            'health_score' => $analysis['health']['score'],
+            'health_status' => $this->healthStatus($analysis['health']['score']),
+            'source' => 'esp32_device',
+            'recorded_at' => now(),
+        ]);
+
+        // Keputusan otomatis: jika kelembaban tanah di bawah 30% -> Buka keran (Relay ON)
+        $shouldWater = $telemetryData['moisture'] < 30.0;
+        $waterDuration = $shouldWater ? 10 : 0; // 10 detik
+
+        if ($shouldWater) {
+            FarmActivity::create([
+                'taman_id' => $taman->id,
+                'user_id'  => $taman->user_id,
+                'type'     => 'water',
+                'title'    => 'Penyiraman Otomatis (Relay Aktif)',
+                'detail'   => "Kelembaban {$telemetryData['moisture']}% (kritis). Keran dibuka selama {$waterDuration} detik.",
+                'status'   => 'success',
+                'metadata' => ['duration_sec' => $waterDuration, 'trigger' => 'auto_decision_engine'],
+            ]);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Telemetry recorded successfully',
+            'health_score' => $analysis['health']['score'],
+            'health_status' => $this->healthStatus($analysis['health']['score']),
+            'commands' => [
+                'water_valve' => $shouldWater ? 'ON' : 'OFF',
+                'duration_sec' => $waterDuration,
+                'buzzer_alert' => $shouldWater,
+            ],
+        ]);
+    }
 }
+
