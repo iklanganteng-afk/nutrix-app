@@ -373,10 +373,44 @@ class AuthController extends Controller
     }
 
     /**
-     * Helper pengiriman email via SMTP dengan error fallback yang aman.
+     * Helper pengiriman email via Gmail REST API (HTTPS Port 443) dengan fallback SMTP.
      */
     private function dispatchOtpEmail(string $email, string $otp, string $action, string $name): bool
     {
+        // 0. Saat automated test berjalan, selalu gunakan Mail Facade agar Mail::fake() berfungsi
+        if (app()->runningUnitTests()) {
+            try {
+                Mail::to($email)->send(new OtpVerificationMail($otp, $action, $name));
+                return true;
+            } catch (\Throwable $e) {
+                return false;
+            }
+        }
+
+        // 1. Coba kirim via Gmail REST API (Port 443 HTTPS - Bebas blokir Railway / Cloud)
+        $gmailApi = app(\App\Services\GmailApiService::class);
+        if ($gmailApi->isConfigured()) {
+            try {
+                $subject = $action === 'register' 
+                    ? '🔐 [NUTRIX] Kode Verifikasi Pendaftaran Akun' 
+                    : '🔐 [NUTRIX] Kode Verifikasi Masuk (Login)';
+
+                $htmlBody = view('emails.otp', [
+                    'otp' => $otp,
+                    'action' => $action,
+                    'name' => $name,
+                ])->render();
+
+                if ($gmailApi->sendRawEmail($email, $subject, $htmlBody)) {
+                    return true;
+                }
+                Log::warning("Pengiriman via Gmail API gagal, mencoba fallback ke SMTP standard...");
+            } catch (\Throwable $e) {
+                Log::warning("Exception pada Gmail API ({$e->getMessage()}), mencoba fallback ke SMTP standard...");
+            }
+        }
+
+        // 2. Fallback: Kirim via Mail Facade (SMTP / Local Mailer)
         try {
             Mail::to($email)->send(new OtpVerificationMail($otp, $action, $name));
             return true;
