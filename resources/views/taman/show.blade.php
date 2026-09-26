@@ -27,379 +27,418 @@
 @endphp
 
 {{-- ────────────────────────────────────────────────────────── --}}
-{{-- DASHBOARD NUTRIX IoT                                       --}}
 {{-- ────────────────────────────────────────────────────────── --}}
-<section class="dashboard-section standalone-dashboard container" id="dashboard">
+{{-- DASHBOARD NUTRIX IoT — MODERN REFRESH STYLE                --}}
+{{-- ────────────────────────────────────────────────────────── --}}
+<section class="nutrix-iot-wrap container-xl py-4" id="dashboard">
 
-    {{-- ── Header ── --}}
-    <div class="farm-detail-toolbar">
-        <a href="{{ route('dashboard') }}#gardens" class="farm-back-link">
-            <i class="bi bi-arrow-left"></i>
-            <span>Kembali ke Taman Saya</span>
+    {{-- Top Navigation & Status Bar --}}
+    <div class="nx-topbar mb-4">
+        <a href="{{ route('dashboard') }}#gardens" class="nx-back-btn">
+            <i class="bi bi-chevron-left"></i>
+            <span>Taman Saya</span>
         </a>
-        <span class="farm-detail-context">
-            <i class="bi bi-broadcast-pin"></i>
-            <span id="topStatusText">{{ $isConnected ? 'SENSOR CONNECTED' : 'SENSOR OFFLINE' }}</span>
-        </span>
+        <div class="nx-topbar-meta">
+            <span class="nx-badge-glow {{ $isConnected ? 'is-live' : 'is-idle' }}">
+                <span class="nx-dot" id="liveDot"></span>
+                <span id="topStatusText">{{ $isConnected ? 'IOT SENSOR ONLINE' : 'IOT SENSOR OFFLINE' }}</span>
+            </span>
+            <span class="nx-tag-chip" id="connectionBadge">{{ $isConnected ? 'LIVE' : 'STANDBY' }}</span>
+        </div>
     </div>
 
-    <div class="d-flex justify-content-between align-items-end mb-4 position-relative z-2 border-bottom border-secondary pb-3">
-        <div>
-            <span class="badge-web3 mb-2">{{ ucfirst($taman->type) }}</span>
-            <h2 class="section-title mb-0" style="font-family:'Cinzel',serif;">{{ $taman->name }}</h2>
-            @if($taman->location)
-                <small class="text-muted"><i class="bi bi-geo-alt"></i> {{ $taman->location }}</small>
-            @endif
+    {{-- Hero Garden Header --}}
+    <div class="nx-hero-card mb-4">
+        <div class="nx-hero-content">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <span class="nx-type-pill"><i class="bi bi-flower1 me-1"></i>{{ ucfirst($taman->type) }}</span>
+                @if($taman->location)
+                    <span class="nx-loc-pill"><i class="bi bi-geo-alt-fill me-1"></i>{{ $taman->location }}</span>
+                @endif
+            </div>
+            <h1 class="nx-title">{{ $taman->name }}</h1>
+            <p class="nx-subtitle mb-0">Autonomous Smart Agriculture Controller & Real-Time Sensor Telemetry Node</p>
         </div>
-        <div class="live-indicator">
-            <div class="live-dot" id="liveDot"></div>
-            <span id="connectionBadge" class="badge {{ $isConnected ? 'bg-success' : 'bg-secondary' }} text-white">
-                {{ $isConnected ? 'ONLINE' : 'OFFLINE' }}
+        <div class="nx-hero-actions">
+            <button type="button" class="nx-action-btn primary" id="btnConnectSensor">
+                <i class="bi bi-cpu-fill me-2"></i>{{ $isConnected ? 'Konfigurasi Sensor' : 'Hubungkan Node ESP32' }}
+            </button>
+            <button type="button" class="nx-action-btn secondary" id="btnRefreshTelemetry">
+                <i class="bi bi-arrow-repeat me-1"></i> Sync Telemetri
+            </button>
+        </div>
+    </div>
+
+    {{-- Connection Alert Strip --}}
+    <div id="connectionBanner" class="nx-alert-banner mb-4 {{ $isConnected ? 'is-connected' : 'is-disconnected' }}">
+        <div class="d-flex align-items-center gap-3">
+            <div class="nx-alert-icon">
+                <i class="bi bi-{{ $isConnected ? 'broadcast' : 'wifi-off' }}"></i>
+            </div>
+            <div>
+                <strong class="d-block text-white" style="font-size:0.92rem;">
+                    {{ $isConnected ? 'Koneksi Telemetri ESP32 Aktif' : 'Menunggu Koneksi ESP32' }}
+                </strong>
+                <span id="bannerText" class="nx-alert-desc">
+                    {{ $isConnected ? 'Data telemetri streaming setiap 5 detik via WiFi ke Railway Cloud.' : 'Belum ada sensor terhubung. Nyalakan ESP32 dan hubungkan ke WiFi.' }}
+                </span>
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <span class="nx-latency-pill">
+                <i class="bi bi-lightning-charge-fill me-1 text-mint"></i> 5s polling
             </span>
         </div>
-    </div>
-
-    {{-- ── Connection Banner ── --}}
-    <div id="connectionBanner" class="sensor-connection-banner {{ $isConnected ? 'is-connected' : 'is-disconnected' }}">
-        <div>
-            <i class="bi bi-{{ $isConnected ? 'check-circle' : 'plug' }}"></i>
-            <span id="bannerText">{{ $isConnected ? 'ESP32 aktif mengirim telemetri via WiFi ke Railway Cloud.' : 'Belum ada sensor terhubung. Nyalakan ESP32 dan pastikan WiFi aktif.' }}</span>
-        </div>
-        <button type="button" class="btn btn-sm btn-outline-secondary" id="btnConnectSensor">
-            {{ $isConnected ? 'Ganti Sensor' : 'Hubungkan Sensor' }}
-        </button>
     </div>
 
     {{-- ═══════════════════════════════════════════════════════════
-         BAGIAN 1: FLOW VISUALIZER (alur IoT dari kiri ke kanan)
+         BAGIAN 1: METRICS 4-GRID (pH, Kelembapan, Suhu, EC)
          ═══════════════════════════════════════════════════════════ --}}
-    <div class="iot-flow-section mt-4 section-panel">
-        <div class="sensor-config-header">
-            <div>
-                <span class="badge-web3">Alur Telemetri</span>
-                <h3 class="mb-0 mt-2">Cara Kerja Sistem IoT NUTRIX</h3>
-                <small class="text-muted d-block mt-1">Data mengalir dari sensor fisik → ESP32 → Cloud → Dashboard setiap 5 detik</small>
+    <div class="row g-3 mb-4">
+        {{-- pH --}}
+        <div class="col-12 col-sm-6 col-lg-3" data-metric-column="ph">
+            <div class="nx-metric-card metric-ph">
+                <div class="nx-metric-top">
+                    <div class="nx-metric-icon"><i class="bi bi-droplet-half"></i></div>
+                    <span class="nx-metric-chip">Kadar Asam</span>
+                </div>
+                <div class="nx-metric-main">
+                    <div class="nx-metric-val"><span id="val-ph">--</span><span class="unit">pH</span></div>
+                    <div class="nx-metric-label">Derajat Keasaman</div>
+                </div>
+                <div class="nx-metric-foot">
+                    <span class="nx-hint-badge" id="status-ph">Optimal (6.0 - 7.5)</span>
+                    <span class="trend-icon" id="trend-ph"><i class="bi bi-activity"></i></span>
+                </div>
+                <div class="metric-sparkline" id="spark-ph" style="display:none;"></div>
             </div>
-            <span id="flowStatusBadge" class="badge {{ $isConnected ? 'bg-success' : 'bg-secondary' }} text-white">
-                {{ $isConnected ? 'Stream Aktif' : 'Menunggu ESP32' }}
+        </div>
+
+        {{-- Moisture --}}
+        <div class="col-12 col-sm-6 col-lg-3" data-metric-column="moisture">
+            <div class="nx-metric-card metric-moist">
+                <div class="nx-metric-top">
+                    <div class="nx-metric-icon"><i class="bi bi-moisture"></i></div>
+                    <span class="nx-metric-chip">Kadar Air</span>
+                </div>
+                <div class="nx-metric-main">
+                    <div class="nx-metric-val"><span id="val-hum">--</span><span class="unit">%</span></div>
+                    <div class="nx-metric-label">Kelembapan Tanah</div>
+                </div>
+                <div class="nx-metric-foot">
+                    <span class="nx-hint-badge" id="status-moisture">Optimal (30 - 80%)</span>
+                    <span class="trend-icon" id="trend-moisture"><i class="bi bi-activity"></i></span>
+                </div>
+                <div class="metric-sparkline" id="spark-hum" style="display:none;"></div>
+            </div>
+        </div>
+
+        {{-- Temperature --}}
+        <div class="col-12 col-sm-6 col-lg-3" data-metric-column="temperature">
+            <div class="nx-metric-card metric-temp">
+                <div class="nx-metric-top">
+                    <div class="nx-metric-icon"><i class="bi bi-thermometer-sun"></i></div>
+                    <span class="nx-metric-chip">Suhu Media</span>
+                </div>
+                <div class="nx-metric-main">
+                    <div class="nx-metric-val"><span id="val-temp">--</span><span class="unit">°C</span></div>
+                    <div class="nx-metric-label">Temperatur Tanah</div>
+                </div>
+                <div class="nx-metric-foot">
+                    <span class="nx-hint-badge" id="status-temp">Ideal (15 - 35°C)</span>
+                    <span class="trend-icon" id="trend-temp"><i class="bi bi-activity"></i></span>
+                </div>
+                <div class="metric-sparkline" id="spark-temp" style="display:none;"></div>
+            </div>
+        </div>
+
+        {{-- EC --}}
+        <div class="col-12 col-sm-6 col-lg-3" data-metric-column="ec">
+            <div class="nx-metric-card metric-ec">
+                <div class="nx-metric-top">
+                    <div class="nx-metric-icon"><i class="bi bi-lightning-charge-fill"></i></div>
+                    <span class="nx-metric-chip">Nutrisi Tanah</span>
+                </div>
+                <div class="nx-metric-main">
+                    <div class="nx-metric-val"><span id="val-ec">--</span><span class="unit">mS/cm</span></div>
+                    <div class="nx-metric-label">Konduktivitas Elektrik</div>
+                </div>
+                <div class="nx-metric-foot">
+                    <span class="nx-hint-badge" id="status-ec">Nutrisi (0.5 - 3.0)</span>
+                    <span class="trend-icon" id="trend-ec"><i class="bi bi-activity"></i></span>
+                </div>
+                <div class="metric-sparkline" id="spark-ec" style="display:none;"></div>
+            </div>
+        </div>
+    </div>
+
+    {{-- ═══════════════════════════════════════════════════════════
+         BAGIAN 2: HEALTH SCORE COMMAND CENTER + ACTION BUTTONS
+         ═══════════════════════════════════════════════════════════ --}}
+    <div class="row g-4 mb-4">
+        {{-- Health Score Card --}}
+        <div class="col-12 col-lg-7">
+            <div class="nx-glass-card h-100 p-4 d-flex flex-column justify-content-between">
+                <div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="nx-card-title">
+                            <i class="bi bi-heart-pulse-fill text-mint me-2"></i>Status Kesehatan Kebun (AI Farm Health)
+                        </span>
+                        <div class="d-flex gap-2">
+                            <span class="nx-meta-badge" id="sourceBadge">
+                                <i class="bi bi-broadcast me-1"></i><span id="sourceText">Auto-Stream</span>
+                            </span>
+                            <span class="nx-meta-badge" id="lastUpdatedBadge">
+                                <i class="bi bi-clock me-1"></i><span id="lastUpdatedTime">--:--</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="nx-health-hero">
+                        <div class="nx-health-dial">
+                            <span class="nx-health-num" id="aiHealthScore">--</span>
+                            <span class="nx-health-lbl">HTH INDEX</span>
+                        </div>
+                        <div class="nx-health-desc">
+                            <h3 class="nx-health-status" id="aiHealthStatus">MEMERIKSA STATUS TANAH...</h3>
+                            <div class="nx-ai-insight mt-2" id="aiRecommendation">
+                                <i class="bi bi-stars text-amber me-1"></i>
+                                <span>Menunggu paket telemetri perdana dari mikrokontroler untuk kalkulasi indeks nutrisi tanah.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Action Strip --}}
+                <div class="nx-action-strip mt-4 pt-3 border-top border-secondary">
+                    <div class="nx-strip-btn" id="btnSyncData" data-requires-sensor title="Sinkronkan Telemetri">
+                        <i class="bi bi-arrow-down-up"></i>
+                        <span>Sync</span>
+                    </div>
+                    <div class="nx-strip-btn highlight" id="btnWaterAction" data-requires-sensor title="Siram Manual (Database Action)">
+                        <i class="bi bi-droplet-fill"></i>
+                        <span>Siram Kebun</span>
+                    </div>
+                    <div class="nx-strip-btn" id="btnFertilizeAction" data-requires-sensor title="Catat Pemupukan">
+                        <i class="bi bi-flower2"></i>
+                        <span>Beri Pupuk</span>
+                    </div>
+                    <div class="nx-strip-btn" id="btnActivityLog" title="Buka Riwayat Aktivitas">
+                        <i class="bi bi-clock-history"></i>
+                        <span>Riwayat Log</span>
+                    </div>
+                    <div class="nx-strip-btn" id="btnExportData" data-requires-sensor title="Export CSV">
+                        <i class="bi bi-file-earmark-arrow-down"></i>
+                        <span>Export CSV</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Relay & Hardware Status Control --}}
+        <div class="col-12 col-lg-5">
+            <div class="nx-glass-card h-100 p-4 d-flex flex-column justify-content-between">
+                <div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="nx-card-title">
+                            <i class="bi bi-toggles2 text-mint me-2"></i>Aktuator Relay & Hardware
+                        </span>
+                        <span id="relayPill" class="nx-tag-chip">STANDBY</span>
+                    </div>
+
+                    <div class="nx-relay-box mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div>
+                                <strong class="text-white d-block" style="font-size:0.9rem;">Relay Solenoid Keran</strong>
+                                <small class="text-muted">GPIO 26 · Valve Pompa Irigasi</small>
+                            </div>
+                            <span class="nx-relay-val" id="relayStatusDisplay">STANDBY</span>
+                        </div>
+                        <div class="nx-relay-meter">
+                            <div class="nx-relay-bar"></div>
+                        </div>
+                    </div>
+
+                    <div class="nx-spec-list">
+                        <div class="nx-spec-item">
+                            <span><i class="bi bi-cpu me-2 text-muted"></i>Board Controller</span>
+                            <strong>{{ $controllerName }}</strong>
+                        </div>
+                        <div class="nx-spec-item">
+                            <span><i class="bi bi-qr-code me-2 text-muted"></i>Sensor ID</span>
+                            <strong id="displaySensorId" class="text-mint">{{ $sensorId ?? 'Belum terpasang' }}</strong>
+                        </div>
+                        <div class="nx-spec-item">
+                            <span><i class="bi bi-cloud-check me-2 text-muted"></i>Status Cloud</span>
+                            <strong id="displayCloudStatus" class="{{ $isConnected ? 'text-mint' : 'text-muted' }}">
+                                {{ $isConnected ? 'Online (Railway HTTPS)' : 'Offline' }}
+                            </strong>
+                        </div>
+                        <div class="nx-spec-item">
+                            <span><i class="bi bi-gear-wide-connected me-2 text-muted"></i>Decision Engine</span>
+                            <strong class="text-warning">Moisture &lt; 30% ➔ Auto Siram</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2 mt-3 pt-3 border-top border-secondary">
+                    <button type="button" class="nx-btn-valve flex-fill" id="btnTriggerWaterManual" {{ !$isConnected ? 'disabled' : '' }}>
+                        <i class="bi bi-droplet-fill me-1"></i> Buka Keran 10s
+                    </button>
+                    <button type="button" class="nx-btn-outline-danger" id="btnResetSensor" title="Putus Koneksi Sensor">
+                        <i class="bi bi-power"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- ═══════════════════════════════════════════════════════════
+         BAGIAN 3: PIPELINE VISUALIZER & CLOUD STREAM TERMINAL
+         ═══════════════════════════════════════════════════════════ --}}
+    <div class="nx-glass-card mb-4 p-4">
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <div>
+                <span class="nx-badge-glow is-live mb-1"><i class="bi bi-diagram-3-fill me-1"></i> ARSITEKTUR TELEMETRI</span>
+                <h3 class="text-white mb-0" style="font-size:1.15rem; font-weight:700;">Pipeline Aliran Data Sensor ke Cloud</h3>
+            </div>
+            <span id="flowStatusBadge" class="nx-tag-chip {{ $isConnected ? 'is-online' : '' }}">
+                {{ $isConnected ? 'Data Pipeline Active' : 'Menunggu ESP32' }}
             </span>
         </div>
 
-        <div class="iot-flow-diagram">
-            {{-- Node 1: Sensor --}}
-            <div class="flow-node {{ !empty($sensorTypes) ? 'node-active' : '' }}" id="flowNodeSensor">
-                <div class="flow-node-icon"><i class="bi bi-moisture"></i></div>
-                <div class="flow-node-label">Sensor Tanah</div>
-                <div class="flow-node-sub">GPIO 34 (ADC)</div>
+        {{-- 5 Flow Nodes --}}
+        <div class="nx-pipeline">
+            <div class="nx-pipe-step {{ !empty($sensorTypes) ? 'is-active' : '' }}" id="flowNodeSensor">
+                <div class="nx-pipe-icon"><i class="bi bi-moisture"></i></div>
+                <div class="nx-pipe-info">
+                    <strong>Sensor Tanah</strong>
+                    <small>GPIO 34 ADC</small>
+                </div>
             </div>
-            <div class="flow-arrow" id="arrow1"><i class="bi bi-arrow-right"></i></div>
+            <div class="nx-pipe-arrow"><i class="bi bi-arrow-right"></i></div>
 
-            {{-- Node 2: ESP32 --}}
-            <div class="flow-node {{ $isConnected ? 'node-active' : '' }}" id="flowNodeEsp">
-                <div class="flow-node-icon"><i class="bi bi-cpu"></i></div>
-                <div class="flow-node-label">{{ $controllerName }}</div>
-                <div class="flow-node-sub">WiFiManager</div>
+            <div class="nx-pipe-step {{ $isConnected ? 'is-active' : '' }}" id="flowNodeEsp">
+                <div class="nx-pipe-icon"><i class="bi bi-cpu"></i></div>
+                <div class="nx-pipe-info">
+                    <strong>{{ $controllerName }}</strong>
+                    <small>WiFiManager 2.4G</small>
+                </div>
             </div>
-            <div class="flow-arrow" id="arrow2"><i class="bi bi-arrow-right"></i></div>
+            <div class="nx-pipe-arrow"><i class="bi bi-arrow-right"></i></div>
 
-            {{-- Node 3: WiFi/Cloud --}}
-            <div class="flow-node {{ $isConnected ? 'node-active' : '' }}" id="flowNodeCloud">
-                <div class="flow-node-icon"><i class="bi bi-cloud-arrow-up"></i></div>
-                <div class="flow-node-label">Railway Cloud</div>
-                <div class="flow-node-sub">HTTPS POST</div>
+            <div class="nx-pipe-step {{ $isConnected ? 'is-active' : '' }}" id="flowNodeCloud">
+                <div class="nx-pipe-icon"><i class="bi bi-cloud-arrow-up-fill"></i></div>
+                <div class="nx-pipe-info">
+                    <strong>Railway Cloud</strong>
+                    <small>HTTPS POST /api/iot</small>
+                </div>
             </div>
-            <div class="flow-arrow" id="arrow3"><i class="bi bi-arrow-right"></i></div>
+            <div class="nx-pipe-arrow"><i class="bi bi-arrow-right"></i></div>
 
-            {{-- Node 4: Decision Engine --}}
-            <div class="flow-node node-brain {{ $isConnected ? 'node-active' : '' }}" id="flowNodeBrain">
-                <div class="flow-node-icon"><i class="bi bi-lightning-charge-fill"></i></div>
-                <div class="flow-node-label">Decision Engine</div>
-                <div class="flow-node-sub">Health Score</div>
+            <div class="nx-pipe-step brain-step {{ $isConnected ? 'is-active' : '' }}" id="flowNodeBrain">
+                <div class="nx-pipe-icon"><i class="bi bi-stars"></i></div>
+                <div class="nx-pipe-info">
+                    <strong>Decision Engine</strong>
+                    <small>Health Analytics</small>
+                </div>
             </div>
-            <div class="flow-arrow flow-arrow-down" id="arrow4"><i class="bi bi-arrow-down"></i></div>
+            <div class="nx-pipe-arrow"><i class="bi bi-arrow-right"></i></div>
 
-            {{-- Node 5: Relay (di bawah) --}}
-            <div class="flow-node flow-node-relay {{ $isConnected ? 'node-active' : '' }}" id="flowNodeRelay">
-                <div class="flow-node-icon"><i class="bi bi-toggles"></i></div>
-                <div class="flow-node-label">Relay Keran</div>
-                <div class="flow-node-sub" id="relayFlowStatus">GPIO 26 · STANDBY</div>
+            <div class="nx-pipe-step relay-step {{ $isConnected ? 'is-active' : '' }}" id="flowNodeRelay">
+                <div class="nx-pipe-icon"><i class="bi bi-toggles"></i></div>
+                <div class="nx-pipe-info">
+                    <strong>Relay Keran Air</strong>
+                    <small id="relayFlowStatus">GPIO 26 · STANDBY</small>
+                </div>
             </div>
         </div>
 
-        {{-- Live Cloud Log --}}
-        <div class="cloud-log-terminal mt-3" id="cloudLogTerminal">
-            <div class="terminal-header">
-                <span><i class="bi bi-terminal-fill text-mint me-1"></i> Cloud Telemetry Log</span>
-                <span class="badge {{ $isConnected ? 'bg-success' : 'bg-secondary' }} text-white" id="terminalStatusBadge">
-                    {{ $isConnected ? 'Live' : 'Waiting' }}
-                </span>
+        {{-- Cloud Console Terminal --}}
+        <div class="nx-terminal mt-4">
+            <div class="nx-terminal-top">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="term-dot red"></span>
+                    <span class="term-dot yellow"></span>
+                    <span class="term-dot green"></span>
+                    <span class="term-title ms-2"><i class="bi bi-terminal-fill me-1 text-mint"></i> Railway Ingestion Console Log</span>
+                </div>
+                <span class="term-chip" id="terminalStatusBadge">{{ $isConnected ? 'LIVE' : 'WAITING' }}</span>
             </div>
-            <div class="terminal-body" id="terminalLines">
-                <div class="t-line"><span class="t-prompt">›</span> endpoint /api/iot/telemetry siap menerima data</div>
-                <div class="t-line"><span class="t-prompt">›</span> node {{ $controllerName }} dikonfigurasi ke hotspot WiFi</div>
+            <div class="nx-terminal-screen" id="terminalLines">
+                <div class="t-line"><span class="t-prompt">›</span> NUTRIX Cloud Ingest API initialized at /api/iot/telemetry</div>
+                <div class="t-line"><span class="t-prompt">›</span> Mikrokontroler target: {{ $controllerName }} (GPIO 34 sensor, GPIO 26 relay)</div>
                 @if($isConnected)
-                <div class="t-line t-success"><span class="t-prompt">✓</span> sensor {{ $sensorId }} terhubung — telemetri aktif</div>
+                <div class="t-line t-success"><span class="t-prompt">✓</span> Perangkat [{{ $sensorId }}] terverifikasi aktif mengirim paket telemetri.</div>
                 @else
-                <div class="t-line t-warn"><span class="t-prompt">!</span> menunggu paket pertama dari ESP32...</div>
+                <div class="t-line t-warn"><span class="t-prompt">!</span> Belum ada paket masuk. Pastikan daya dan WiFi ESP32 telah aktif.</div>
                 @endif
             </div>
         </div>
     </div>
 
     {{-- ═══════════════════════════════════════════════════════════
-         BAGIAN 2: 4 KARTU SENSOR METRIC
+         BAGIAN 4: SENSOR HARDWARE LIST & SETUP GUIDE
          ═══════════════════════════════════════════════════════════ --}}
-    <div class="row g-4 mt-1 position-relative z-2">
-        {{-- pH --}}
-        <div class="col-12 col-md-6 col-lg-3" data-metric-column="ph">
-            <div class="metric-card interactive-metric" data-metric="ph">
-                <div class="metric-header d-flex justify-content-between">
-                    <span><i class="bi bi-droplet-half"></i> pH Level</span>
-                    <span class="trend-icon text-muted" id="trend-ph"><i class="bi bi-activity"></i></span>
-                </div>
-                <div class="metric-value"><span id="val-ph">--</span> <small>pH</small></div>
-                <div class="metric-status small mt-1" id="status-ph">—</div>
-                <div class="metric-sparkline" id="spark-ph">
-                    <div class="bar"></div><div class="bar"></div><div class="bar"></div>
-                    <div class="bar"></div><div class="bar"></div><div class="bar"></div>
-                </div>
-            </div>
-        </div>
-        {{-- Moisture --}}
-        <div class="col-12 col-md-6 col-lg-3" data-metric-column="moisture">
-            <div class="metric-card interactive-metric" data-metric="moisture">
-                <div class="metric-header d-flex justify-content-between">
-                    <span><i class="bi bi-moisture"></i> Kelembapan</span>
-                    <span class="trend-icon text-muted" id="trend-moisture"><i class="bi bi-activity"></i></span>
-                </div>
-                <div class="metric-value"><span id="val-hum">--</span> <small>%</small></div>
-                <div class="metric-status small mt-1" id="status-moisture">—</div>
-                <div class="metric-sparkline" id="spark-hum">
-                    <div class="bar"></div><div class="bar"></div><div class="bar"></div>
-                    <div class="bar"></div><div class="bar"></div><div class="bar"></div>
-                </div>
-            </div>
-        </div>
-        {{-- Temperature --}}
-        <div class="col-12 col-md-6 col-lg-3" data-metric-column="temperature">
-            <div class="metric-card interactive-metric" data-metric="temp">
-                <div class="metric-header d-flex justify-content-between">
-                    <span><i class="bi bi-thermometer-half"></i> Suhu</span>
-                    <span class="trend-icon text-muted" id="trend-temp"><i class="bi bi-activity"></i></span>
-                </div>
-                <div class="metric-value"><span id="val-temp">--</span> <small>°C</small></div>
-                <div class="metric-status small mt-1" id="status-temp">—</div>
-                <div class="metric-sparkline" id="spark-temp">
-                    <div class="bar"></div><div class="bar"></div><div class="bar"></div>
-                    <div class="bar"></div><div class="bar"></div><div class="bar"></div>
-                </div>
-            </div>
-        </div>
-        {{-- EC --}}
-        <div class="col-12 col-md-6 col-lg-3" data-metric-column="ec">
-            <div class="metric-card interactive-metric" data-metric="ec">
-                <div class="metric-header d-flex justify-content-between">
-                    <span class="text-mint"><i class="bi bi-lightning-charge-fill"></i> Konduktivitas</span>
-                    <span class="trend-icon text-mint" id="trend-ec"><i class="bi bi-graph-up"></i></span>
-                </div>
-                <div class="metric-value text-mint"><span id="val-ec">--</span> <small class="text-mint">mS/cm</small></div>
-                <div class="metric-status small mt-1" id="status-ec">—</div>
-                <div class="metric-sparkline" id="spark-ec">
-                    <div class="bar highlight"></div><div class="bar highlight"></div><div class="bar highlight"></div>
-                    <div class="bar highlight"></div><div class="bar highlight"></div><div class="bar highlight"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    {{-- ═══════════════════════════════════════════════════════════
-         BAGIAN 3: HEALTH SCORE & QUICK ACTIONS
-         ═══════════════════════════════════════════════════════════ --}}
-    <div class="row mt-5 mb-4 position-relative z-2 justify-content-center">
-        <div class="col-12 col-md-8 col-lg-6 text-center">
-            <div class="portfolio-dashboard">
-                <div class="d-flex align-items-center justify-content-center gap-2 mb-2">
-                    <span class="text-secondary fw-bold" style="letter-spacing:1px;font-size:.85rem;">OVERALL FARM HEALTH</span>
-                </div>
-                <div class="display-1 fw-bold text-white mb-0 mt-3 d-flex align-items-center justify-content-center gap-2" style="font-family:'Outfit',sans-serif;">
-                    <span id="aiHealthScore">--</span> <span class="fs-4 text-mint">HTH</span>
-                </div>
-                <div class="text-muted mt-2 d-flex align-items-center justify-content-center gap-2">
-                    <span id="aiHealthStatus">Status: {{ $isConnected ? 'MEMUAT...' : 'NOT CONNECTED' }}</span>
-                </div>
-                <div class="d-flex justify-content-center gap-2 mt-2">
-                    <span class="badge bg-dark border border-secondary small" id="lastUpdatedBadge">
-                        <i class="bi bi-clock me-1"></i> <span id="lastUpdatedTime">—</span>
-                    </span>
-                    <span class="badge bg-dark border border-secondary small" id="sourceBadge">
-                        <i class="bi bi-broadcast me-1"></i> <span id="sourceText">—</span>
-                    </span>
-                </div>
-
-                {{-- Quick Actions --}}
-                <div class="d-flex justify-content-center gap-4 mt-4 pt-3">
-                    <div class="quick-action-btn" id="btnSyncData" data-requires-sensor data-bs-toggle="tooltip" title="Sync Telemetry">
-                        <div class="action-icon-circle"><i class="bi bi-arrow-down-up"></i></div>
-                        <span>Sync</span>
-                    </div>
-                    <div class="quick-action-btn" id="btnWaterAction" data-requires-sensor data-bs-toggle="tooltip" title="Siram Sekarang">
-                        <div class="action-icon-circle text-mint border-mint"><i class="bi bi-droplet-fill"></i></div>
-                        <span class="text-mint">Siram</span>
-                    </div>
-                    <div class="quick-action-btn" id="btnFertilizeAction" data-requires-sensor data-bs-toggle="tooltip" title="Pupuk">
-                        <div class="action-icon-circle"><i class="bi bi-flower2"></i></div>
-                        <span>Pupuk</span>
-                    </div>
-                    <div class="quick-action-btn" id="btnActivityLog" data-bs-toggle="tooltip" title="Riwayat Aktivitas">
-                        <div class="action-icon-circle"><i class="bi bi-clock-history"></i></div>
-                        <span>Riwayat</span>
-                    </div>
-                    <div class="quick-action-btn" id="btnExportData" data-requires-sensor data-bs-toggle="tooltip" title="Export CSV">
-                        <div class="action-icon-circle"><i class="bi bi-download"></i></div>
-                        <span>Export</span>
-                    </div>
-                </div>
-
-                {{-- AI Recommendation --}}
-                <div class="mt-4 pt-3 border-top border-secondary text-start">
-                    <p class="text-secondary mb-0" id="aiRecommendation" style="font-size:.85rem;line-height:1.5;">
-                        <i class="bi bi-lightbulb text-mint me-1"></i>
-                        <strong>Insight:</strong> Menunggu data sensor pertama...
-                    </p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    {{-- ═══════════════════════════════════════════════════════════
-         BAGIAN 4: STATUS PERANGKAT & KONTROL RELAY
-         ═══════════════════════════════════════════════════════════ --}}
-    <div class="section-panel mt-4">
-        <div class="sensor-config-header">
+    <div class="nx-glass-card p-4">
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
             <div>
-                <span class="badge-web3">Status Perangkat</span>
-                <h3 class="mb-0 mt-2">Kontrol & Status IoT Node</h3>
+                <span class="nx-badge-glow is-live mb-1"><i class="bi bi-sliders me-1"></i> SPESIFIKASI SENSOR</span>
+                <h3 class="text-white mb-0" style="font-size:1.15rem; font-weight:700;">Daftar Sensor & Panduan Node</h3>
             </div>
-        </div>
-
-        <div class="device-status-grid">
-            <div class="device-status-card">
-                <span class="device-status-label">Sensor ID</span>
-                <strong class="text-mint" id="displaySensorId">{{ $sensorId ?? 'Belum dipasangkan' }}</strong>
-            </div>
-            <div class="device-status-card">
-                <span class="device-status-label">Status Cloud</span>
-                <strong id="displayCloudStatus" class="{{ $isConnected ? 'text-mint' : 'text-muted' }}">
-                    {{ $isConnected ? 'Online' : 'Offline' }}
-                </strong>
-            </div>
-            <div class="device-status-card">
-                <span class="device-status-label">Board Controller</span>
-                <strong>{{ $controllerName }}</strong>
-            </div>
-            <div class="device-status-card">
-                <span class="device-status-label">Relay Keran (GPIO 26)</span>
-                <strong id="relayStatusDisplay" class="text-white">STANDBY</strong>
-            </div>
-            <div class="device-status-card">
-                <span class="device-status-label">Interval Pengiriman</span>
-                <strong>5 detik</strong>
-            </div>
-        </div>
-
-        {{-- Relay Control Panel --}}
-        <div class="mt-3 p-3 rounded border border-secondary" style="background:rgba(11,20,17,.72);">
-            <div class="d-flex align-items-center justify-content-between mb-3">
-                <div class="d-flex align-items-center gap-2">
-                    <i class="bi bi-toggles text-mint"></i>
-                    <strong class="text-white">Kontrol Relay Manual</strong>
-                </div>
-                <span id="relayPill" class="badge bg-secondary text-white">STANDBY</span>
-            </div>
-            <p class="small text-muted mb-3">
-                Perintah ini dikirim via API ke server Railway. Server kemudian meneruskan respons ke ESP32 pada pengiriman telemetri berikutnya (maks. 5 detik).
-            </p>
-            <div class="d-flex gap-2 flex-wrap">
-                <button type="button" class="btn btn-sm btn-connect-node" id="btnTriggerWaterManual" {{ !$isConnected ? 'disabled' : '' }}>
-                    <i class="bi bi-droplet-fill"></i> Buka Keran (10 detik)
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnRefreshTelemetry">
-                    <i class="bi bi-arrow-repeat"></i> Refresh Telemetri
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-danger" id="btnResetSensor">
-                    <i class="bi bi-plug"></i> Putus Sensor
-                </button>
-            </div>
-        </div>
-    </div>
-
-    {{-- ═══════════════════════════════════════════════════════════
-         BAGIAN 5: KONFIGURASI SENSOR (collapsed panel)
-         ═══════════════════════════════════════════════════════════ --}}
-    <div class="sensor-config-summary mt-4 section-panel">
-        <div class="sensor-config-header">
-            <div>
-                <span class="badge-web3">Konfigurasi</span>
-                <h3 class="mb-0 mt-2">Daftar Sensor & Board</h3>
-            </div>
-            <button type="button" class="btn btn-sm btn-outline-secondary section-action-btn" id="btnEditSensorConfig">
-                Edit konfigurasi
+            <button type="button" class="nx-action-btn secondary" id="btnEditSensorConfig">
+                <i class="bi bi-pencil-square me-1"></i> Edit Konfigurasi
             </button>
         </div>
 
-        @if(!empty($sensorTypes))
-            <div class="sensor-config-list">
+        <div class="row g-3 mb-4">
+            @if(!empty($sensorTypes))
                 @foreach($sensorTypes as $sensorType)
                     @php $typeKey = (string) $sensorType; @endphp
-                    <div class="sensor-config-item">
-                        <div class="sensor-config-icon">
-                            <i class="bi bi-{{ $sensorType === 'moisture' ? 'moisture' : ($sensorType === 'temperature' ? 'thermometer-half' : ($sensorType === 'ph' ? 'droplet-half' : 'lightning-charge-fill')) }}"></i>
-                        </div>
-                        <div class="sensor-config-copy">
-                            <strong>{{ $sensorTypeLabels[$typeKey] ?? ucfirst($typeKey) }}</strong>
-                            <small>{{ $sensorModels[$typeKey] ?? 'Model tidak dipilih' }}</small>
+                    <div class="col-12 col-sm-6 col-lg-3">
+                        <div class="nx-sensor-spec-box">
+                            <div class="spec-icon">
+                                <i class="bi bi-{{ $sensorType === 'moisture' ? 'moisture' : ($sensorType === 'temperature' ? 'thermometer-half' : ($sensorType === 'ph' ? 'droplet-half' : 'lightning-charge-fill')) }}"></i>
+                            </div>
+                            <div class="spec-content">
+                                <strong>{{ $sensorTypeLabels[$typeKey] ?? ucfirst($typeKey) }}</strong>
+                                <span>{{ $sensorModels[$typeKey] ?? 'Model default' }}</span>
+                            </div>
                         </div>
                     </div>
                 @endforeach
-            </div>
-        @else
-            <div class="sensor-config-empty">Belum ada sensor yang dipilih untuk taman ini.</div>
-        @endif
-
-        <div class="sensor-connection-panel">
-            <div class="sensor-connection-row">
-                <span>Board Controller</span>
-                <strong>{{ $controller }}</strong>
-            </div>
-            <div class="sensor-connection-row">
-                <span>Mode Jaringan</span>
-                <strong>WiFi 2.4 GHz (via WiFiManager)</strong>
-            </div>
-            <div class="sensor-connection-row">
-                <span>Endpoint Telemetri</span>
-                <strong>/api/iot/telemetry (HTTPS POST)</strong>
-            </div>
-            <div class="sensor-connection-row">
-                <span>Cloud Server</span>
-                <strong>Railway (nutrix-app-production.up.railway.app)</strong>
-            </div>
-            <div class="sensor-connection-row">
-                <span>Database</span>
-                <strong>Aiven Cloud MySQL</strong>
-            </div>
-            <div class="sensor-connection-row">
-                <span>Keputusan Otomatis</span>
-                <strong>Kelembapan &lt; 30% → Relay ON (10 detik)</strong>
-            </div>
+            @else
+                <div class="col-12">
+                    <div class="p-3 text-center text-muted" style="background:rgba(255,255,255,0.02); border-radius:12px;">
+                        Belum ada sensor spesifik yang dikonfigurasi. Klik tombol Edit Konfigurasi untuk menambahkan.
+                    </div>
+                </div>
+            @endif
         </div>
 
-        {{-- Setup Guide --}}
-        <div class="guide-step-list mt-3">
-            <div class="guide-step-item"><span>1</span> Nyalakan daya ESP32 (adaptor 5V atau powerbank).</div>
-            <div class="guide-step-item"><span>2</span> Jika WiFi belum tersimpan → ESP32 jadi hotspot <strong>NUTRIX-ESP32-SETUP</strong>. Buka browser HP, isi WiFi + ID Taman.</div>
-            <div class="guide-step-item"><span>3</span> ESP32 otomatis kirim data kelembapan tiap 5 detik ke Railway via HTTP POST.</div>
-            <div class="guide-step-item"><span>4</span> Server menganalisa data, kirim balasan perintah relay (<code>water_valve: ON/OFF</code>) ke ESP32.</div>
-            <div class="guide-step-item"><span>5</span> Dashboard ini otomatis update tiap 5 detik — tidak perlu refresh manual.</div>
+        {{-- Guide Steps --}}
+        <div class="nx-guide-box">
+            <h4 class="text-white mb-3" style="font-size:0.95rem; font-weight:700;">
+                <i class="bi bi-info-circle-fill text-mint me-2"></i>Panduan Komisioning IoT Nutrix:
+            </h4>
+            <div class="nx-guide-steps">
+                <div class="nx-g-step">
+                    <span class="step-num">01</span>
+                    <p>Sambungkan daya ke board ESP32 via kabel USB / adaptor 5V.</p>
+                </div>
+                <div class="nx-g-step">
+                    <span class="step-num">02</span>
+                    <p>Jika WiFi baru, hubungkan smartphone ke hotspot <strong>NUTRIX-ESP32-SETUP</strong> untuk konfigurasi.</p>
+                </div>
+                <div class="nx-g-step">
+                    <span class="step-num">03</span>
+                    <p>ESP32 streaming parameter tanah tiap 5 detik ke endpoint cloud Railway.</p>
+                </div>
+                <div class="nx-g-step">
+                    <span class="step-num">04</span>
+                    <p>Decision Engine cloud otomatis mengevaluasi kadar air & mengaktifkan relay GPIO 26 bila tanah kering.</p>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1075,140 +1114,767 @@ document.addEventListener('keydown', e => {
 </script>
 
 <style>
-/* ── IoT Flow Diagram ─────────────────────────────── */
-.iot-flow-section { padding: 1.5rem; }
-
-.iot-flow-diagram {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    margin-top: 1.5rem;
-    padding: 1rem;
-    background: rgba(0,0,0,.25);
-    border-radius: 16px;
-    border: 1px solid var(--border-subtle);
-    position: relative;
+/* ═══════════════════════════════════════════════════════════
+   NUTRIX NEXT-GEN SMART AGRI DASHBOARD STYLES
+   ═══════════════════════════════════════════════════════════ */
+.nutrix-iot-wrap {
+    min-height: 85vh;
 }
 
-.flow-node {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    padding: 14px 18px;
-    border-radius: 14px;
-    background: rgba(255,255,255,.04);
-    border: 1.5px solid rgba(148,163,184,.25);
-    transition: all .4s ease;
-    min-width: 90px;
-    opacity: 0.55;
-}
-.flow-node.node-active {
-    opacity: 1;
-    border-color: rgba(27,196,146,.6);
-    background: rgba(27,196,146,.08);
-    box-shadow: 0 0 16px rgba(27,196,146,.15);
-    animation: node-pulse 2.5s ease infinite;
-}
-.flow-node.node-brain.node-active {
-    border-color: rgba(251,191,36,.6);
-    background: rgba(251,191,36,.08);
-    box-shadow: 0 0 16px rgba(251,191,36,.15);
-}
-.flow-node-icon { font-size: 1.5rem; color: var(--color-accent-highlight); }
-.flow-node.node-brain .flow-node-icon { color: #fbbf24; }
-.flow-node-label { font-size: .78rem; font-weight: 700; color: var(--text-primary); white-space: nowrap; }
-.flow-node-sub   { font-size: .66rem; color: var(--text-muted); white-space: nowrap; }
-
-.flow-arrow { color: var(--text-muted); font-size: 1.1rem; flex-shrink: 0; }
-.flow-arrow-down {
-    position: absolute;
-    right: calc(90px + 1.5rem);
-    bottom: -32px;
-    font-size: 1.1rem;
-    color: var(--text-muted);
-}
-.flow-node-relay {
-    position: absolute;
-    right: 0;
-    bottom: -80px;
-    border-color: rgba(239,68,68,.3);
-}
-.flow-node-relay.node-active {
-    border-color: rgba(239,68,68,.7);
-    background: rgba(239,68,68,.08);
-    box-shadow: 0 0 16px rgba(239,68,68,.15);
-}
-.flow-node-relay .flow-node-icon { color: #ef4444; }
-
-@keyframes node-pulse {
-    0%,100% { box-shadow: 0 0 14px rgba(27,196,146,.15); }
-    50%      { box-shadow: 0 0 28px rgba(27,196,146,.35); }
-}
-
-/* ── Cloud Log Terminal ──────────────────────────── */
-.cloud-log-terminal {
-    border-radius: 12px;
-    border: 1px solid var(--border-subtle);
-    overflow: hidden;
-    background: rgba(0,0,0,.45);
-}
-.terminal-header {
+/* ── Top Bar ─────────────────────────────────────────────── */
+.nx-topbar {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: .5rem 1rem;
-    background: rgba(255,255,255,.04);
-    border-bottom: 1px solid var(--border-subtle);
-    font-size: .78rem;
-    color: var(--text-secondary);
-    font-weight: 600;
+    flex-wrap: wrap;
+    gap: 12px;
 }
-.terminal-body {
-    padding: .75rem 1rem;
+.nx-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    color: var(--text-pure, #f8fafc);
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.nx-back-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--color-mint, #10b981);
+    border-color: rgba(16, 185, 129, 0.3);
+    transform: translateX(-2px);
+}
+.nx-topbar-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.nx-badge-glow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--text-pure, #f8fafc);
+}
+.nx-badge-glow.is-live {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: rgba(16, 185, 129, 0.35);
+    color: #34d399;
+}
+.nx-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #94a3b8;
+}
+.nx-dot.dot-online,
+.nx-badge-glow.is-live .nx-dot {
+    background: #10b981;
+    box-shadow: 0 0 10px #10b981;
+    animation: nxPulse 2s infinite ease-in-out;
+}
+@keyframes nxPulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.4); opacity: 0.5; }
+}
+
+.nx-tag-chip {
+    padding: 5px 12px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    color: #94a3b8;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    letter-spacing: 0.05em;
+}
+.nx-tag-chip.is-online,
+.nx-tag-chip.bg-success {
+    background: rgba(16, 185, 129, 0.15) !important;
+    color: #34d399 !important;
+    border-color: rgba(16, 185, 129, 0.4) !important;
+}
+
+/* ── Hero Card ───────────────────────────────────────────── */
+.nx-hero-card {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.75) 0%, rgba(15, 23, 42, 0.9) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 24px;
+    padding: 2rem 2.25rem;
+    backdrop-filter: blur(16px);
+    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    position: relative;
+    overflow: hidden;
+}
+.nx-hero-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(16, 185, 129, 0.12) 0%, transparent 70%);
+    pointer-events: none;
+}
+.nx-title {
+    font-size: 2.2rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: #ffffff;
+    margin-bottom: 0.35rem;
+}
+.nx-subtitle {
+    color: #94a3b8;
+    font-size: 0.88rem;
+    max-width: 580px;
+}
+.nx-type-pill {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 3px 10px;
+    border-radius: 6px;
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+.nx-loc-pill {
+    font-size: 0.75rem;
+    color: #94a3b8;
+}
+.nx-hero-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.nx-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 20px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    border: none;
+}
+.nx-action-btn.primary {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+}
+.nx-action-btn.primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
+}
+.nx-action-btn.secondary {
+    background: rgba(255, 255, 255, 0.05);
+    color: #f8fafc;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.nx-action-btn.secondary:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+}
+
+/* ── Connection Banner ───────────────────────────────────── */
+.nx-alert-banner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 14px 20px;
+    border-radius: 16px;
+    backdrop-filter: blur(12px);
+    transition: all 0.3s;
+}
+.nx-alert-banner.is-connected {
+    background: linear-gradient(90deg, rgba(16, 185, 129, 0.12) 0%, rgba(16, 185, 129, 0.03) 100%);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+}
+.nx-alert-banner.is-disconnected {
+    background: linear-gradient(90deg, rgba(239, 68, 68, 0.12) 0%, rgba(239, 68, 68, 0.03) 100%);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+}
+.nx-alert-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.15rem;
+}
+.nx-alert-banner.is-connected .nx-alert-icon {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+}
+.nx-alert-banner.is-disconnected .nx-alert-icon {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+}
+.nx-alert-desc {
+    font-size: 0.82rem;
+    color: #94a3b8;
+}
+.nx-latency-pill {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    color: #cbd5e1;
+}
+
+/* ── 4 Metric Cards (Vibrant Tech Glass) ─────────────────── */
+.nx-metric-card {
+    background: rgba(30, 41, 59, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    padding: 1.5rem;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(14px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25);
+}
+.nx-metric-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.4);
+}
+.nx-metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+}
+.nx-metric-card.metric-ph::before    { background: linear-gradient(90deg, #ec4899, #f43f5e); }
+.nx-metric-card.metric-moist::before { background: linear-gradient(90deg, #0ea5e9, #38bdf8); }
+.nx-metric-card.metric-temp::before  { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+.nx-metric-card.metric-ec::before    { background: linear-gradient(90deg, #10b981, #34d399); }
+
+.nx-metric-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+.nx-metric-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+}
+.metric-ph .nx-metric-icon    { background: rgba(244, 63, 94, 0.12); color: #fb7185; }
+.metric-moist .nx-metric-icon { background: rgba(14, 165, 233, 0.12); color: #38bdf8; }
+.metric-temp .nx-metric-icon  { background: rgba(245, 158, 11, 0.12); color: #fbbf24; }
+.metric-ec .nx-metric-icon    { background: rgba(16, 185, 129, 0.12); color: #34d399; }
+
+.nx-metric-chip {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #94a3b8;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.03);
+}
+.nx-metric-val {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: #ffffff;
+    line-height: 1;
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    font-family: 'Outfit', -apple-system, sans-serif;
+}
+.nx-metric-val .unit {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #64748b;
+}
+.nx-metric-label {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    margin-top: 0.4rem;
+    font-weight: 500;
+}
+.nx-metric-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1.2rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+.nx-hint-badge {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #cbd5e1;
+}
+.trend-icon {
+    font-size: 0.85rem;
+    color: #64748b;
+}
+
+/* ── Generic Glass Card ──────────────────────────────────── */
+.nx-glass-card {
+    background: rgba(30, 41, 59, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 24px;
+    backdrop-filter: blur(14px);
+    box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.25);
+}
+.nx-card-title {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #e2e8f0;
+    letter-spacing: 0.02em;
+}
+.nx-meta-badge {
+    font-size: 0.72rem;
+    padding: 3px 10px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    color: #94a3b8;
+}
+
+/* ── Health Hero ─────────────────────────────────────────── */
+.nx-health-hero {
+    display: flex;
+    align-items: center;
+    gap: 1.75rem;
+    padding: 1.25rem 0;
+    flex-wrap: wrap;
+}
+.nx-health-dial {
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    background: conic-gradient(#10b981 0%, #0ea5e9 60%, rgba(255, 255, 255, 0.08) 60%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    box-shadow: 0 0 25px rgba(16, 185, 129, 0.2);
+    flex-shrink: 0;
+}
+.nx-health-dial::before {
+    content: '';
+    position: absolute;
+    inset: 9px;
+    background: #0f172a;
+    border-radius: 50%;
+    z-index: 1;
+}
+.nx-health-num {
+    position: relative;
+    z-index: 2;
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: #ffffff;
+    font-family: 'Outfit', sans-serif;
+    line-height: 1;
+}
+.nx-health-lbl {
+    position: relative;
+    z-index: 2;
+    font-size: 0.62rem;
+    font-weight: 700;
+    color: #34d399;
+    letter-spacing: 0.05em;
+    margin-top: 2px;
+}
+.nx-health-desc {
+    flex: 1;
+    min-width: 200px;
+}
+.nx-health-status {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: -0.01em;
+    margin-bottom: 0.25rem;
+}
+.nx-ai-insight {
+    font-size: 0.82rem;
+    color: #94a3b8;
+    line-height: 1.5;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* ── Action Strip ────────────────────────────────────────── */
+.nx-action-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+    gap: 8px;
+}
+.nx-strip-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 12px 6px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    color: #cbd5e1;
+}
+.nx-strip-btn i {
+    font-size: 1.25rem;
+    transition: transform 0.2s;
+}
+.nx-strip-btn span {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-align: center;
+    white-space: nowrap;
+}
+.nx-strip-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+    color: #ffffff;
+}
+.nx-strip-btn:hover i {
+    transform: scale(1.15);
+}
+.nx-strip-btn.highlight {
+    background: rgba(16, 185, 129, 0.12);
+    border-color: rgba(16, 185, 129, 0.35);
+    color: #34d399;
+}
+.nx-strip-btn.highlight:hover {
+    background: rgba(16, 185, 129, 0.22);
+    border-color: rgba(16, 185, 129, 0.5);
+}
+.nx-strip-btn.is-disabled {
+    opacity: 0.45;
+    pointer-events: none;
+}
+
+/* ── Relay Card ──────────────────────────────────────────── */
+.nx-relay-box {
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 16px;
+    padding: 14px 18px;
+}
+.nx-relay-val {
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: #94a3b8;
+    letter-spacing: 0.05em;
+}
+.nx-relay-meter {
+    height: 4px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 9999px;
+    overflow: hidden;
+    margin-top: 6px;
+}
+.nx-relay-bar {
+    width: 25%;
+    height: 100%;
+    background: #10b981;
+    border-radius: 9999px;
+}
+.nx-spec-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 14px;
+}
+.nx-spec-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 10px;
+    font-size: 0.8rem;
+    color: #cbd5e1;
+}
+.nx-spec-item strong {
+    font-size: 0.82rem;
+    color: #ffffff;
+}
+.nx-btn-valve {
+    padding: 10px 16px;
+    background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+    border: none;
+    border-radius: 12px;
+    color: #ffffff;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+    transition: all 0.2s;
+}
+.nx-btn-valve:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(14, 165, 233, 0.45);
+}
+.nx-btn-valve:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+.nx-btn-outline-danger {
+    padding: 10px 16px;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 12px;
+    color: #f87171;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.nx-btn-outline-danger:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.5);
+}
+
+/* ── Pipeline Visualizer ─────────────────────────────────── */
+.nx-pipeline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 1.25rem;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+.nx-pipe-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 8px;
+    padding: 14px 18px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    min-width: 130px;
+    opacity: 0.5;
+    transition: all 0.3s;
+}
+.nx-pipe-step.is-active {
+    opacity: 1;
+    background: rgba(16, 185, 129, 0.08);
+    border-color: rgba(16, 185, 129, 0.4);
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.15);
+}
+.nx-pipe-step.brain-step.is-active {
+    background: rgba(245, 158, 11, 0.08);
+    border-color: rgba(245, 158, 11, 0.4);
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.15);
+}
+.nx-pipe-step.relay-step.is-active {
+    background: rgba(14, 165, 233, 0.08);
+    border-color: rgba(14, 165, 233, 0.4);
+    box-shadow: 0 0 20px rgba(14, 165, 233, 0.15);
+}
+.nx-pipe-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    background: rgba(255, 255, 255, 0.05);
+    color: #94a3b8;
+}
+.nx-pipe-step.is-active .nx-pipe-icon {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+}
+.nx-pipe-step.brain-step.is-active .nx-pipe-icon {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+}
+.nx-pipe-step.relay-step.is-active .nx-pipe-icon {
+    background: rgba(14, 165, 233, 0.2);
+    color: #38bdf8;
+}
+.nx-pipe-info strong {
+    display: block;
+    font-size: 0.8rem;
+    color: #ffffff;
+    white-space: nowrap;
+}
+.nx-pipe-info small {
+    font-size: 0.68rem;
+    color: #94a3b8;
+    white-space: nowrap;
+}
+.nx-pipe-arrow {
+    color: #475569;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+/* ── Terminal Console ────────────────────────────────────── */
+.nx-terminal {
+    background: #090d16;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+.nx-terminal-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    background: rgba(255, 255, 255, 0.02);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.term-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+.term-dot.red    { background: #ef4444; }
+.term-dot.yellow { background: #f59e0b; }
+.term-dot.green  { background: #10b981; }
+.term-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #94a3b8;
+    letter-spacing: 0.02em;
+}
+.term-chip {
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.06);
+    color: #94a3b8;
+}
+.nx-terminal-screen {
+    padding: 14px 18px;
     max-height: 140px;
     overflow-y: auto;
-    font-family: 'Courier New', monospace;
-    font-size: .73rem;
+    font-family: 'Fira Code', 'Cascadia Code', Consolas, monospace;
+    font-size: 0.74rem;
+    line-height: 1.6;
 }
-.t-line   { padding: 2px 0; color: var(--text-muted); }
-.t-prompt { margin-right: 8px; color: var(--color-accent-highlight); }
-.t-success .t-prompt { color: #4ade80; }
-.t-warn   .t-prompt  { color: #fbbf24; }
-.t-error  .t-prompt  { color: #ef4444; }
-.t-success { color: rgba(74,222,128,.85); }
-.t-warn    { color: rgba(251,191,36,.85); }
-.t-error   { color: rgba(239,68,68,.85); }
+.t-line   { color: #94a3b8; padding: 2px 0; }
+.t-prompt { color: #10b981; font-weight: 700; margin-right: 8px; }
+.t-success { color: #4ade80; }
+.t-warn    { color: #fbbf24; }
+.t-error   { color: #f87171; }
 
-/* ── Live dot ──────────────────────────────────────── */
-.live-dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: var(--text-muted);
-    transition: background .3s;
+/* ── Hardware Spec & Guide ───────────────────────────────── */
+.nx-sensor-spec-box {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 14px;
 }
-.live-dot.dot-online {
-    background: var(--color-accent-highlight);
-    box-shadow: 0 0 0 0 rgba(27,196,146,.5);
-    animation: blink 1.4s ease infinite;
+.spec-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: rgba(16, 185, 129, 0.12);
+    color: #34d399;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
 }
-@keyframes blink {
-    0%,100% { box-shadow: 0 0 0 0 rgba(27,196,146,.5); }
-    70%     { box-shadow: 0 0 0 8px rgba(27,196,146,0); }
+.spec-content strong {
+    display: block;
+    font-size: 0.85rem;
+    color: #ffffff;
 }
-
-/* ── Alert IoT info box ────────────────────────────── */
-.alert-iot {
+.spec-content span {
+    font-size: 0.72rem;
+    color: #94a3b8;
+}
+.nx-guide-box {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 18px;
+    padding: 1.25rem;
+}
+.nx-guide-steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+}
+.nx-g-step {
     display: flex;
     align-items: flex-start;
-    gap: 10px;
-    padding: .85rem 1rem;
-    background: rgba(27,196,146,.08);
-    border: 1px solid rgba(27,196,146,.3);
-    border-radius: 12px;
+    gap: 12px;
+}
+.nx-g-step .step-num {
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: #10b981;
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 8px;
+    padding: 4px 8px;
+    flex-shrink: 0;
+}
+.nx-g-step p {
+    font-size: 0.78rem;
+    color: #94a3b8;
+    margin: 0;
+    line-height: 1.5;
 }
 
-/* ── Border Mint ───────────────────────────────────── */
-.border-mint  { border-color: var(--color-accent-highlight) !important; }
+/* ── Responsive Rules ────────────────────────────────────── */
+@media (max-width: 768px) {
+    .nx-title { font-size: 1.6rem; }
+    .nx-hero-card { padding: 1.5rem; }
+    .nx-pipeline { justify-content: flex-start; }
+}
 </style>
 @endsection
