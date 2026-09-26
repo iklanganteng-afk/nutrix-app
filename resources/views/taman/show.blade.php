@@ -1,67 +1,350 @@
 @extends('layouts.app')
 
 @section('content')
-<!-- DASHBOARD IoT SIMULATION PREVIEW (scoped ke taman ini) -->
+@php
+    $sensorTypeLabels = [
+        'moisture'    => 'Kelembapan',
+        'temperature' => 'Suhu',
+        'ph'          => 'pH',
+        'ec'          => 'EC',
+    ];
+    $sensorTypes  = $taman->sensor_types  ?? [];
+    $sensorModels = $taman->sensor_models ?? [];
+    $controller   = $taman->controller_type ? strtoupper($taman->controller_type) : 'Belum dipilih';
+    $controllerName = match($taman->controller_type ?? '') {
+        'esp32'   => 'ESP32',
+        'arduino' => 'Arduino Uno / Nano',
+        'esp8266' => 'ESP8266',
+        default   => 'Board belum dipilih',
+    };
+    $sensorId = $taman->sensor_id ?? null;
+    $isConnected = (bool) $taman->sensor_connected;
+    $selectedSoil = $taman->soil_type ?? '';
+    $selectedSensorTypes  = $taman->sensor_types  ?? [];
+    $selectedSensorModels = $taman->sensor_models ?? [];
+    $selectedController   = $taman->controller_type ?? 'esp32';
+    $selectedIndicatorMode = $taman->indicator_mode ?? 'active_only';
+@endphp
+
+{{-- ────────────────────────────────────────────────────────── --}}
+{{-- DASHBOARD NUTRIX IoT                                       --}}
+{{-- ────────────────────────────────────────────────────────── --}}
 <section class="dashboard-section standalone-dashboard container" id="dashboard">
+
+    {{-- ── Header ── --}}
     <div class="farm-detail-toolbar">
         <a href="{{ route('dashboard') }}#gardens" class="farm-back-link">
             <i class="bi bi-arrow-left"></i>
-            <span data-i18n="detail-back">Kembali ke Taman Saya</span>
+            <span>Kembali ke Taman Saya</span>
         </a>
-        <span class="farm-detail-context"><i class="bi bi-broadcast-pin"></i> <span data-i18n="{{ $taman->sensor_connected ? 'detail-connected' : 'detail-disconnected' }}">{{ $taman->sensor_connected ? 'SENSOR CONNECTED' : 'SENSOR NOT CONNECTED' }}</span></span>
+        <span class="farm-detail-context">
+            <i class="bi bi-broadcast-pin"></i>
+            <span id="topStatusText">{{ $isConnected ? 'SENSOR CONNECTED' : 'SENSOR OFFLINE' }}</span>
+        </span>
     </div>
+
     <div class="d-flex justify-content-between align-items-end mb-4 position-relative z-2 border-bottom border-secondary pb-3">
         <div>
             <span class="badge-web3 mb-2">{{ ucfirst($taman->type) }}</span>
-            <h2 class="section-title mb-0" style="font-family: 'Cinzel', serif;">{{ $taman->name }}</h2>
+            <h2 class="section-title mb-0" style="font-family:'Cinzel',serif;">{{ $taman->name }}</h2>
             @if($taman->location)
                 <small class="text-muted"><i class="bi bi-geo-alt"></i> {{ $taman->location }}</small>
             @endif
         </div>
         <div class="live-indicator">
-            <div class="live-dot"></div>
-            <span class="badge {{ $taman->sensor_connected ? 'bg-success' : 'bg-secondary' }} text-white" data-i18n="{{ $taman->sensor_connected ? 'detail-connected' : 'detail-disconnected' }}">{{ $taman->sensor_connected ? 'SENSOR CONNECTED' : 'SENSOR NOT CONNECTED' }}</span>
+            <div class="live-dot" id="liveDot"></div>
+            <span id="connectionBadge" class="badge {{ $isConnected ? 'bg-success' : 'bg-secondary' }} text-white">
+                {{ $isConnected ? 'ONLINE' : 'OFFLINE' }}
+            </span>
         </div>
     </div>
 
-    <div class="sensor-connection-banner {{ $taman->sensor_connected ? 'is-connected' : 'is-disconnected' }}">
-        <div><i class="bi bi-{{ $taman->sensor_connected ? 'check-circle' : 'plug' }}"></i><span data-i18n="{{ $taman->sensor_connected ? 'detail-sensor-ready' : 'detail-sensor-missing' }}">{{ $taman->sensor_connected ? 'Sensor siap mengirim telemetry.' : 'Belum ada sensor terhubung. Nilai ditampilkan 0.' }}</span></div>
-        <button type="button" class="btn btn-sm btn-outline-secondary" id="btnConnectSensor" data-i18n="detail-connect-sensor">Hubungkan sensor</button>
+    {{-- ── Connection Banner ── --}}
+    <div id="connectionBanner" class="sensor-connection-banner {{ $isConnected ? 'is-connected' : 'is-disconnected' }}">
+        <div>
+            <i class="bi bi-{{ $isConnected ? 'check-circle' : 'plug' }}"></i>
+            <span id="bannerText">{{ $isConnected ? 'ESP32 aktif mengirim telemetri via WiFi ke Railway Cloud.' : 'Belum ada sensor terhubung. Nyalakan ESP32 dan pastikan WiFi aktif.' }}</span>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="btnConnectSensor">
+            {{ $isConnected ? 'Ganti Sensor' : 'Hubungkan Sensor' }}
+        </button>
     </div>
 
-    @php
-        $sensorTypeLabels = [
-            'moisture' => 'Kelembapan',
-            'temperature' => 'Suhu',
-            'ph' => 'pH',
-            'ec' => 'EC',
-        ];
-        $sensorTypes = $taman->sensor_types ?? [];
-        $sensorModels = $taman->sensor_models ?? [];
-        $controller = $taman->controller_type ? strtoupper($taman->controller_type) : 'Belum dipilih';
-        $deviceConnection = $taman->device_connection ?? [];
-        $computerPort = $deviceConnection['computer_port'] ?? 'USB-A';
-        $devicePort = $deviceConnection['device_port'] ?? 'USB-C';
-        $connectionNote = $deviceConnection['note'] ?? 'Belum ada catatan koneksi';
-        $controllerName = match($taman->controller_type ?? '') {
-            'esp32' => 'ESP32',
-            'arduino' => 'Arduino Uno / Nano',
-            'esp8266' => 'ESP8266',
-            default => 'Board belum dipilih',
-        };
-        $connectionStatusText = $taman->sensor_connected
-            ? 'Board terdeteksi dan siap menerima telemetri dari sensor.'
-            : 'Belum ada perangkat terhubung. Sambungkan kabel dan lakukan pairing sensor.';
-        $sensorId = $taman->sensor_id ?? 'Belum dipasangkan';
-    @endphp
+    {{-- ═══════════════════════════════════════════════════════════
+         BAGIAN 1: FLOW VISUALIZER (alur IoT dari kiri ke kanan)
+         ═══════════════════════════════════════════════════════════ --}}
+    <div class="iot-flow-section mt-4 section-panel">
+        <div class="sensor-config-header">
+            <div>
+                <span class="badge-web3">Alur Telemetri</span>
+                <h3 class="mb-0 mt-2">Cara Kerja Sistem IoT NUTRIX</h3>
+                <small class="text-muted d-block mt-1">Data mengalir dari sensor fisik → ESP32 → Cloud → Dashboard setiap 5 detik</small>
+            </div>
+            <span id="flowStatusBadge" class="badge {{ $isConnected ? 'bg-success' : 'bg-secondary' }} text-white">
+                {{ $isConnected ? 'Stream Aktif' : 'Menunggu ESP32' }}
+            </span>
+        </div>
 
+        <div class="iot-flow-diagram">
+            {{-- Node 1: Sensor --}}
+            <div class="flow-node {{ !empty($sensorTypes) ? 'node-active' : '' }}" id="flowNodeSensor">
+                <div class="flow-node-icon"><i class="bi bi-moisture"></i></div>
+                <div class="flow-node-label">Sensor Tanah</div>
+                <div class="flow-node-sub">GPIO 34 (ADC)</div>
+            </div>
+            <div class="flow-arrow" id="arrow1"><i class="bi bi-arrow-right"></i></div>
+
+            {{-- Node 2: ESP32 --}}
+            <div class="flow-node {{ $isConnected ? 'node-active' : '' }}" id="flowNodeEsp">
+                <div class="flow-node-icon"><i class="bi bi-cpu"></i></div>
+                <div class="flow-node-label">{{ $controllerName }}</div>
+                <div class="flow-node-sub">WiFiManager</div>
+            </div>
+            <div class="flow-arrow" id="arrow2"><i class="bi bi-arrow-right"></i></div>
+
+            {{-- Node 3: WiFi/Cloud --}}
+            <div class="flow-node {{ $isConnected ? 'node-active' : '' }}" id="flowNodeCloud">
+                <div class="flow-node-icon"><i class="bi bi-cloud-arrow-up"></i></div>
+                <div class="flow-node-label">Railway Cloud</div>
+                <div class="flow-node-sub">HTTPS POST</div>
+            </div>
+            <div class="flow-arrow" id="arrow3"><i class="bi bi-arrow-right"></i></div>
+
+            {{-- Node 4: Decision Engine --}}
+            <div class="flow-node node-brain {{ $isConnected ? 'node-active' : '' }}" id="flowNodeBrain">
+                <div class="flow-node-icon"><i class="bi bi-lightning-charge-fill"></i></div>
+                <div class="flow-node-label">Decision Engine</div>
+                <div class="flow-node-sub">Health Score</div>
+            </div>
+            <div class="flow-arrow flow-arrow-down" id="arrow4"><i class="bi bi-arrow-down"></i></div>
+
+            {{-- Node 5: Relay (di bawah) --}}
+            <div class="flow-node flow-node-relay {{ $isConnected ? 'node-active' : '' }}" id="flowNodeRelay">
+                <div class="flow-node-icon"><i class="bi bi-toggles"></i></div>
+                <div class="flow-node-label">Relay Keran</div>
+                <div class="flow-node-sub" id="relayFlowStatus">GPIO 26 · STANDBY</div>
+            </div>
+        </div>
+
+        {{-- Live Cloud Log --}}
+        <div class="cloud-log-terminal mt-3" id="cloudLogTerminal">
+            <div class="terminal-header">
+                <span><i class="bi bi-terminal-fill text-mint me-1"></i> Cloud Telemetry Log</span>
+                <span class="badge {{ $isConnected ? 'bg-success' : 'bg-secondary' }} text-white" id="terminalStatusBadge">
+                    {{ $isConnected ? 'Live' : 'Waiting' }}
+                </span>
+            </div>
+            <div class="terminal-body" id="terminalLines">
+                <div class="t-line"><span class="t-prompt">›</span> endpoint /api/iot/telemetry siap menerima data</div>
+                <div class="t-line"><span class="t-prompt">›</span> node {{ $controllerName }} dikonfigurasi ke hotspot WiFi</div>
+                @if($isConnected)
+                <div class="t-line t-success"><span class="t-prompt">✓</span> sensor {{ $sensorId }} terhubung — telemetri aktif</div>
+                @else
+                <div class="t-line t-warn"><span class="t-prompt">!</span> menunggu paket pertama dari ESP32...</div>
+                @endif
+            </div>
+        </div>
+    </div>
+
+    {{-- ═══════════════════════════════════════════════════════════
+         BAGIAN 2: 4 KARTU SENSOR METRIC
+         ═══════════════════════════════════════════════════════════ --}}
+    <div class="row g-4 mt-1 position-relative z-2">
+        {{-- pH --}}
+        <div class="col-12 col-md-6 col-lg-3" data-metric-column="ph">
+            <div class="metric-card interactive-metric" data-metric="ph">
+                <div class="metric-header d-flex justify-content-between">
+                    <span><i class="bi bi-droplet-half"></i> pH Level</span>
+                    <span class="trend-icon text-muted" id="trend-ph"><i class="bi bi-activity"></i></span>
+                </div>
+                <div class="metric-value"><span id="val-ph">--</span> <small>pH</small></div>
+                <div class="metric-status small mt-1" id="status-ph">—</div>
+                <div class="metric-sparkline" id="spark-ph">
+                    <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                    <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                </div>
+            </div>
+        </div>
+        {{-- Moisture --}}
+        <div class="col-12 col-md-6 col-lg-3" data-metric-column="moisture">
+            <div class="metric-card interactive-metric" data-metric="moisture">
+                <div class="metric-header d-flex justify-content-between">
+                    <span><i class="bi bi-moisture"></i> Kelembapan</span>
+                    <span class="trend-icon text-muted" id="trend-moisture"><i class="bi bi-activity"></i></span>
+                </div>
+                <div class="metric-value"><span id="val-hum">--</span> <small>%</small></div>
+                <div class="metric-status small mt-1" id="status-moisture">—</div>
+                <div class="metric-sparkline" id="spark-hum">
+                    <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                    <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                </div>
+            </div>
+        </div>
+        {{-- Temperature --}}
+        <div class="col-12 col-md-6 col-lg-3" data-metric-column="temperature">
+            <div class="metric-card interactive-metric" data-metric="temp">
+                <div class="metric-header d-flex justify-content-between">
+                    <span><i class="bi bi-thermometer-half"></i> Suhu</span>
+                    <span class="trend-icon text-muted" id="trend-temp"><i class="bi bi-activity"></i></span>
+                </div>
+                <div class="metric-value"><span id="val-temp">--</span> <small>°C</small></div>
+                <div class="metric-status small mt-1" id="status-temp">—</div>
+                <div class="metric-sparkline" id="spark-temp">
+                    <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                    <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                </div>
+            </div>
+        </div>
+        {{-- EC --}}
+        <div class="col-12 col-md-6 col-lg-3" data-metric-column="ec">
+            <div class="metric-card interactive-metric" data-metric="ec">
+                <div class="metric-header d-flex justify-content-between">
+                    <span class="text-mint"><i class="bi bi-lightning-charge-fill"></i> Konduktivitas</span>
+                    <span class="trend-icon text-mint" id="trend-ec"><i class="bi bi-graph-up"></i></span>
+                </div>
+                <div class="metric-value text-mint"><span id="val-ec">--</span> <small class="text-mint">mS/cm</small></div>
+                <div class="metric-status small mt-1" id="status-ec">—</div>
+                <div class="metric-sparkline" id="spark-ec">
+                    <div class="bar highlight"></div><div class="bar highlight"></div><div class="bar highlight"></div>
+                    <div class="bar highlight"></div><div class="bar highlight"></div><div class="bar highlight"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- ═══════════════════════════════════════════════════════════
+         BAGIAN 3: HEALTH SCORE & QUICK ACTIONS
+         ═══════════════════════════════════════════════════════════ --}}
+    <div class="row mt-5 mb-4 position-relative z-2 justify-content-center">
+        <div class="col-12 col-md-8 col-lg-6 text-center">
+            <div class="portfolio-dashboard">
+                <div class="d-flex align-items-center justify-content-center gap-2 mb-2">
+                    <span class="text-secondary fw-bold" style="letter-spacing:1px;font-size:.85rem;">OVERALL FARM HEALTH</span>
+                </div>
+                <div class="display-1 fw-bold text-white mb-0 mt-3 d-flex align-items-center justify-content-center gap-2" style="font-family:'Outfit',sans-serif;">
+                    <span id="aiHealthScore">--</span> <span class="fs-4 text-mint">HTH</span>
+                </div>
+                <div class="text-muted mt-2 d-flex align-items-center justify-content-center gap-2">
+                    <span id="aiHealthStatus">Status: {{ $isConnected ? 'MEMUAT...' : 'NOT CONNECTED' }}</span>
+                </div>
+                <div class="d-flex justify-content-center gap-2 mt-2">
+                    <span class="badge bg-dark border border-secondary small" id="lastUpdatedBadge">
+                        <i class="bi bi-clock me-1"></i> <span id="lastUpdatedTime">—</span>
+                    </span>
+                    <span class="badge bg-dark border border-secondary small" id="sourceBadge">
+                        <i class="bi bi-broadcast me-1"></i> <span id="sourceText">—</span>
+                    </span>
+                </div>
+
+                {{-- Quick Actions --}}
+                <div class="d-flex justify-content-center gap-4 mt-4 pt-3">
+                    <div class="quick-action-btn" id="btnSyncData" data-requires-sensor data-bs-toggle="tooltip" title="Sync Telemetry">
+                        <div class="action-icon-circle"><i class="bi bi-arrow-down-up"></i></div>
+                        <span>Sync</span>
+                    </div>
+                    <div class="quick-action-btn" id="btnWaterAction" data-requires-sensor data-bs-toggle="tooltip" title="Siram Sekarang">
+                        <div class="action-icon-circle text-mint border-mint"><i class="bi bi-droplet-fill"></i></div>
+                        <span class="text-mint">Siram</span>
+                    </div>
+                    <div class="quick-action-btn" id="btnFertilizeAction" data-requires-sensor data-bs-toggle="tooltip" title="Pupuk">
+                        <div class="action-icon-circle"><i class="bi bi-flower2"></i></div>
+                        <span>Pupuk</span>
+                    </div>
+                    <div class="quick-action-btn" id="btnActivityLog" data-bs-toggle="tooltip" title="Riwayat Aktivitas">
+                        <div class="action-icon-circle"><i class="bi bi-clock-history"></i></div>
+                        <span>Riwayat</span>
+                    </div>
+                    <div class="quick-action-btn" id="btnExportData" data-requires-sensor data-bs-toggle="tooltip" title="Export CSV">
+                        <div class="action-icon-circle"><i class="bi bi-download"></i></div>
+                        <span>Export</span>
+                    </div>
+                </div>
+
+                {{-- AI Recommendation --}}
+                <div class="mt-4 pt-3 border-top border-secondary text-start">
+                    <p class="text-secondary mb-0" id="aiRecommendation" style="font-size:.85rem;line-height:1.5;">
+                        <i class="bi bi-lightbulb text-mint me-1"></i>
+                        <strong>Insight:</strong> Menunggu data sensor pertama...
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- ═══════════════════════════════════════════════════════════
+         BAGIAN 4: STATUS PERANGKAT & KONTROL RELAY
+         ═══════════════════════════════════════════════════════════ --}}
+    <div class="section-panel mt-4">
+        <div class="sensor-config-header">
+            <div>
+                <span class="badge-web3">Status Perangkat</span>
+                <h3 class="mb-0 mt-2">Kontrol & Status IoT Node</h3>
+            </div>
+        </div>
+
+        <div class="device-status-grid">
+            <div class="device-status-card">
+                <span class="device-status-label">Sensor ID</span>
+                <strong class="text-mint" id="displaySensorId">{{ $sensorId ?? 'Belum dipasangkan' }}</strong>
+            </div>
+            <div class="device-status-card">
+                <span class="device-status-label">Status Cloud</span>
+                <strong id="displayCloudStatus" class="{{ $isConnected ? 'text-mint' : 'text-muted' }}">
+                    {{ $isConnected ? 'Online' : 'Offline' }}
+                </strong>
+            </div>
+            <div class="device-status-card">
+                <span class="device-status-label">Board Controller</span>
+                <strong>{{ $controllerName }}</strong>
+            </div>
+            <div class="device-status-card">
+                <span class="device-status-label">Relay Keran (GPIO 26)</span>
+                <strong id="relayStatusDisplay" class="text-white">STANDBY</strong>
+            </div>
+            <div class="device-status-card">
+                <span class="device-status-label">Interval Pengiriman</span>
+                <strong>5 detik</strong>
+            </div>
+        </div>
+
+        {{-- Relay Control Panel --}}
+        <div class="mt-3 p-3 rounded border border-secondary" style="background:rgba(11,20,17,.72);">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-toggles text-mint"></i>
+                    <strong class="text-white">Kontrol Relay Manual</strong>
+                </div>
+                <span id="relayPill" class="badge bg-secondary text-white">STANDBY</span>
+            </div>
+            <p class="small text-muted mb-3">
+                Perintah ini dikirim via API ke server Railway. Server kemudian meneruskan respons ke ESP32 pada pengiriman telemetri berikutnya (maks. 5 detik).
+            </p>
+            <div class="d-flex gap-2 flex-wrap">
+                <button type="button" class="btn btn-sm btn-connect-node" id="btnTriggerWaterManual" {{ !$isConnected ? 'disabled' : '' }}>
+                    <i class="bi bi-droplet-fill"></i> Buka Keran (10 detik)
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnRefreshTelemetry">
+                    <i class="bi bi-arrow-repeat"></i> Refresh Telemetri
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger" id="btnResetSensor">
+                    <i class="bi bi-plug"></i> Putus Sensor
+                </button>
+            </div>
+        </div>
+    </div>
+
+    {{-- ═══════════════════════════════════════════════════════════
+         BAGIAN 5: KONFIGURASI SENSOR (collapsed panel)
+         ═══════════════════════════════════════════════════════════ --}}
     <div class="sensor-config-summary mt-4 section-panel">
         <div class="sensor-config-header">
             <div>
-                <span class="badge-web3" data-i18n="detail-config">Konfigurasi sensor</span>
-                <h3 class="mb-0 mt-2" data-i18n="detail-device-list">Daftar perangkat yang terhubung</h3>
+                <span class="badge-web3">Konfigurasi</span>
+                <h3 class="mb-0 mt-2">Daftar Sensor & Board</h3>
             </div>
-            <button type="button" class="btn btn-sm btn-outline-secondary section-action-btn" id="btnEditSensorConfig" data-i18n="detail-edit-config">Edit konfigurasi</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary section-action-btn" id="btnEditSensorConfig">
+                Edit konfigurasi
+            </button>
         </div>
 
         @if(!empty($sensorTypes))
@@ -69,7 +352,9 @@
                 @foreach($sensorTypes as $sensorType)
                     @php $typeKey = (string) $sensorType; @endphp
                     <div class="sensor-config-item">
-                        <div class="sensor-config-icon"><i class="bi bi-{{ $sensorType === 'moisture' ? 'moisture' : ($sensorType === 'temperature' ? 'thermometer-half' : ($sensorType === 'ph' ? 'droplet-half' : 'lightning-charge-fill')) }}"></i></div>
+                        <div class="sensor-config-icon">
+                            <i class="bi bi-{{ $sensorType === 'moisture' ? 'moisture' : ($sensorType === 'temperature' ? 'thermometer-half' : ($sensorType === 'ph' ? 'droplet-half' : 'lightning-charge-fill')) }}"></i>
+                        </div>
                         <div class="sensor-config-copy">
                             <strong>{{ $sensorTypeLabels[$typeKey] ?? ucfirst($typeKey) }}</strong>
                             <small>{{ $sensorModels[$typeKey] ?? 'Model tidak dipilih' }}</small>
@@ -78,473 +363,89 @@
                 @endforeach
             </div>
         @else
-            <div class="sensor-config-empty" data-i18n="detail-no-sensors">Belum ada sensor yang dipilih untuk taman ini.</div>
+            <div class="sensor-config-empty">Belum ada sensor yang dipilih untuk taman ini.</div>
         @endif
 
         <div class="sensor-connection-panel">
             <div class="sensor-connection-row">
-                <span data-i18n="detail-board-controller">Board Controller</span>
+                <span>Board Controller</span>
                 <strong>{{ $controller }}</strong>
             </div>
             <div class="sensor-connection-row">
-                <span data-i18n="detail-laptop-port">Port laptop / Gateway</span>
-                <strong>{{ $computerPort }}</strong>
+                <span>Mode Jaringan</span>
+                <strong>WiFi 2.4 GHz (via WiFiManager)</strong>
             </div>
             <div class="sensor-connection-row">
-                <span data-i18n="detail-device-port">Port alat / Catu Daya</span>
-                <strong>{{ $devicePort }}</strong>
+                <span>Endpoint Telemetri</span>
+                <strong>/api/iot/telemetry (HTTPS POST)</strong>
             </div>
             <div class="sensor-connection-row">
-                <span data-i18n="detail-network-mode">Mode Jaringan</span>
-                <strong>WiFi 2.4 GHz (Hotspot GG)</strong>
+                <span>Cloud Server</span>
+                <strong>Railway (nutrix-app-production.up.railway.app)</strong>
             </div>
             <div class="sensor-connection-row">
-                <span data-i18n="detail-ingest-endpoint">Endpoint Telemetri</span>
-                <strong>/api/iot/telemetry</strong>
+                <span>Database</span>
+                <strong>Aiven Cloud MySQL</strong>
             </div>
             <div class="sensor-connection-row">
-                <span data-i18n="detail-note">Catatan Sinkronisasi</span>
-                <strong>{{ $taman->sensor_connected ? 'Telemetri nirkabel aktif setiap 5 detik' : 'Nyalakan ESP32 untuk transmisi cloud' }}</strong>
+                <span>Keputusan Otomatis</span>
+                <strong>Kelembapan &lt; 30% → Relay ON (10 detik)</strong>
             </div>
+        </div>
+
+        {{-- Setup Guide --}}
+        <div class="guide-step-list mt-3">
+            <div class="guide-step-item"><span>1</span> Nyalakan daya ESP32 (adaptor 5V atau powerbank).</div>
+            <div class="guide-step-item"><span>2</span> Jika WiFi belum tersimpan → ESP32 jadi hotspot <strong>NUTRIX-ESP32-SETUP</strong>. Buka browser HP, isi WiFi + ID Taman.</div>
+            <div class="guide-step-item"><span>3</span> ESP32 otomatis kirim data kelembapan tiap 5 detik ke Railway via HTTP POST.</div>
+            <div class="guide-step-item"><span>4</span> Server menganalisa data, kirim balasan perintah relay (<code>water_valve: ON/OFF</code>) ke ESP32.</div>
+            <div class="guide-step-item"><span>5</span> Dashboard ini otomatis update tiap 5 detik — tidak perlu refresh manual.</div>
         </div>
     </div>
 
-    <div class="hardware-wiring-guide mt-4 section-panel">
-        <div class="sensor-config-header">
-            <div>
-                <span class="badge-web3" data-i18n="detail-wireless-node">Wireless IoT Architecture</span>
-                <h3 class="mb-0 mt-2" data-i18n="detail-wireless-status">Status Koneksi Node & Topologi Nirkabel</h3>
-                <small class="text-muted d-block mt-1">Panduan kabel & transmisi nirkabel node IoT</small>
-            </div>
-        </div>
-
-        <div class="hardware-guide-grid">
-            <div class="hardware-guide-card">
-                <div class="guide-card-header">
-                    <span class="guide-chip"><i class="bi bi-wifi me-1"></i> Jaringan</span>
-                    <strong>WiFi 2.4 GHz</strong>
-                </div>
-                <p>ESP32 terhubung via hotspot <strong>GG</strong> atau konfigurasi mandiri melalui Captive Portal <strong>NUTRIX-ESP32-SETUP</strong>.</p>
-            </div>
-
-            <div class="hardware-guide-card">
-                <div class="guide-card-header">
-                    <span class="guide-chip"><i class="bi bi-cpu me-1"></i> Controller</span>
-                    <strong>{{ $controllerName }}</strong>
-                </div>
-                <p>Membaca sensor kelembapan pada <strong>GPIO 34</strong> dan mengendalikan relay keran air pada <strong>GPIO 26</strong>.</p>
-            </div>
-
-            <div class="hardware-guide-card guide-status-card">
-                <div class="guide-card-header">
-                    <span class="guide-chip status-chip">Cloud Sync</span>
-                    <strong class="text-white">{{ $taman->sensor_connected ? 'ONLINE / SYNCD' : 'MENUNGGU TELEMETRI' }}</strong>
-                </div>
-                <p>{{ $taman->sensor_connected ? 'Data telemetri realtime diterima secara nirkabel dari ESP32.' : 'Alat belum mengirimkan paket data. Nyalakan daya ESP32.' }}</p>
-            </div>
-        </div>
-
-        <div class="guide-step-list">
-            <div class="guide-step-item"><span>1</span> Nyalakan daya ESP32 (colok adaptor charger HP atau powerbank).</div>
-            <div class="guide-step-item"><span>2</span> Pastikan hotspot HP <strong>GG</strong> aktif atau koneksikan WiFi melalui portal <strong>NUTRIX-ESP32-SETUP</strong>.</div>
-            <div class="guide-step-item"><span>3</span> Data telemetri tanah akan langsung terkirim otomatis setiap 5 detik ke cloud Railway.</div>
-        </div>
-    </div>
-
-    <div class="device-status-panel mt-4 section-panel">
-        <div class="sensor-config-header">
-            <div>
-                <span class="badge-web3" data-i18n="detail-device-status">Status perangkat</span>
-                <h3 class="mb-0 mt-2" data-i18n="detail-device-status">Status Perangkat Nirkabel</h3>
-            </div>
-        </div>
-
-        <div class="device-status-grid">
-            <div class="device-status-card">
-                <span class="device-status-label">Sensor ID</span>
-                <strong class="text-mint">{{ $sensorId }}</strong>
-            </div>
-            <div class="device-status-card">
-                <span class="device-status-label">Status Cloud</span>
-                <strong class="{{ $taman->sensor_connected ? 'text-mint' : 'text-muted' }}">{{ $taman->sensor_connected ? 'Cloud Online' : 'Offline' }}</strong>
-            </div>
-            <div class="device-status-card">
-                <span class="device-status-label">Board Controller</span>
-                <strong>{{ $controllerName }}</strong>
-            </div>
-            <div class="device-status-card">
-                <span class="device-status-label">Aktuator Keran (Relay)</span>
-                <strong id="relayStatusDisplay" class="text-white">SIAP (STANDBY)</strong>
-            </div>
-            <div class="device-status-card">
-                <span class="device-status-label">Metode Koneksi</span>
-                <strong>WiFi / Cloud API</strong>
-            </div>
-        </div>
-
-        <div class="mt-3 p-3 rounded border border-secondary" style="background: rgba(11, 20, 17, 0.72);">
-            <div class="d-flex align-items-center justify-content-between mb-2">
-                <div class="d-flex align-items-center gap-2">
-                    <i class="bi bi-broadcast text-mint"></i>
-                    <strong class="text-white" data-i18n="detail-wireless-detection">Wireless Telemetry Stream</strong>
-                </div>
-                <span id="usbBoardPill" class="badge {{ $taman->sensor_connected ? 'bg-success' : 'bg-secondary' }} text-white">
-                    {{ $taman->sensor_connected ? 'Sync Live' : 'Awaiting Telemetry' }}
-                </span>
-            </div>
-            <div class="small text-muted mb-3" id="usbDetectionText">
-                {{ $taman->sensor_connected ? 'ESP32 aktif mengirim data ke endpoint /api/iot/telemetry.' : 'Nyalakan ESP32 untuk mulai mengirimkan telemetri ke server Railway.' }}
-            </div>
-            <div class="d-flex gap-2 flex-wrap">
-                <button type="button" class="btn btn-sm btn-connect-node" id="btnSyncDataDirect">
-                    <i class="bi bi-arrow-repeat"></i> <span>Refresh Telemetri</span>
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnTriggerWaterManual">
-                    <i class="bi bi-droplet-fill text-mint"></i> <span>Uji Keran / Pompa</span>
-                </button>
-            </div>
-        </div>
-
-        <div class="mt-3 p-3 rounded border border-secondary" style="background: rgba(7, 14, 11, 0.8);">
-            <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
-                <div class="d-flex align-items-center gap-2">
-                    <i class="bi bi-terminal text-mint"></i>
-                    <strong class="text-white" data-i18n="detail-serial-monitor">Wireless telemetry & serial monitor</strong>
-                </div>
-                <span class="small text-muted">{{ $controllerName }} / Cloud Ingest</span>
-            </div>
-            <div class="d-flex gap-2 mb-3 flex-wrap">
-                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnAutoDetectUsbPort">
-                    <i class="bi bi-wifi"></i> <span data-i18n="detail-detect-port">Periksa Node Wireless</span>
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnSimulateUsbRefresh">
-                    <i class="bi bi-arrow-clockwise"></i> <span data-i18n="detail-refresh-log">Refresh log telemetry</span>
-                </button>
-            </div>
-            <div class="d-grid gap-2" id="usbConsoleList" style="font-size: .78rem; color: var(--text-muted);">
-                <div class="py-1"><span class="text-mint">&gt;</span> endpoint /api/iot/telemetry siap menerima data</div>
-                <div class="py-1"><span class="text-mint">&gt;</span> node {{ $controllerName }} terkonfigurasi ke SSID Hotspot [GG]</div>
-            </div>
-        </div>
-
-        <div class="mt-3 p-3 rounded border border-secondary" style="background: rgba(9, 16, 15, 0.72);">
-            <div class="d-flex align-items-center gap-2 mb-2">
-                <i class="bi bi-check2-circle text-mint"></i>
-                <strong class="text-white" data-i18n="detail-checklist">IoT setup checklist</strong>
-            </div>
-            <div class="small text-muted d-grid gap-2">
-                <div class="d-flex align-items-center gap-2"><i class="bi bi-check-circle-fill text-mint"></i> Catu daya ESP32 aktif (adaptor 5V / powerbank terpasang).</div>
-                <div class="d-flex align-items-center gap-2"><i class="bi bi-check-circle-fill text-mint"></i> Hotspot "GG" aktif atau WiFi terhubung.</div>
-                <div class="d-flex align-items-center gap-2"><i class="bi bi-check-circle-fill text-mint"></i> Node mengirim paket JSON telemetry ke /api/iot/telemetry.</div>
-                <div class="d-flex align-items-center gap-2"><i class="bi bi-check-circle-fill text-mint"></i> Data sensor terbarui otomatis pada kartu indikator & grafik.</div>
-            </div>
-        </div>
-
-        <div class="mt-3 p-3 rounded border border-secondary" style="background: rgba(12, 21, 19, 0.85);">
-            <div class="d-flex align-items-center justify-content-between mb-3">
-                <div class="d-flex align-items-center gap-2">
-                    <i class="bi bi-diagram-3 text-mint"></i>
-                    <strong class="text-white" data-i18n="detail-pairing">Pairing flow</strong>
-                </div>
-                <span class="badge bg-success text-white" id="pairingFlowStatus" data-i18n="pair-ready">Ready</span>
-            </div>
-            <div class="row g-2">
-                <div class="col-12 col-md-4">
-                    <div class="rounded border border-secondary p-3 h-100 bg-dark" data-pair-step="board">
-                        <div class="small text-muted mb-1"><span data-i18n="pair-step">Step</span> 1</div>
-                        <div class="fw-semibold text-white" data-i18n="pair-board-detected">Board detected</div>
-                    </div>
-                </div>
-                <div class="col-12 col-md-4">
-                    <div class="rounded border border-secondary p-3 h-100 bg-dark" data-pair-step="port">
-                        <div class="small text-muted mb-1"><span data-i18n="pair-step">Step</span> 2</div>
-                        <div class="fw-semibold text-white" data-i18n="pair-port-verified">Port verified</div>
-                    </div>
-                </div>
-                <div class="col-12 col-md-4">
-                    <div class="rounded border border-secondary p-3 h-100 bg-dark" data-pair-step="sensor">
-                        <div class="small text-muted mb-1"><span data-i18n="pair-step">Step</span> 3</div>
-                        <div class="fw-semibold text-white" data-i18n="pair-sensor-validated">Sensor ID validated</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="mt-3 p-3 rounded border border-secondary" style="background: rgba(8, 18, 15, 0.82);">
-            <div class="d-flex align-items-center justify-content-between mb-3">
-                <div class="d-flex align-items-center gap-2">
-                    <i class="bi bi-activity text-mint"></i>
-                    <strong class="text-white" data-i18n="detail-live-stream">Live telemetry stream</strong>
-                </div>
-                <span class="badge bg-success text-white" id="liveTelemetryStatus" data-i18n="detail-stream-active">Stream active</span>
-            </div>
-            <div class="small text-muted">
-                <span data-i18n="detail-stream-description">Telemetri dari node {{ $controllerName }} diteruskan secara nirkabel via HTTP POST ke endpoint cloud secara real-time.</span>
-            </div>
-            <div class="row g-2 mt-2 small">
-                <div class="col-12 col-md-6 text-muted"><span data-i18n="detail-source">Sumber data</span>: <strong class="text-white" id="telemetryDataSource">Wireless HTTP Ingest</strong></div>
-                <div class="col-12 col-md-6 text-muted"><span data-i18n="detail-last-update">Pembaruan terakhir</span>: <strong class="text-white" id="telemetryLastUpdated">Menunggu data</strong></div>
-            </div>
-        </div>
-
-        <div class="mt-3 p-3 rounded border border-secondary" style="background: rgba(8, 18, 15, 0.82);">
-            <div class="d-flex align-items-center justify-content-between mb-3">
-                <div class="d-flex align-items-center gap-2">
-                    <i class="bi bi-receipt text-mint"></i>
-                    <strong class="text-white" data-i18n="detail-event-stream">USB event stream</strong>
-                </div>
-                <span class="badge bg-success text-white" id="usbEventStreamStatus" data-i18n="detail-event-connected">Connected</span>
-            </div>
-            <div class="d-grid gap-2" id="usbEventStreamList" style="font-size: .78rem; color: var(--text-muted);">
-                <div class="py-1"><span class="text-mint">&gt;</span> board detected on {{ $computerPort }}</div>
-                <div class="py-1"><span class="text-mint">&gt;</span> serial channel open</div>
-                <div class="py-1"><span class="text-mint">&gt;</span> sensor stream ready</div>
-            </div>
-        </div>
-
-        <div class="mt-3 p-3 rounded border border-secondary" style="background: rgba(10, 19, 17, 0.8);">
-            <div class="d-flex align-items-center justify-content-between mb-3">
-                <div class="d-flex align-items-center gap-2">
-                    <i class="bi bi-heart-pulse text-mint"></i>
-                    <strong class="text-white" data-i18n="detail-board-health">Board health</strong>
-                </div>
-                <span class="badge bg-success text-white" id="boardHealthPill" data-i18n="detail-board-stable">Stable</span>
-            </div>
-            <div class="row g-3">
-                <div class="col-12 col-md-4">
-                    <div class="bg-dark rounded p-3 border border-secondary h-100">
-                        <div class="text-muted small mb-1" data-i18n="detail-signal-quality">Signal quality</div>
-                        <div class="fw-bold text-white" id="boardSignalValue">96%</div>
-                    </div>
-                </div>
-                <div class="col-12 col-md-4">
-                    <div class="bg-dark rounded p-3 border border-secondary h-100">
-                        <div class="text-muted small mb-1" data-i18n="detail-port-integrity">Port integrity</div>
-                        <div class="fw-bold text-white" id="boardPortValue">Nominal</div>
-                    </div>
-                </div>
-                <div class="col-12 col-md-4">
-                    <div class="bg-dark rounded p-3 border border-secondary h-100">
-                        <div class="text-muted small mb-1" data-i18n="detail-retry-count">Retry count</div>
-                        <div class="fw-bold text-white" id="boardRetryValue">1</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="mt-3 p-3 rounded border border-secondary" style="background: rgba(10, 19, 17, 0.8);">
-            <div class="d-flex align-items-center justify-content-between mb-3">
-                <div class="d-flex align-items-center gap-2">
-                    <i class="bi bi-arrow-repeat text-mint"></i>
-                    <strong class="text-white" data-i18n="detail-auto-reconnect">Auto reconnect</strong>
-                </div>
-                <span class="badge bg-success text-white" id="reconnectPolicyStatus">Ready</span>
-            </div>
-            <div class="row g-3">
-                <div class="col-12 col-md-6">
-                    <div class="bg-dark rounded p-3 border border-secondary h-100">
-                        <div class="text-muted small mb-1" data-i18n="detail-signal-alert">Signal alert</div>
-                        <div class="fw-bold text-white" id="signalAlertStatus">Stable</div>
-                    </div>
-                </div>
-                <div class="col-12 col-md-6">
-                    <div class="bg-dark rounded p-3 border border-secondary h-100">
-                        <div class="text-muted small mb-1" data-i18n="detail-reconnect-policy">Reconnect policy</div>
-                        <div class="fw-bold text-white" id="reconnectPolicyText">Queued</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="mt-3 p-3 rounded border border-secondary" style="background: rgba(10, 19, 17, 0.8);">
-            <div class="d-flex align-items-center gap-2 mb-3">
-                <i class="bi bi-speedometer2 text-mint"></i>
-                    <strong class="text-white" data-i18n="detail-hardware-metrics">Board hardware metrics</strong>
-            </div>
-            <div class="row g-3">
-                <div class="col-12 col-md-4">
-                    <div class="bg-dark rounded p-3 border border-secondary h-100">
-                        <div class="text-muted small mb-1" data-i18n="detail-voltage">Voltage</div>
-                        <div class="fw-bold text-white" id="usbVoltageValue">3.3V</div>
-                    </div>
-                </div>
-                <div class="col-12 col-md-4">
-                    <div class="bg-dark rounded p-3 border border-secondary h-100">
-                        <div class="text-muted small mb-1" data-i18n="detail-baud-rate">Baud rate</div>
-                        <div class="fw-bold text-white" id="usbBaudValue">115200</div>
-                    </div>
-                </div>
-                <div class="col-12 col-md-4">
-                    <div class="bg-dark rounded p-3 border border-secondary h-100">
-                        <div class="text-muted small mb-1" data-i18n="detail-signal">Signal</div>
-                        <div class="fw-bold text-white" id="usbSignalValue">96%</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="device-status-actions">
-            <button type="button" class="btn btn-connect-node btn-reconnect-device">
-                <i class="bi bi-arrow-repeat"></i> <span data-i18n="detail-reconnect">Reconnect</span>
-            </button>
-            <button type="button" class="btn btn-outline-secondary btn-reset-device">
-                <i class="bi bi-plug"></i> <span data-i18n="detail-reset">Reset koneksi</span>
-            </button>
-        </div>
-    </div>
-
-    <!-- ==========================================
-         4 KARTU SENSOR DENGAN SPARKLINE
-         ========================================== -->
-    <div class="row g-4 position-relative z-2">
-        <!-- pH Card -->
-        <div class="col-12 col-md-6 col-lg-3" data-metric-column="ph">
-            <div class="metric-card interactive-metric" data-metric="ph">
-                <div class="metric-header d-flex justify-content-between">
-                    <span><i class="bi bi-droplet-half"></i> <span data-i18n="sensor-ph">pH Level</span></span>
-                    <span class="trend-icon text-muted"><i class="bi bi-activity"></i></span>
-                </div>
-                <div class="metric-value"><span id="val-ph">--</span> <small>pH</small></div>
-                <div class="metric-sparkline" id="spark-ph">
-                    <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
-                </div>
-            </div>
-        </div>
-        <!-- Moisture Card -->
-        <div class="col-12 col-md-6 col-lg-3" data-metric-column="moisture">
-            <div class="metric-card interactive-metric" data-metric="moisture">
-                <div class="metric-header d-flex justify-content-between">
-                    <span><i class="bi bi-moisture"></i> <span data-i18n="sensor-moisture">Moisture</span></span>
-                    <span class="trend-icon text-muted"><i class="bi bi-activity"></i></span>
-                </div>
-                <div class="metric-value"><span id="val-hum">--</span> <small>%</small></div>
-                <div class="metric-sparkline" id="spark-hum">
-                    <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
-                </div>
-            </div>
-        </div>
-        <!-- Temp Card -->
-        <div class="col-12 col-md-6 col-lg-3" data-metric-column="temperature">
-            <div class="metric-card interactive-metric" data-metric="temp">
-                <div class="metric-header d-flex justify-content-between">
-                    <span><i class="bi bi-thermometer-half"></i> <span data-i18n="sensor-temperature">Temperature</span></span>
-                    <span class="trend-icon text-muted"><i class="bi bi-activity"></i></span>
-                </div>
-                <div class="metric-value"><span id="val-temp">--</span> <small>Â°C</small></div>
-                <div class="metric-sparkline" id="spark-temp">
-                    <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
-                </div>
-            </div>
-        </div>
-        <!-- EC Card -->
-        <div class="col-12 col-md-6 col-lg-3" data-metric-column="ec">
-            <div class="metric-card interactive-metric" data-metric="ec">
-                <div class="metric-header d-flex justify-content-between">
-                    <span class="text-mint"><i class="bi bi-lightning-charge-fill"></i> <span data-i18n="sensor-conductivity">Conductivity</span></span>
-                    <span class="trend-icon text-mint"><i class="bi bi-graph-up"></i></span>
-                </div>
-                <div class="metric-value text-mint"><span id="val-ec">--</span> <small class="text-mint">mS/cm</small></div>
-                <div class="metric-sparkline" id="spark-ec">
-                    <div class="bar highlight"></div><div class="bar highlight"></div><div class="bar highlight"></div><div class="bar highlight"></div><div class="bar highlight"></div><div class="bar highlight"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ==========================================
-         PORTFOLIO / HEALTH SCORE DASHBOARD
-         ========================================== -->
-    <div class="row mt-5 mb-4 position-relative z-2 justify-content-center">
-        <div class="col-12 col-md-8 col-lg-6 text-center">
-            <div class="portfolio-dashboard">
-                <div class="d-flex align-items-center justify-content-center gap-2 mb-2">
-                    <span class="text-secondary fw-bold" style="letter-spacing: 1px; font-size: 0.85rem;" data-i18n="detail-health">OVERALL FARM HEALTH</span>
-                </div>
-
-                <div class="display-1 fw-bold text-white mb-0 mt-3 d-flex align-items-center justify-content-center gap-2" style="font-family: 'Outfit', sans-serif;">
-                    <span id="aiHealthScore">0</span> <span class="fs-4 text-mint">HTH</span>
-                </div>
-
-                <div class="text-muted mt-2 d-flex align-items-center justify-content-center gap-2">
-                    <span id="aiHealthStatus">Status: NOT CONNECTED</span>
-                </div>
-
-                <!-- Quick Actions (MetaMask style) - sudah fully wired di script.js -->
-                <div class="d-flex justify-content-center gap-4 mt-4 pt-3">
-                    <div class="quick-action-btn" id="btnSyncData" data-requires-sensor data-bs-toggle="tooltip" title="Sync Telemetry">
-                        <div class="action-icon-circle"><i class="bi bi-arrow-down-up"></i></div>
-                        <span data-i18n="detail-sync">Sync</span>
-                    </div>
-                    <div class="quick-action-btn" id="btnSwapAction" data-requires-sensor data-bs-toggle="tooltip" title="Remote Actions">
-                        <div class="action-icon-circle text-amber border-amber"><i class="bi bi-shuffle"></i></div>
-                        <span class="text-amber" data-i18n="detail-actions">Actions</span>
-                    </div>
-                    <div class="quick-action-btn" id="btnFertilizeAction" data-requires-sensor data-bs-toggle="tooltip" title="Fertilize">
-                        <div class="action-icon-circle"><i class="bi bi-flower2"></i></div>
-                        <span data-i18n="detail-fertilize">Fertilize</span>
-                    </div>
-                    <div class="quick-action-btn" id="btnActivityLog" data-bs-toggle="tooltip" title="View History">
-                        <div class="action-icon-circle"><i class="bi bi-clock-history"></i></div>
-                        <span data-i18n="detail-activity">Activity</span>
-                    </div>
-                    <div class="quick-action-btn" id="btnExportData" data-requires-sensor data-bs-toggle="tooltip" title="Export CSV">
-                        <div class="action-icon-circle"><i class="bi bi-download"></i></div>
-                        <span data-i18n="detail-export">Export</span>
-                    </div>
-                </div>
-
-                <!-- AI Dynamic Recommendation -->
-                <div class="mt-4 pt-3 border-top border-secondary text-start">
-                    <p class="text-secondary mb-0" id="aiRecommendation" role="button" tabindex="0" title="Connect Smart AI Analytics" style="font-size: 0.85rem; line-height: 1.5;">
-                        <i class="bi bi-lightbulb text-mint me-1"></i> <strong data-i18n="detail-insight">Simulated insight:</strong> Menunggu data sensor pertama...
-                    </p>
-                </div>
-            </div>
-        </div>
-    </div>
 </section>
 
+{{-- ════════════════════════════════════════════
+     MODAL: Farm Action (Siram / Pupuk)
+     ════════════════════════════════════════════ --}}
 <div class="modal-overlay" id="farmActionModal" role="dialog" aria-modal="true" aria-labelledby="farmActionTitle">
     <div class="web3-modal-box">
         <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-secondary pb-3">
             <div>
-                <span class="badge-web3 mb-2" data-i18n="detail-review">Review action</span>
-                <h4 class="mb-0 fw-bold" id="farmActionTitle" style="font-family: 'Cinzel', serif;">Farm action</h4>
+                <span class="badge-web3 mb-2">Konfirmasi Aksi</span>
+                <h4 class="mb-0 fw-bold" id="farmActionTitle" style="font-family:'Cinzel',serif;">Farm Action</h4>
             </div>
             <button type="button" class="btn-close-custom" id="closeFarmActionModal" aria-label="Close"><i class="bi bi-x-lg"></i></button>
         </div>
         <p class="text-muted" id="farmActionDescription">Periksa instruksi sebelum disimpan ke riwayat taman.</p>
-        <div class="workspace-stat mb-4"><span class="workspace-stat-label" data-i18n="detail-target">Target</span><strong class="fs-4" id="farmActionTarget">{{ $taman->name }}</strong><i class="bi bi-broadcast-pin"></i></div>
+        <div class="workspace-stat mb-4">
+            <span class="workspace-stat-label">Target</span>
+            <strong class="fs-4" id="farmActionTarget">{{ $taman->name }}</strong>
+            <i class="bi bi-broadcast-pin"></i>
+        </div>
         <div class="d-flex gap-2">
-            <button type="button" class="btn btn-outline-secondary flex-fill" id="cancelFarmAction" data-i18n="detail-cancel">Cancel</button>
-            <button type="button" class="btn btn-connect-node flex-fill" id="confirmFarmAction" data-i18n="detail-confirm">Confirm</button>
+            <button type="button" class="btn btn-outline-secondary flex-fill" id="cancelFarmAction">Batal</button>
+            <button type="button" class="btn btn-connect-node flex-fill" id="confirmFarmAction">Konfirmasi</button>
         </div>
     </div>
 </div>
 
+{{-- ════════════════════════════════════════════
+     MODAL: Edit Konfigurasi Sensor (Wizard)
+     ════════════════════════════════════════════ --}}
 <div class="modal-overlay" id="sensorConfigModal" role="dialog" aria-modal="true" aria-labelledby="sensorConfigTitle">
     <div class="web3-modal-box add-taman-wizard-box">
         <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-secondary pb-3">
-            <h4 class="mb-0 fw-bold" id="sensorConfigTitle" style="font-family: 'Cinzel', serif;">Edit konfigurasi sensor</h4>
+            <h4 class="mb-0 fw-bold" id="sensorConfigTitle" style="font-family:'Cinzel',serif;">Edit konfigurasi sensor</h4>
             <button type="button" class="btn-close-custom" id="closeSensorConfigModal" aria-label="Close"><i class="bi bi-x-lg"></i></button>
         </div>
-
         <form action="{{ route('taman.update', $taman) }}" method="POST" id="sensorConfigForm">
             @csrf
             @method('PATCH')
 
-            @php
-                $selectedSensorTypes = $taman->sensor_types ?? [];
-                $selectedSensorModels = $taman->sensor_models ?? [];
-                $selectedController = $taman->controller_type ?? 'esp32';
-                $selectedConnection = $taman->device_connection ?? [];
-                $selectedSoil = $taman->soil_type ?? '';
-                $selectedIndicatorMode = $taman->indicator_mode ?? 'active_only';
-            @endphp
-
             <div class="wizard-step active" data-sensor-step="1">
                 <div class="auth-input-group">
-                    <label data-i18n="detail-soil-optional">Jenis tanah (opsional)</label>
+                    <label>Jenis tanah (opsional)</label>
                     <select class="auth-input" name="soil_type">
                         <option value="" {{ $selectedSoil === '' || $selectedSoil === 'unspecified' ? 'selected' : '' }}>Tidak dipilih</option>
                         <option value="pasir" {{ $selectedSoil === 'pasir' ? 'selected' : '' }}>Pasir</option>
@@ -553,10 +454,9 @@
                         <option value="liat" {{ $selectedSoil === 'liat' ? 'selected' : '' }}>Liat</option>
                         <option value="organosol" {{ $selectedSoil === 'organosol' ? 'selected' : '' }}>Organosol / gambut</option>
                     </select>
-                    <small class="text-muted">Boleh dikosongkan. Mesin akan memakai profil umum dengan confidence lebih rendah.</small>
                 </div>
                 <div class="auth-input-group">
-                    <label data-i18n="detail-active-indicators">Indikator aktif</label>
+                    <label>Indikator aktif</label>
                     <div class="sensor-check-grid">
                         <label class="sensor-check-card">
                             <input type="checkbox" name="sensor_types[]" value="moisture" {{ in_array('moisture', $selectedSensorTypes, true) ? 'checked' : '' }}>
@@ -593,7 +493,6 @@
                                 <option value="Capacitive-1" {{ ($selectedSensorModels['moisture'] ?? '') === 'Capacitive-1' ? 'selected' : '' }}>Capacitive Soil Sensor</option>
                             </select>
                         </div>
-
                         <div class="sensor-model-row" data-sensor-row="temperature">
                             <div class="sensor-model-label"><i class="bi bi-thermometer-half"></i> Suhu</div>
                             <select class="auth-input" name="sensor_models[temperature]">
@@ -602,7 +501,6 @@
                                 <option value="LM35" {{ ($selectedSensorModels['temperature'] ?? '') === 'LM35' ? 'selected' : '' }}>LM35 - Analog Temperature</option>
                             </select>
                         </div>
-
                         <div class="sensor-model-row" data-sensor-row="ph">
                             <div class="sensor-model-label"><i class="bi bi-droplet-half"></i> pH</div>
                             <select class="auth-input" name="sensor_models[ph]">
@@ -611,7 +509,6 @@
                                 <option value="PH-1" {{ ($selectedSensorModels['ph'] ?? '') === 'PH-1' ? 'selected' : '' }}>PH-1 - Analog pH Module</option>
                             </select>
                         </div>
-
                         <div class="sensor-model-row" data-sensor-row="ec">
                             <div class="sensor-model-label"><i class="bi bi-lightning-charge-fill"></i> EC</div>
                             <select class="auth-input" name="sensor_models[ec]">
@@ -630,48 +527,18 @@
 
             <div class="wizard-step" data-sensor-step="3">
                 <div class="auth-input-group">
-                    <label data-i18n="detail-board-type">Jenis board / otak perangkat</label>
+                    <label>Jenis board / otak perangkat</label>
                     <select class="auth-input" name="controller_type">
-                        <option value="esp32" {{ $selectedController === 'esp32' ? 'selected' : '' }}>ESP32 (ESP)</option>
-                        <option value="esp8266" {{ $selectedController === 'esp8266' ? 'selected' : '' }}>ESP8266 (ESP)</option>
+                        <option value="esp32" {{ $selectedController === 'esp32' ? 'selected' : '' }}>ESP32 (Direkomendasikan)</option>
+                        <option value="esp8266" {{ $selectedController === 'esp8266' ? 'selected' : '' }}>ESP8266</option>
                         <option value="arduino" {{ $selectedController === 'arduino' ? 'selected' : '' }}>Arduino Uno / Nano</option>
                     </select>
-                    <small class="text-muted" data-i18n="detail-board-required">Pilih board yang dikonfigurasi untuk taman ini.</small>
                 </div>
-                <div class="row g-2">
-                    <div class="col-6 auth-input-group">
-                        <label>Port laptop</label>
-                        <select class="auth-input" name="device_connection[computer_port]">
-                            <option value="USB-A" {{ ($selectedConnection['computer_port'] ?? 'USB-A') === 'USB-A' ? 'selected' : '' }}>USB-A</option>
-                            <option value="USB-C" {{ ($selectedConnection['computer_port'] ?? 'USB-A') === 'USB-C' ? 'selected' : '' }}>USB-C</option>
-                            <option value="USB-B" {{ ($selectedConnection['computer_port'] ?? 'USB-A') === 'USB-B' ? 'selected' : '' }}>USB-B</option>
-                        </select>
-                    </div>
-                    <div class="col-6 auth-input-group">
-                        <label>Port alat</label>
-                        <select class="auth-input" name="device_connection[device_port]">
-                            <option value="USB-C" {{ ($selectedConnection['device_port'] ?? 'USB-C') === 'USB-C' ? 'selected' : '' }}>USB-C</option>
-                            <option value="USB-B" {{ ($selectedConnection['device_port'] ?? 'USB-C') === 'USB-B' ? 'selected' : '' }}>USB-B</option>
-                            <option value="UART" {{ ($selectedConnection['device_port'] ?? 'USB-C') === 'UART' ? 'selected' : '' }}>UART</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="auth-input-group">
-                    <label>Catatan koneksi</label>
-                    <textarea class="auth-input" name="device_connection[note]" rows="3">{{ $selectedConnection['note'] ?? '' }}</textarea>
-                </div>
-                <div class="d-flex justify-content-between mt-3">
-                    <button type="button" class="btn btn-outline-secondary btn-sensor-step-prev">Kembali</button>
-                    <button type="button" class="btn btn-connect-node btn-sensor-step-next">Review</button>
-                </div>
-            </div>
-
-            <div class="wizard-step" data-sensor-step="4">
                 <div class="auth-input-group">
                     <label>Tampilan indikator</label>
                     <select class="auth-input" name="indicator_mode">
-                        <option value="active_only" data-i18n="detail-only-active" {{ $selectedIndicatorMode === 'active_only' ? 'selected' : '' }}>Hanya sensor aktif</option>
-                        <option value="all_with_unavailable" data-i18n="detail-all-unavailable" {{ $selectedIndicatorMode === 'all_with_unavailable' ? 'selected' : '' }}>Tampilkan semua, tandai yang tidak tersedia</option>
+                        <option value="active_only" {{ $selectedIndicatorMode === 'active_only' ? 'selected' : '' }}>Hanya sensor aktif</option>
+                        <option value="all_with_unavailable" {{ $selectedIndicatorMode === 'all_with_unavailable' ? 'selected' : '' }}>Tampilkan semua, tandai yang tidak tersedia</option>
                     </select>
                 </div>
                 <div class="auth-input-group">
@@ -687,436 +554,74 @@
     </div>
 </div>
 
+{{-- ════════════════════════════════════════════
+     MODAL: Hubungkan Sensor (Pairing via Sensor ID)
+     ════════════════════════════════════════════ --}}
 <div class="modal-overlay" id="connectSensorModal" role="dialog" aria-modal="true" aria-labelledby="connectSensorTitle">
     <div class="web3-modal-box">
         <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-secondary pb-3">
-            <h4 class="mb-0 fw-bold" id="connectSensorTitle" style="font-family: 'Cinzel', serif;" data-i18n="detail-connect-title">Hubungkan sensor</h4>
+            <div>
+                <span class="badge-web3 mb-2">Pairing Sensor</span>
+                <h4 class="mb-0 fw-bold" id="connectSensorTitle" style="font-family:'Cinzel',serif;">Hubungkan ESP32</h4>
+            </div>
             <button type="button" class="btn-close-custom" id="closeConnectSensorModal" aria-label="Close"><i class="bi bi-x-lg"></i></button>
         </div>
 
-        <div class="sensor-connect-methods mb-3">
-            <button type="button" class="sensor-connect-method active" data-connect-mode="usb">
-                <i class="bi bi-usb-port"></i>
-                <span>USB langsung</span>
-            </button>
-            <button type="button" class="sensor-connect-method" data-connect-mode="manual">
-                <i class="bi bi-keyboard"></i>
-                <span>Masukkan Sensor ID</span>
-            </button>
+        <div class="alert-iot mb-3">
+            <i class="bi bi-info-circle text-mint me-2"></i>
+            <div>
+                <strong class="text-white d-block mb-1">Cara mendapat Sensor ID</strong>
+                <span class="small text-muted">Nyalakan ESP32 → sambungkan ke WiFi → buka Serial Monitor Arduino IDE. Sensor ID tampil di baris pertama log boot (contoh: <code>ESP32-NUTRIX-01</code>).</span>
+            </div>
         </div>
 
-        <div class="sensor-connect-panel active" data-connect-panel="usb">
-            <div class="alert alert-secondary border-0 mb-3" style="background: rgba(255,255,255,.04); color: var(--text-secondary);">
-                <strong class="text-white d-block mb-1">Mode USB-first</strong>
-                Sambungkan kabel USB dari laptop ke board {{ $controllerName }}. Setelah perangkat terdeteksi, isi Sensor ID manual bila diperlukan untuk pairing.
-            </div>
-            <div class="auth-input-group mb-3">
-                <label for="sensorIdInput" data-i18n="detail-sensor-id">Sensor ID</label>
-                <input type="text" id="sensorIdInput" class="auth-input" placeholder="SENSOR-001" autocomplete="off">
-            </div>
-            <p class="text-muted mb-0">Scan QR tetap bisa dipakai sebagai fallback, tetapi untuk proyek ini prioritas utama adalah koneksi USB.</p>
+        <div class="auth-input-group mb-3">
+            <label for="sensorIdInput">Sensor ID (dari firmware ESP32)</label>
+            <input type="text" id="sensorIdInput" class="auth-input" placeholder="ESP32-NUTRIX-01" autocomplete="off">
+            <small class="text-muted">Sesuaikan dengan nilai <code>custom_sensor_id</code> di firmware ESP32 kamu.</small>
         </div>
 
-        <div class="sensor-connect-panel" data-connect-panel="manual">
-            <div class="auth-input-group mb-3">
-                <label for="sensorIdInputManual" data-i18n="detail-sensor-id">Sensor ID</label>
-                <input type="text" id="sensorIdInputManual" class="auth-input" placeholder="SENSOR-001" autocomplete="off">
-            </div>
-            <p class="text-muted mb-0">Setelah sensor terpasang via kabel USB, masukkan ID perangkat untuk mengaktifkan koneksi.</p>
-        </div>
-
-        <button type="button" class="btn btn-connect-node w-100" id="confirmConnectSensor" data-i18n="detail-connect-sensor">Hubungkan sensor</button>
+        <button type="button" class="btn btn-connect-node w-100" id="confirmConnectSensor">
+            <i class="bi bi-link-45deg me-1"></i> Pasangkan Sensor
+        </button>
     </div>
 </div>
 @endsection
 
 @section('scripts')
 <script>
-// ================================================================
-//  NUTRIX - Taman Detail: API-wired Telemetry & Actions
-// ================================================================
+// ═══════════════════════════════════════════════════════
+//  NUTRIX — Taman Detail: Real IoT Dashboard
+// ═══════════════════════════════════════════════════════
 const TAMAN = {
-    id:   {{ $taman->id }},
-    type: @json($taman->type),
-    name: @json($taman->name),
+    id:            {{ $taman->id }},
+    type:          @json($taman->type),
+    name:          @json($taman->name),
     indicatorMode: @json($taman->indicator_mode ?: 'active_only'),
     activeSensors: @json(array_values($taman->sensor_types ?? [])),
 };
-const USB_BOARD_NAME = @json($controllerName);
-const USB_PORT_NAME = @json($computerPort);
-let usbDeviceConnected = {{ $taman->sensor_connected ? 'true' : 'false' }};
-let usbCandidateDetected = false;
 const CSRF = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
+let isConnected = {{ $isConnected ? 'true' : 'false' }};
+let telemetryInterval = null;
 window.NUTRIX_TAMAN = TAMAN;
-window.NUTRIX_USE_API = true;
 
-const detailDynamicCopy = {
-    id: {
-        optimal: 'Semua parameter berada dalam batas optimal.',
-        warning: 'Satu atau lebih parameter mulai berubah. Pertimbangkan sinkronisasi ulang.',
-        critical: 'Parameter kritis terdeteksi. Pertimbangkan penyiraman atau pemupukan.',
-        empty: 'Belum ada data sensor. Klik Sync untuk membaca data pertama.',
-        disconnected: 'Sensor belum terhubung. Hubungkan perangkat untuk mulai menerima telemetry.',
-        score: 'Skor'
-    },
-    en: {
-        optimal: 'All parameters are within the optimal range.',
-        warning: 'One or more parameters are drifting. Consider syncing again.',
-        critical: 'Critical parameters detected. Consider watering or fertilizing.',
-        empty: 'No sensor data yet. Click Sync to read the first measurement.',
-        disconnected: 'The sensor is not connected. Pair a device to start receiving telemetry.',
-        score: 'Score'
-    },
-    ja: {
-        optimal: 'すべてのパラメータは最適範囲内です。',
-        warning: '一部のパラメータが変化しています。再同期を検討してください。',
-        critical: '重要なパラメータを検出しました。散水または施肥を検討してください。',
-        empty: 'センサーデータがありません。同期を押して最初の測定値を取得してください。',
-        disconnected: 'センサーが接続されていません。デバイスを接続してデータを受信してください。',
-        score: 'スコア'
-    },
-    ar: {
-        optimal: 'جميع المعايير ضمن النطاق المثالي.',
-        warning: 'بدأ معيار أو أكثر في الانحراف. فكّر في إعادة المزامنة.',
-        critical: 'تم اكتشاف معايير حرجة. فكّر في الري أو التسميد.',
-        empty: 'لا توجد بيانات مستشعر بعد. اضغط مزامنة لقراءة القياس الأول.',
-        disconnected: 'المستشعر غير متصل. صِل جهازاً لبدء استقبال البيانات.',
-        score: 'النتيجة'
-    }
-};
-
-function detailCopy(key) {
-    const language = window.currentLanguage || document.documentElement.lang || 'id';
-    const family = language === 'id' || language === 'ja' || language === 'ar' ? language : 'en';
-    return detailDynamicCopy[family][key];
-}
-
+// ── Utility ──────────────────────────────────────────────
 function apiFetch(path, method = 'GET', body = null) {
-    const opts = { method, headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' } };
+    const opts = {
+        method,
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' }
+    };
     if (body) opts.body = JSON.stringify(body);
-    return fetch(`/api${path}`, opts).then(async response => {
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.message || 'Request failed');
-        return data;
+    return fetch(`/api${path}`, opts).then(async r => {
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(d.message || 'Request failed');
+        return d;
     });
 }
 
 function setCard(id, value) {
     const el = document.getElementById(id);
-    if (el) el.textContent = value ?? '-';
-}
-
-function applyMetricVisibility() {
-    const active = new Set(TAMAN.activeSensors.length ? TAMAN.activeSensors : ['moisture', 'ph', 'temperature', 'ec']);
-    document.querySelectorAll('[data-metric-column]').forEach(column => {
-        const metric = column.dataset.metricColumn;
-        column.hidden = TAMAN.indicatorMode === 'active_only' && !active.has(metric);
-    });
-}
-
-function updateUsbDetectionState() {
-    const statusEl = document.getElementById('usbBoardStatus');
-    const textEl = document.getElementById('usbDetectionText');
-    const pillEl = document.getElementById('usbBoardPill');
-    if (!statusEl || !textEl) return;
-
-    const connected = usbDeviceConnected || Boolean(document.querySelector('[data-sensor-connected="true"]'));
-    statusEl.textContent = connected ? 'Terdeteksi' : 'Menunggu board';
-    statusEl.style.color = connected ? 'var(--color-accent-highlight)' : 'var(--text-muted)';
-    textEl.innerHTML = connected
-        ? `<i class="bi bi-usb-port me-1"></i> Board ${USB_BOARD_NAME} terdeteksi pada port ${USB_PORT_NAME}.`
-        : `<i class="bi bi-usb-port me-1"></i> Hubungkan board ${USB_BOARD_NAME} ke port ${USB_PORT_NAME} sebelum pairing dimulai.`;
-
-    if (pillEl) {
-        pillEl.textContent = connected ? 'Board Ready' : 'Awaiting Board';
-        pillEl.className = `badge ${connected ? 'bg-success' : 'bg-secondary'} text-white`;
-    }
-}
-
-function appendUsbConsole(message, type = 'info') {
-    const list = document.getElementById('usbConsoleList');
-    if (!list) return;
-
-    const line = document.createElement('div');
-    line.className = 'py-1';
-    const tone = type === 'warn' ? 'text-warning' : type === 'error' ? 'text-danger' : 'text-mint';
-    line.innerHTML = `<span class="${tone}">&gt;</span> ${message}`;
-    list.appendChild(line);
-
-    while (list.children.length > 8) {
-        list.removeChild(list.firstChild);
-    }
-}
-
-function appendUsbEvent(message, type = 'info') {
-    const list = document.getElementById('usbEventStreamList');
-    if (!list) return;
-
-    const line = document.createElement('div');
-    const tone = type === 'warn' ? 'text-warning' : type === 'error' ? 'text-danger' : 'text-mint';
-    line.className = 'py-1';
-    line.innerHTML = `<span class="${tone}">&gt;</span> ${message}`;
-    list.appendChild(line);
-
-    while (list.children.length > 6) {
-        list.removeChild(list.firstChild);
-    }
-}
-
-function markTelemetryFresh(source = 'USB serial stream') {
-    const sourceEl = document.getElementById('telemetryDataSource');
-    const updatedEl = document.getElementById('telemetryLastUpdated');
-    if (sourceEl) sourceEl.textContent = source;
-    if (updatedEl) updatedEl.textContent = new Date().toLocaleTimeString('id-ID');
-}
-
-const pairingSequenceState = {
-    board: false,
-    port: false,
-    sensor: false,
-};
-let telemetryStreamInterval = null;
-let boardHealthMonitor = null;
-let autoReconnectLock = false;
-
-function stopTelemetryStream() {
-    if (telemetryStreamInterval) {
-        clearInterval(telemetryStreamInterval);
-        telemetryStreamInterval = null;
-    }
-    const liveStatus = document.getElementById('liveTelemetryStatus');
-    if (liveStatus) {
-        liveStatus.textContent = 'Stream inactive';
-        liveStatus.className = 'badge bg-secondary text-white';
-    }
-}
-
-function startTelemetryStream() {
-    stopTelemetryStream();
-    const liveStatus = document.getElementById('liveTelemetryStatus');
-    if (liveStatus) {
-        liveStatus.textContent = 'API polling active';
-        liveStatus.className = 'badge bg-success text-white';
-    }
-
-}
-
-function updatePairingProgress() {
-    const statusEl = document.getElementById('pairingFlowStatus');
-    const steps = document.querySelectorAll('[data-pair-step]');
-    const connected = usbDeviceConnected || Boolean(document.querySelector('[data-sensor-connected="true"]'));
-
-    if (!steps.length) return;
-
-    const boardDone = pairingSequenceState.board || connected;
-    const portDone = pairingSequenceState.port || connected;
-    const sensorDone = pairingSequenceState.sensor || connected;
-
-    steps.forEach(step => {
-        const stepName = step.dataset.pairStep;
-        const done = stepName === 'board' ? boardDone : stepName === 'port' ? portDone : sensorDone;
-        step.classList.toggle('border-success', done);
-        step.classList.toggle('bg-success-subtle', done);
-        step.style.opacity = done ? '1' : '0.65';
-        step.style.borderColor = done ? 'rgba(27, 196, 146, 0.8)' : 'rgba(148,163,184,0.4)';
-    });
-
-    if (statusEl) {
-        statusEl.textContent = connected ? 'Ready' : (pairingSequenceState.board || pairingSequenceState.port || pairingSequenceState.sensor) ? 'Verifying' : 'Waiting';
-        statusEl.className = `badge ${connected ? 'bg-success' : 'bg-secondary'} text-white`;
-    }
-}
-
-function resetPairingSequence() {
-    pairingSequenceState.board = false;
-    pairingSequenceState.port = false;
-    pairingSequenceState.sensor = false;
-    updatePairingProgress();
-}
-
-function beginPairingSequence(sensorId) {
-    const boardName = USB_BOARD_NAME || 'ESP32';
-    const portName = USB_PORT_NAME || 'USB-A';
-
-    resetPairingSequence();
-    usbDeviceConnected = false;
-    updateUsbDetectionState();
-    updateHardwareMetrics();
-
-    appendUsbConsole(`board detection: scanning ${boardName}...`);
-    setTimeout(() => {
-        pairingSequenceState.board = true;
-        usbDeviceConnected = true;
-        updateUsbDetectionState();
-        updateHardwareMetrics();
-        appendUsbConsole(`board detected: ${boardName} on ${portName}`);
-    }, 350);
-
-    setTimeout(() => {
-        pairingSequenceState.port = true;
-        updateHardwareMetrics();
-        appendUsbConsole(`port verified: ${portName} ready for serial handshake`);
-    }, 900);
-
-    setTimeout(() => {
-        pairingSequenceState.sensor = true;
-        updateUsbDetectionState();
-        updateHardwareMetrics();
-        appendUsbConsole(`sensor id validated: ${sensorId}`);
-        appendUsbConsole('channel ready: telemetry stream enabled');
-        appendUsbEvent(`sensor paired: ${sensorId}`);
-        appendUsbEvent('telemetry channel ready');
-        pushFarmNotification(`Sensor ${sensorId} berhasil dipasangkan via USB.`, 'bi-usb-port');
-        showToast('Pairing sensor berhasil dilakukan.');
-        startTelemetryStream();
-        setTimeout(() => window.location.reload(), 700);
-    }, 1500);
-}
-
-function updateHardwareMetrics() {
-    const voltage = document.getElementById('usbVoltageValue');
-    const baud = document.getElementById('usbBaudValue');
-    const signal = document.getElementById('usbSignalValue');
-    const boardSignal = document.getElementById('boardSignalValue');
-    const boardPort = document.getElementById('boardPortValue');
-    const boardRetry = document.getElementById('boardRetryValue');
-    const healthPill = document.getElementById('boardHealthPill');
-    if (!voltage || !baud || !signal) return;
-
-    const connected = usbDeviceConnected || Boolean(document.querySelector('[data-sensor-connected="true"]'));
-    if (connected) {
-        voltage.textContent = '3.3V';
-        baud.textContent = '115200';
-        signal.textContent = '96%';
-        if (boardSignal) boardSignal.textContent = '96%';
-        if (boardPort) boardPort.textContent = 'Nominal';
-        if (boardRetry) boardRetry.textContent = '1';
-        if (healthPill) {
-            healthPill.textContent = 'Stable';
-            healthPill.className = 'badge bg-success text-white';
-        }
-    } else {
-        voltage.textContent = '0.0V';
-        baud.textContent = '0';
-        signal.textContent = '0%';
-        if (boardSignal) boardSignal.textContent = '0%';
-        if (boardPort) boardPort.textContent = 'Offline';
-        if (boardRetry) boardRetry.textContent = '0';
-        if (healthPill) {
-            healthPill.textContent = 'Offline';
-            healthPill.className = 'badge bg-secondary text-white';
-        }
-    }
-    updatePairingProgress();
-}
-
-function refreshUsbEventStream(state = 'Connected') {
-    const statusEl = document.getElementById('usbEventStreamStatus');
-    if (statusEl) {
-        statusEl.textContent = state;
-        statusEl.className = `badge ${state === 'Connected' ? 'bg-success' : state === 'Reconnecting' ? 'bg-warning text-dark' : 'bg-secondary'} text-white`;
-    }
-}
-
-function handleReconnectionAlert(status, signal) {
-    const signalAlert = document.getElementById('signalAlertStatus');
-    const reconnectText = document.getElementById('reconnectPolicyText');
-    const reconnectStatus = document.getElementById('reconnectPolicyStatus');
-
-    if (signalAlert) {
-        signalAlert.textContent = status === 'Stable' ? 'Stable' : 'Signal alert';
-        signalAlert.style.color = status === 'Stable' ? 'var(--color-accent-highlight)' : '#fbbf24';
-    }
-
-    if (reconnectText) {
-        reconnectText.textContent = status === 'Stable' ? 'Queued' : 'Retry now';
-    }
-
-    if (reconnectStatus) {
-        reconnectStatus.textContent = status === 'Stable' ? 'Ready' : 'Retrying';
-        reconnectStatus.className = `badge ${status === 'Stable' ? 'bg-success' : 'bg-warning text-dark'} text-white`;
-    }
-
-    if (status !== 'Stable' && !autoReconnectLock) {
-        autoReconnectLock = true;
-        refreshUsbEventStream('Reconnecting');
-        appendUsbConsole(`signal alert: board signal ${signal}% dropped below safe threshold`, 'warn');
-        pushFarmNotification('Signal alert: USB board sedang mencoba reconnect otomatis.', 'bi-arrow-repeat');
-        showToast('Signal alert: reconnecting board...', 'error');
-    }
-
-    if (status === 'Stable') {
-        autoReconnectLock = false;
-        refreshUsbEventStream('Connected');
-    }
-            appendUsbEvent(`signal alert: ${signal}%`, 'warn');
-}
-
-function startBoardHealthMonitor() {
-    if (boardHealthMonitor) clearInterval(boardHealthMonitor);
-
-    boardHealthMonitor = setInterval(() => {
-        const connected = usbDeviceConnected || Boolean(document.querySelector('[data-sensor-connected="true"]'));
-        const boardSignal = document.getElementById('boardSignalValue');
-        const boardPort = document.getElementById('boardPortValue');
-        const boardRetry = document.getElementById('boardRetryValue');
-        const healthPill = document.getElementById('boardHealthPill');
-        if (!boardSignal || !boardPort || !boardRetry || !healthPill || !connected) {
-            updateHardwareMetrics();
-            return;
-        }
-
-        const signal = 78 + Math.round(Math.sin(Date.now() / 1200) * 16 + Math.random() * 6);
-        const clamped = Math.min(99, Math.max(62, signal));
-        const status = clamped >= 90 ? 'Stable' : clamped >= 75 ? 'Watch' : 'Critical';
-        const portState = clamped >= 75 ? 'Nominal' : 'Drifting';
-        const retries = clamped >= 75 ? 1 : clamped >= 68 ? 2 : 3;
-
-        boardSignal.textContent = `${clamped}%`;
-        document.getElementById('usbSignalValue').textContent = `${clamped}%`;
-        boardPort.textContent = portState;
-        boardRetry.textContent = String(retries);
-        healthPill.textContent = status;
-        healthPill.className = `badge ${status === 'Stable' ? 'bg-success' : status === 'Watch' ? 'bg-warning text-dark' : 'bg-danger'} text-white`;
-        handleReconnectionAlert(status, clamped);
-
-        if (status !== 'Stable') {
-            appendUsbConsole(`board health warning: signal ${clamped}% - ${status.toLowerCase()} connection`, 'warn');
-        }
-            appendUsbEvent('connection healthy: telemetry continuing');
-    }, 6000);
-}
-
-function autoDetectUsbPort() {
-    const resolvedPort = USB_PORT_NAME || 'USB-A';
-    const boardName = USB_BOARD_NAME || 'ESP32';
-    usbCandidateDetected = true;
-    pairingSequenceState.board = true;
-    pairingSequenceState.port = true;
-    pairingSequenceState.sensor = false;
-    updateUsbDetectionState();
-    updatePairingProgress();
-    appendUsbConsole(`usb candidate detected: ${boardName} on ${resolvedPort}`);
-    appendUsbConsole(`serial port opened: ${resolvedPort}`);
-    appendUsbConsole('sensor handshake: waiting for explicit pairing');
-    pushFarmNotification(`Board ${boardName} otomatis terdeteksi pada port ${resolvedPort}.`, 'bi-usb-port');
-    openBoardConfiguration();
-    showToast(runtimeText('detail-usb-candidate', { port: resolvedPort }));
-}
-
-function updateCards(t) {
-    if (!t) return;
-    const metrics = t.metrics || {};
-    const value = metric => metrics[metric]?.value ?? t[metric] ?? null;
-    setCard('val-ph', value('ph') != null ? Number(value('ph')).toFixed(1) : '--');
-    setCard('val-hum', value('moisture') != null ? Number(value('moisture')).toFixed(0) : '--');
-    setCard('val-temp', value('temperature') != null ? Number(value('temperature')).toFixed(1) : '--');
-    setCard('val-ec', value('ec') != null ? Number(value('ec')).toFixed(2) : '--');
-    if (t.health?.score != null || t.health_score != null) {
-        setCard('aiHealthScore', Math.round(t.health?.score ?? t.health_score));
-        const label = t.decision?.tier ? `PRIORITAS ${t.decision.tier}` : (t.health_status || 'UNKNOWN').toUpperCase();
-        setCard('aiHealthStatus', 'Status: ' + label);
-    }
+    if (el) el.textContent = value ?? '--';
 }
 
 function showToast(msg, type = 'success') {
@@ -1128,434 +633,339 @@ function showToast(msg, type = 'success') {
         return d;
     })();
     const el = document.createElement('div');
-    el.style.cssText = `background:${type==='error'?'#ef4444':'var(--color-accent-highlight)'};color:#fff;padding:12px 20px;border-radius:12px;font-weight:600;font-size:.9rem;box-shadow:0 4px 20px rgba(0,0,0,.35);`;
+    el.style.cssText = `background:${type==='error'?'#ef4444':'var(--color-accent-highlight)'};color:#fff;padding:12px 20px;border-radius:12px;font-weight:600;font-size:.9rem;box-shadow:0 4px 20px rgba(0,0,0,.35);animation:fadeIn .2s ease;`;
     el.textContent = msg;
     wrap.appendChild(el);
     setTimeout(() => el.remove(), 3500);
 }
 
 function pushFarmNotification(message, icon = 'bi-bell') {
-    if (typeof pushNotification === 'function') {
-        pushNotification(message, icon);
-        return;
-    }
-
+    if (typeof pushNotification === 'function') { pushNotification(message, icon); return; }
     const panel = document.getElementById('notificationList');
     const badge = document.getElementById('notificationBadge');
     if (!panel) return;
-
     const item = document.createElement('div');
     item.className = 'notification-item';
-    item.innerHTML = `<div class="notification-item-icon"><i class="bi ${icon}"></i></div><div><p>${message}</p><small>Just now</small></div>`;
+    item.innerHTML = `<div class="notification-item-icon"><i class="bi ${icon}"></i></div><div><p>${message}</p><small>Baru saja</small></div>`;
     panel.prepend(item);
-
-    if (badge) {
-        const count = panel.querySelectorAll('.notification-item').length;
-        badge.textContent = count > 0 ? String(count) : '';
-    }
+    if (badge) badge.textContent = panel.querySelectorAll('.notification-item').length || '';
 }
 
-function setSensorAvailability(connected) {
-    document.querySelectorAll('[data-requires-sensor]').forEach(action => {
-        action.classList.toggle('is-disabled', !connected);
-        action.setAttribute('aria-disabled', connected ? 'false' : 'true');
+// ── Terminal Log ──────────────────────────────────────────
+function appendLog(msg, type = 'info') {
+    const el = document.getElementById('terminalLines');
+    if (!el) return;
+    const line = document.createElement('div');
+    const cls = type === 'success' ? 't-success' : type === 'warn' ? 't-warn' : type === 'error' ? 't-error' : '';
+    const prompt = type === 'success' ? '✓' : type === 'warn' ? '!' : type === 'error' ? '✗' : '›';
+    line.className = `t-line ${cls}`;
+    line.innerHTML = `<span class="t-prompt">${prompt}</span> ${msg}`;
+    el.appendChild(line);
+    while (el.children.length > 10) el.removeChild(el.firstChild);
+    el.scrollTop = el.scrollHeight;
+}
+
+// ── Connection State UI ────────────────────────────────────
+function applyConnectionState(connected) {
+    isConnected = connected;
+    const badge    = document.getElementById('connectionBadge');
+    const dot      = document.getElementById('liveDot');
+    const banner   = document.getElementById('connectionBanner');
+    const bannerTx = document.getElementById('bannerText');
+    const flowBadge = document.getElementById('flowStatusBadge');
+    const termBadge = document.getElementById('terminalStatusBadge');
+    const topTx    = document.getElementById('topStatusText');
+    const cloudSt  = document.getElementById('displayCloudStatus');
+    const relayBtn = document.getElementById('btnTriggerWaterManual');
+
+    if (badge) { badge.textContent = connected ? 'ONLINE' : 'OFFLINE'; badge.className = `badge ${connected ? 'bg-success' : 'bg-secondary'} text-white`; }
+    if (dot)   { dot.classList.toggle('dot-online', connected); }
+    if (banner){ banner.className = `sensor-connection-banner ${connected ? 'is-connected' : 'is-disconnected'}`; }
+    if (bannerTx) bannerTx.textContent = connected ? 'ESP32 aktif mengirim telemetri via WiFi ke Railway Cloud.' : 'Belum ada sensor terhubung. Nyalakan ESP32 dan pastikan WiFi aktif.';
+    if (flowBadge) { flowBadge.textContent = connected ? 'Stream Aktif' : 'Menunggu ESP32'; flowBadge.className = `badge ${connected ? 'bg-success' : 'bg-secondary'} text-white`; }
+    if (termBadge) { termBadge.textContent = connected ? 'Live' : 'Waiting'; termBadge.className = `badge ${connected ? 'bg-success' : 'bg-secondary'} text-white`; }
+    if (topTx) topTx.textContent = connected ? 'SENSOR CONNECTED' : 'SENSOR OFFLINE';
+    if (cloudSt) { cloudSt.textContent = connected ? 'Online' : 'Offline'; cloudSt.className = connected ? 'text-mint' : 'text-muted'; }
+    if (relayBtn) relayBtn.disabled = !connected;
+
+    // Flow nodes
+    ['flowNodeSensor','flowNodeEsp','flowNodeCloud','flowNodeBrain','flowNodeRelay'].forEach(id => {
+        const n = document.getElementById(id);
+        if (n) n.classList.toggle('node-active', connected);
+    });
+    document.querySelectorAll('[data-requires-sensor]').forEach(el => {
+        el.classList.toggle('is-disabled', !connected);
+        el.setAttribute('aria-disabled', connected ? 'false' : 'true');
     });
 }
 
-function showDisconnectedState() {
-    setCard('val-ph', '--');
-    setCard('val-hum', '--');
-    setCard('val-temp', '--');
-    setCard('val-ec', '--');
-    setCard('aiHealthScore', '--');
-    setCard('aiHealthStatus', detailCopy('disconnected'));
-    const ai = document.getElementById('aiRecommendation');
-    if (ai) ai.innerHTML = `<i class="bi bi-plug text-warning me-1"></i> <strong>${document.querySelector('[data-i18n="detail-insight"]')?.textContent || 'Insight'}:</strong> ${detailCopy('disconnected')}`;
+function applyMetricVisibility() {
+    const active = new Set(TAMAN.activeSensors.length ? TAMAN.activeSensors : ['moisture', 'ph', 'temperature', 'ec']);
+    document.querySelectorAll('[data-metric-column]').forEach(col => {
+        col.hidden = TAMAN.indicatorMode === 'active_only' && !active.has(col.dataset.metricColumn);
+    });
 }
 
-async function loadLatestTelemetry() {
+// ── Relay Status ──────────────────────────────────────────
+function setRelayStatus(on) {
+    const display = document.getElementById('relayStatusDisplay');
+    const flow    = document.getElementById('relayFlowStatus');
+    const pill    = document.getElementById('relayPill');
+    if (display) { display.textContent = on ? 'AKTIF (KERAN TERBUKA)' : 'STANDBY'; display.className = on ? 'text-mint animate-pulse' : 'text-white'; }
+    if (flow)    flow.textContent = on ? 'GPIO 26 · AKTIF 🟢' : 'GPIO 26 · STANDBY';
+    if (pill)    { pill.textContent = on ? 'AKTIF' : 'STANDBY'; pill.className = `badge ${on ? 'bg-success' : 'bg-secondary'} text-white`; }
+}
+
+// ── Update Cards ───────────────────────────────────────────
+const METRIC_HINTS = {
+    ph:          { ok: [6.0, 7.5], label: (v) => v < 6.0 ? 'Asam — perlu kapur' : v > 7.5 ? 'Basa — perlu asam' : 'Optimal' },
+    moisture:    { ok: [30, 80],   label: (v) => v < 30 ? '⚠ Kering — siram segera!' : v > 80 ? 'Terlalu basah' : 'Optimal' },
+    temperature: { ok: [15, 35],  label: (v) => v < 15 ? 'Terlalu dingin' : v > 35 ? 'Terlalu panas' : 'Optimal' },
+    ec:          { ok: [0.5, 3.0], label: (v) => v < 0.5 ? 'Nutrisi rendah' : v > 3.0 ? 'Terlalu tinggi' : 'Optimal' },
+};
+
+function updateCards(t) {
+    if (!t) return;
+    const metrics = t.metrics || {};
+    const val = (k) => metrics[k]?.value ?? t[k] ?? null;
+
+    const phV   = val('ph');
+    const humV  = val('moisture');
+    const tmpV  = val('temperature');
+    const ecV   = val('ec');
+
+    setCard('val-ph',   phV  != null ? Number(phV).toFixed(1)  : '--');
+    setCard('val-hum',  humV != null ? Number(humV).toFixed(0) : '--');
+    setCard('val-temp', tmpV != null ? Number(tmpV).toFixed(1) : '--');
+    setCard('val-ec',   ecV  != null ? Number(ecV).toFixed(2)  : '--');
+
+    // Metric status hints
+    [['status-ph', phV, 'ph'], ['status-moisture', humV, 'moisture'],
+     ['status-temp', tmpV, 'temperature'], ['status-ec', ecV, 'ec']].forEach(([id, v, key]) => {
+        const el = document.getElementById(id);
+        if (!el || v == null) return;
+        const hint = METRIC_HINTS[key];
+        const label = hint.label(Number(v));
+        const inRange = Number(v) >= hint.ok[0] && Number(v) <= hint.ok[1];
+        el.textContent = label;
+        el.style.color = inRange ? 'var(--color-accent-highlight)' : (label.startsWith('⚠') ? '#ef4444' : '#fbbf24');
+    });
+
+    // Health score
+    if (t.health?.score != null || t.health_score != null) {
+        const score = Math.round(t.health?.score ?? t.health_score);
+        setCard('aiHealthScore', score);
+        const tier = t.decision?.tier ? `PRIORITAS ${t.decision.tier}` : (t.health_status || 'UNKNOWN').toUpperCase();
+        setCard('aiHealthStatus', 'Status: ' + tier);
+
+        const tip = score >= 80
+            ? 'Semua parameter dalam batas optimal. Taman dalam kondisi prima.'
+            : score >= 55
+                ? 'Beberapa parameter mulai bergeser. Pantau dan pertimbangkan penyiraman.'
+                : 'Parameter kritis terdeteksi! Segera lakukan penyiraman atau pemupukan.';
+        const ai = document.getElementById('aiRecommendation');
+        if (ai) ai.innerHTML = `<i class="bi bi-lightbulb text-mint me-1"></i> <strong>Insight:</strong> ${tip} (Skor: ${score})`;
+    }
+}
+
+function markFresh(source) {
+    const now = new Date().toLocaleTimeString('id-ID');
+    const srcEl = document.getElementById('sourceText');
+    const timeEl = document.getElementById('lastUpdatedTime');
+    if (srcEl) srcEl.textContent = source === 'esp32_device' ? 'ESP32 Wireless' : source === 'simulator' ? 'Simulator' : source || 'API';
+    if (timeEl) timeEl.textContent = now;
+}
+
+// ── Load Telemetry ─────────────────────────────────────────
+async function loadLatestTelemetry(silent = false) {
     try {
         applyMetricVisibility();
         const data = await apiFetch(`/taman/${TAMAN.id}/telemetry/latest`);
-        setSensorAvailability(data.available_sensors?.length > 0);
+
+        const connected = data.available_sensors?.length > 0 || data.lifecycle === 'live' || data.lifecycle === 'stale';
+        applyConnectionState(connected);
+
         if (data.lifecycle === 'never_received' && !data.recorded_at) {
-            showDisconnectedState();
+            setCard('aiHealthScore', '--');
+            setCard('aiHealthStatus', 'Menunggu data pertama dari ESP32...');
             return;
         }
+
         updateCards(data);
-        markTelemetryFresh(data.source === 'simulator' ? 'Simulasi' : 'Telemetry API');
-        const ai = document.getElementById('aiRecommendation');
-        if (ai && data.health?.score != null) {
-            const score = Math.round(data.health.score);
-            const tip = score >= 80 ? detailCopy('optimal') : score >= 55 ? detailCopy('warning') : detailCopy('critical');
-            ai.innerHTML = `<i class="bi bi-lightbulb text-mint me-1"></i> <strong>${document.querySelector('[data-i18n="detail-insight"]')?.textContent || 'Insight'}:</strong> ${tip} (${detailCopy('score')}: ${score})`;
+        markFresh(data.source);
+
+        if (!silent) {
+            appendLog(`telemetry ok — lifecycle: ${data.lifecycle} — source: ${data.source}`, 'success');
         }
-    } catch (e) { console.warn('Telemetry load failed', e); }
+
+        // Auto detect relay trigger dari decision engine
+        const shouldWater = (data.metrics?.moisture?.value ?? data.moisture ?? 100) < 30;
+        if (shouldWater) {
+            setRelayStatus(true);
+            appendLog('⚡ kelembapan < 30% — relay ON otomatis dari Decision Engine', 'warn');
+        }
+
+    } catch (e) {
+        if (!silent) appendLog(`error: ${e.message}`, 'error');
+    }
 }
-updateUsbDetectionState();
-updateHardwareMetrics();
-startBoardHealthMonitor();
+
+// ── Start / Stop polling ───────────────────────────────────
+function startPolling() {
+    stopPolling();
+    telemetryInterval = setInterval(() => {
+        if (!document.hidden) loadLatestTelemetry(true);
+    }, 5000);
+}
+
+function stopPolling() {
+    if (telemetryInterval) { clearInterval(telemetryInterval); telemetryInterval = null; }
+}
+
+// ── Init ───────────────────────────────────────────────────
+applyMetricVisibility();
+applyConnectionState(isConnected);
 loadLatestTelemetry();
-if (usbDeviceConnected || Boolean(document.querySelector('[data-sensor-connected="true"]'))) {
-    startTelemetryStream();
-}
+startPolling();
+
 document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-        stopTelemetryStream();
-    } else {
-        loadLatestTelemetry();
-        if (usbDeviceConnected) startTelemetryStream();
-    }
-});
-document.getElementById('btnTriggerWaterManual')?.addEventListener('click', async () => {
-    try {
-        showToast('Mengirim instruksi buka keran (Relay) ke ESP32...');
-        const res = await apiFetch(`/taman/${TAMAN.id}/actions/water`, 'POST', { duration_sec: 10 });
-        const relayDisplay = document.getElementById('relayStatusDisplay');
-        if (relayDisplay) {
-            relayDisplay.textContent = 'KERAN TERBUKA (10 DETIK)';
-            relayDisplay.className = 'text-mint animate-pulse';
-            setTimeout(() => {
-                relayDisplay.textContent = 'SIAP (STANDBY)';
-                relayDisplay.className = 'text-white';
-            }, 10000);
-        }
-        showToast('Instruksi keran air berhasil dikirim!');
-        loadLatestTelemetry();
-    } catch (err) {
-        showToast(err.message || 'Gagal mengirim instruksi keran', 'error');
-    }
+    if (document.hidden) stopPolling();
+    else { loadLatestTelemetry(); startPolling(); }
 });
 
-document.getElementById('btnSyncDataDirect')?.addEventListener('click', () => {
+// ── Refresh Button ─────────────────────────────────────────
+document.getElementById('btnRefreshTelemetry')?.addEventListener('click', () => {
+    appendLog('manual refresh...');
     loadLatestTelemetry();
-    showToast('Data telemetri diperbarui.');
+    showToast('Telemetri diperbarui.');
 });
 
-setInterval(() => {
-    if (!document.hidden) loadLatestTelemetry();
-}, 5000);
-
-const sensorConfigModal = document.getElementById('sensorConfigModal');
-const configForm = document.getElementById('sensorConfigForm');
-const configWizardSteps = Array.from(document.querySelectorAll('[data-sensor-step]'));
-let currentConfigStep = 1;
-
-const updateSensorWizardStep = (nextStep) => {
-    currentConfigStep = nextStep;
-    configWizardSteps.forEach((step) => {
-        step.classList.toggle('active', Number(step.dataset.sensorStep) === nextStep);
-    });
-};
-
-const openBoardConfiguration = () => {
-    updateSensorWizardStep(3);
-    refreshSensorConfigSummary();
-    sensorConfigModal?.classList.add('active');
-    document.body.style.overflow = 'hidden';
-    document.querySelector('#sensorConfigForm select[name="controller_type"]')?.focus();
-};
-
-const runtimeText = (key, params = {}) => {
-    const language = window.currentLanguage || 'id';
-    const template = window.languageDictionary?.[language]?.[key] || window.languageDictionary?.id?.[key] || key;
-    return Object.entries(params).reduce((text, [name, value]) => text.replace(`{${name}}`, value), template);
-};
-
-document.addEventListener('nutrix:languagechange', () => {
-    if (usbCandidateDetected) {
-        const candidateText = document.getElementById('usbDetectionText');
-        if (candidateText) candidateText.textContent = runtimeText('detail-usb-candidate', { port: USB_PORT_NAME || 'USB' });
-    }
-});
-
-const refreshSensorConfigSummary = () => {
-    const selected = Array.from(document.querySelectorAll('#sensorConfigForm input[name="sensor_types[]"]:checked')).map(input => input.value);
-    const summary = document.getElementById('sensorConfigSummary');
-    if (!summary) return;
-
-    if (!selected.length) {
-        summary.innerHTML = '<div class="wizard-summary-empty">Belum ada sensor dipilih. Pilih minimal satu sensor sebelum menyimpan.</div>';
-        return;
-    }
-
-    const rows = selected.map(type => {
-        const labels = { moisture: 'Kelembapan', temperature: 'Suhu', ph: 'pH', ec: 'EC' };
-        const model = document.querySelector(`#sensorConfigForm select[name="sensor_models[${type}]"]`)?.value || 'Belum dipilih';
-        return `<div class="wizard-summary-item"><span>${labels[type] || type}</span><strong>${model}</strong></div>`;
-    }).join('');
-
-    const controller = document.querySelector('#sensorConfigForm select[name="controller_type"]')?.value || 'esp32';
-    const portLaptop = document.querySelector('#sensorConfigForm select[name="device_connection[computer_port]"]')?.value || 'USB-A';
-    const portDevice = document.querySelector('#sensorConfigForm select[name="device_connection[device_port]"]')?.value || 'USB-C';
-
-    summary.innerHTML = `
-        <div class="wizard-summary-item"><span>Sensor</span><strong>${selected.length} tipe aktif</strong></div>
-        ${rows}
-        <div class="wizard-summary-item"><span>Board</span><strong>${controller.toUpperCase()}</strong></div>
-        <div class="wizard-summary-item"><span>Koneksi</span><strong>${portLaptop} → ${portDevice}</strong></div>
-    `;
-};
-
-document.querySelectorAll('.btn-sensor-step-next').forEach((button) => {
-    button.addEventListener('click', () => {
-        if (currentConfigStep < 4) updateSensorWizardStep(currentConfigStep + 1);
-        refreshSensorConfigSummary();
-    });
-});
-
-document.querySelectorAll('.btn-sensor-step-prev').forEach((button) => {
-    button.addEventListener('click', () => {
-        if (currentConfigStep > 1) updateSensorWizardStep(currentConfigStep - 1);
-    });
-});
-
-document.querySelectorAll('#sensorConfigForm input[name="sensor_types[]"]').forEach((checkbox) => {
-    checkbox.addEventListener('change', () => {
-        const selected = Array.from(document.querySelectorAll('#sensorConfigForm input[name="sensor_types[]"]:checked')).map(item => item.value);
-        document.querySelectorAll('#sensorConfigForm [data-sensor-row]').forEach((row) => {
-            row.style.display = selected.includes(row.dataset.sensorRow) ? 'block' : 'none';
-        });
-        refreshSensorConfigSummary();
-    });
-});
-
-document.querySelectorAll('#sensorConfigForm select[name^="sensor_models"], #sensorConfigForm select[name="controller_type"], #sensorConfigForm select[name="device_connection[computer_port]"], #sensorConfigForm select[name="device_connection[device_port]"]').forEach((select) => {
-    select.addEventListener('change', refreshSensorConfigSummary);
-});
-
-document.getElementById('btnEditSensorConfig')?.addEventListener('click', () => {
-    updateSensorWizardStep(1);
-    refreshSensorConfigSummary();
-    sensorConfigModal?.classList.add('active');
-    document.body.style.overflow = 'hidden';
-});
-
-document.getElementById('closeSensorConfigModal')?.addEventListener('click', () => {
-    sensorConfigModal?.classList.remove('active');
-    document.body.style.overflow = '';
-});
-
-sensorConfigModal?.addEventListener('click', event => {
-    if (event.target === sensorConfigModal) {
-        sensorConfigModal.classList.remove('active');
-        document.body.style.overflow = '';
-    }
-});
-
-const connectSensorModal = document.getElementById('connectSensorModal');
-const closeConnectSensor = () => {
-    connectSensorModal?.classList.remove('active');
-    document.body.style.overflow = '';
-};
-document.getElementById('btnConnectSensor')?.addEventListener('click', () => {
-    connectSensorModal?.classList.add('active');
-    document.body.style.overflow = 'hidden';
-    document.getElementById('sensorIdInput')?.focus();
-});
-
-document.querySelectorAll('.sensor-connect-method').forEach((button) => {
-    button.addEventListener('click', () => {
-        const mode = button.dataset.connectMode;
-        document.querySelectorAll('.sensor-connect-method').forEach((item) => item.classList.toggle('active', item === button));
-        document.querySelectorAll('.sensor-connect-panel').forEach((panel) => {
-            panel.classList.toggle('active', panel.dataset.connectPanel === mode);
-        });
-
-        if (mode === 'manual') {
-            setTimeout(() => document.getElementById('sensorIdInputManual')?.focus(), 50);
-        } else {
-            setTimeout(() => document.getElementById('sensorIdInput')?.focus(), 50);
-        }
-    });
-});
-
-document.getElementById('closeConnectSensorModal')?.addEventListener('click', closeConnectSensor);
-connectSensorModal?.addEventListener('click', event => { if (event.target === connectSensorModal) closeConnectSensor(); });
-document.getElementById('confirmConnectSensor')?.addEventListener('click', async () => {
-    const sensorId = document.getElementById('sensorIdInput')?.value.trim() || document.getElementById('sensorIdInputManual')?.value.trim();
-    if (!sensorId) return showToast('Masukkan Sensor ID terlebih dahulu.', 'error');
-    const boardType = document.querySelector('#sensorConfigForm select[name="controller_type"]')?.value || null;
-
-    closeConnectSensor();
-
+// ── Water Relay Button ─────────────────────────────────────
+document.getElementById('btnTriggerWaterManual')?.addEventListener('click', async () => {
+    if (!isConnected) return showToast('Sensor belum terhubung.', 'error');
     try {
-        const data = await apiFetch(`/taman/${TAMAN.id}/sensor/connect`, 'POST', { sensor_id: sensorId, board_type: boardType });
-        if (data.success || data.connected) {
-            beginPairingSequence(sensorId);
-            return;
+        showToast('Mengirim perintah relay ke server...');
+        appendLog('manual water command — duration: 10s');
+        const res = await apiFetch(`/taman/${TAMAN.id}/actions/water`, 'POST', { duration_sec: 10 });
+        if (res.success) {
+            setRelayStatus(true);
+            appendLog('relay ON — keran terbuka (10 detik)', 'success');
+            pushFarmNotification('Keran air dibuka selama 10 detik.', 'bi-droplet-fill');
+            showToast('Keran berhasil dibuka!');
+            if (res.telemetry) updateCards(res.telemetry);
+            setTimeout(() => { setRelayStatus(false); appendLog('relay OFF — keran ditutup', 'info'); }, 10000);
         }
-        showToast('Sensor gagal dihubungkan.', 'error');
-    } catch (error) {
-        showToast(error.message || 'Pairing gagal. Periksa board dan koneksi API.', 'error');
-    }
-});
-document.addEventListener('keydown', event => {
-    if (event.key === 'Escape' && sensorConfigModal?.classList.contains('active')) {
-        sensorConfigModal.classList.remove('active');
-        document.body.style.overflow = '';
-    }
-    if (event.key === 'Escape' && connectSensorModal?.classList.contains('active')) closeConnectSensor();
-});
-
-document.querySelector('.btn-reconnect-device')?.addEventListener('click', async () => {
-    const sensorId = document.querySelector('.device-status-card strong')?.textContent?.trim();
-    refreshUsbEventStream('Reconnecting');
-    showToast('Menyambungkan ulang perangkat...');
-    try {
-        const boardType = document.querySelector('#sensorConfigForm select[name="controller_type"]')?.value || null;
-        const payload = { sensor_id: sensorId && sensorId !== 'Belum dipasangkan' ? sensorId : 'SENSOR-RECONNECT-001', board_type: boardType };
-        const data = await apiFetch(`/taman/${TAMAN.id}/sensor/connect`, 'POST', payload);
-        if (data.success || data.connected) {
-            usbDeviceConnected = true;
-            updateUsbDetectionState();
-            updateHardwareMetrics();
-            appendUsbConsole('reconnect success: board restored on usb channel');
-            refreshUsbEventStream('Connected');
-            pushFarmNotification('Koneksi sensor berhasil dipulihkan.', 'bi-arrow-repeat');
-            showToast('Koneksi berhasil dipulihkan.');
-            window.location.reload();
-        } else {
-            showToast('Gagal melakukan reconnect.', 'error');
-        }
-    } catch (error) {
-        showToast(error.message || 'Reconnect gagal.', 'error');
+    } catch (err) {
+        showToast(err.message || 'Gagal mengirim perintah relay.', 'error');
+        appendLog(`relay error: ${err.message}`, 'error');
     }
 });
 
-document.querySelector('.btn-reset-device')?.addEventListener('click', async () => {
-    showToast('Mereset koneksi perangkat...');
-    try {
-        const data = await apiFetch(`/taman/${TAMAN.id}/sensor`, 'DELETE');
-        if (data.success || data.connected === false) {
-            pushFarmNotification('Koneksi sensor diputus. Menunggu pairing ulang.', 'bi-plug');
-            showToast('Koneksi berhasil direset.', 'error');
-            window.location.reload();
-        } else {
-            showToast('Gagal mereset koneksi.', 'error');
-        }
-    } catch (error) {
-        showToast(error.message || 'Reset koneksi gagal.', 'error');
-    }
-});
-
-document.getElementById('btnDetectUsbBoard')?.addEventListener('click', () => {
-    autoDetectUsbPort();
-    updateHardwareMetrics();
-});
-
-document.getElementById('btnAutoDetectUsbPort')?.addEventListener('click', () => {
-    autoDetectUsbPort();
-    updateHardwareMetrics();
-});
-
-document.getElementById('btnSimulateUsbRefresh')?.addEventListener('click', () => {
-    appendUsbConsole(`refreshing usb state on ${USB_PORT_NAME || 'USB-A'}`);
-    appendUsbConsole(`status: ${usbDeviceConnected ? 'board connected' : 'board not connected'}`);
-    if (!usbDeviceConnected) {
-        showToast('USB state refreshed. Board belum terdeteksi.', 'error');
-    } else {
-        showToast('USB state refreshed. Board terdeteksi.');
-    }
-});
-
-document.getElementById('btnDisconnectUsbBoard')?.addEventListener('click', () => {
-    usbDeviceConnected = false;
-    updateUsbDetectionState();
-    updateHardwareMetrics();
-    appendUsbConsole(`usb disconnect: ${USB_PORT_NAME} lost connection`, 'warn');
-    pushFarmNotification(`Board ${USB_BOARD_NAME} terputus dari port ${USB_PORT_NAME}.`, 'bi-plug');
-    showToast('Board terputus dari USB.', 'error');
-});
-
+// ── Sync (Simulator) ───────────────────────────────────────
 document.getElementById('btnSyncData')?.addEventListener('click', async () => {
-    showToast('Menyinkronkan sensor...');
+    showToast('Menyinkronkan sensor (simulator)...');
+    appendLog('sync triggered — simulator mode');
     try {
         const data = await apiFetch(`/taman/${TAMAN.id}/sync`, 'POST');
         if (data.success) {
             updateCards(data.telemetry);
+            markFresh('simulator');
+            applyConnectionState(true);
+            appendLog('sync ok — data updated via simulator', 'success');
             pushFarmNotification('Sinkronisasi sensor selesai.', 'bi-arrow-repeat');
             showToast('Sinkronisasi berhasil!');
-        } else showToast('Gagal sync.', 'error');
+        }
     } catch { showToast('Gagal terhubung ke server.', 'error'); }
 });
 
+// ── Reset Sensor ───────────────────────────────────────────
+document.getElementById('btnResetSensor')?.addEventListener('click', async () => {
+    if (!confirm('Putus koneksi sensor ini? ESP32 perlu dipasangkan ulang.')) return;
+    try {
+        const data = await apiFetch(`/taman/${TAMAN.id}/sensor`, 'DELETE');
+        if (data.success || data.connected === false) {
+            applyConnectionState(false);
+            setCard('displaySensorId', 'Belum dipasangkan');
+            appendLog('sensor disconnected — awaiting re-pair', 'warn');
+            pushFarmNotification('Sensor diputus. Silakan pasangkan ulang.', 'bi-plug');
+            showToast('Sensor berhasil diputus.', 'error');
+        }
+    } catch (e) { showToast(e.message || 'Reset gagal.', 'error'); }
+});
+
+// ── Farm Action Modal (Pupuk / Siram) ─────────────────────
 const farmActionModal = document.getElementById('farmActionModal');
-let pendingFarmAction = null;
+let pendingAction = null;
+
 const closeFarmAction = () => {
     farmActionModal?.classList.remove('active');
     document.body.style.overflow = '';
-    pendingFarmAction = null;
+    pendingAction = null;
 };
 
 function openFarmAction(action) {
-    pendingFarmAction = action;
+    pendingAction = action;
     document.getElementById('farmActionTitle').textContent = action.title;
     document.getElementById('farmActionDescription').textContent = action.description;
     farmActionModal?.classList.add('active');
     document.body.style.overflow = 'hidden';
 }
 
-document.getElementById('btnSwapAction')?.addEventListener('click', () => openFarmAction({
+document.getElementById('btnWaterAction')?.addEventListener('click', () => openFarmAction({
     endpoint: `/taman/${TAMAN.id}/actions/water`,
     body: { duration_sec: 30 },
     title: 'Konfirmasi penyiraman',
-    description: 'Instruksi simulasi akan mencatat penyiraman selama 30 detik ke riwayat taman.',
-    success: 'Penyiraman dicatat!',
-    icon: 'bi-droplet-fill'
+    description: 'Mencatat penyiraman manual 30 detik ke riwayat taman dan menghitung efek pada telemetri.',
+    success: 'Penyiraman berhasil dicatat!',
+    icon: 'bi-droplet-fill',
 }));
 
 document.getElementById('btnFertilizeAction')?.addEventListener('click', () => openFarmAction({
     endpoint: `/taman/${TAMAN.id}/actions/fertilize`,
     body: { fertilizer_type: 'NPK', volume_ml: 200 },
     title: 'Konfirmasi pemupukan',
-    description: 'Instruksi simulasi akan mencatat pemupukan NPK sebanyak 200 ml ke riwayat taman.',
-    success: 'Pemupukan dicatat!',
-    icon: 'bi-flower2'
+    description: 'Mencatat pemupukan NPK 200ml ke riwayat taman dan menyesuaikan nilai EC & pH.',
+    success: 'Pemupukan berhasil dicatat!',
+    icon: 'bi-flower2',
 }));
 
 document.getElementById('confirmFarmAction')?.addEventListener('click', async () => {
-    if (!pendingFarmAction) return;
-    const action = pendingFarmAction;
+    if (!pendingAction) return;
+    const action = pendingAction;
     closeFarmAction();
     showToast('Menyimpan aksi...');
+    appendLog(`${action.icon?.replace('bi-', '') || 'action'} — ${action.title}`);
     try {
         const data = await apiFetch(action.endpoint, 'POST', action.body);
         if (data.success) {
-            if (data.telemetry) {
-                updateCards(data.telemetry);
-                markTelemetryFresh('Manual action');
-                const ai = document.getElementById('aiRecommendation');
-                if (ai && data.telemetry.health_score != null) {
-                    const score = Math.round(data.telemetry.health_score);
-                    const tip = score >= 80 ? detailCopy('optimal') : score >= 55 ? detailCopy('warning') : detailCopy('critical');
-                    ai.innerHTML = `<i class="bi bi-lightbulb text-mint me-1"></i> <strong>${document.querySelector('[data-i18n="detail-insight"]')?.textContent || 'Simulated insight'}:</strong> ${tip} (${detailCopy('score')}: ${score})`;
-                }
-            }
+            if (data.telemetry) { updateCards(data.telemetry); markFresh('manual action'); }
             pushFarmNotification(action.success, action.icon || 'bi-check-circle');
+            appendLog(`${action.title} berhasil`, 'success');
             showToast(action.success);
         }
-    } catch (error) { showToast(error.message || 'Aksi gagal.', 'error'); }
+    } catch (e) { showToast(e.message || 'Aksi gagal.', 'error'); }
 });
 
 document.getElementById('closeFarmActionModal')?.addEventListener('click', closeFarmAction);
 document.getElementById('cancelFarmAction')?.addEventListener('click', closeFarmAction);
-farmActionModal?.addEventListener('click', event => { if (event.target === farmActionModal) closeFarmAction(); });
-document.addEventListener('keydown', event => { if (event.key === 'Escape' && farmActionModal?.classList.contains('active')) closeFarmAction(); });
+farmActionModal?.addEventListener('click', e => { if (e.target === farmActionModal) closeFarmAction(); });
 
+// ── Activity Log Drawer ────────────────────────────────────
 document.getElementById('btnActivityLog')?.addEventListener('click', async () => {
     try {
         const data = await apiFetch(`/taman/${TAMAN.id}/activities`);
         const items = data.activities || [];
-        const icons = { sync:'sync_icon', water:'droplet-fill', fertilize:'flower2', alert:'exclamation-triangle', export:'download' };
+        const iconMap = { sync:'arrow-repeat', water:'droplet-fill', fertilize:'flower2', alert:'exclamation-triangle', connection:'plug', export:'download' };
         const html = items.length === 0
             ? '<p style="color:var(--text-muted);font-size:.9rem;">Belum ada aktivitas.</p>'
             : items.map(a => `<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border-subtle);">
-                    <i class="bi bi-${icons[a.type]||'journal'}" style="color:var(--color-accent-highlight);margin-top:3px;"></i>
-                    <div>
-                        <div style="font-weight:600;font-size:.88rem;">${a.title}</div>
-                        <div style="font-size:.75rem;color:var(--text-muted);">${new Date(a.created_at).toLocaleString('id-ID')}</div>
-                    </div></div>`).join('');
+                <i class="bi bi-${iconMap[a.type]||'journal'}" style="color:var(--color-accent-highlight);margin-top:3px;"></i>
+                <div>
+                    <div style="font-weight:600;font-size:.88rem;">${a.title}</div>
+                    <div style="font-size:.75rem;color:var(--text-muted);">${new Date(a.created_at).toLocaleString('id-ID')}</div>
+                    ${a.detail ? `<div style="font-size:.75rem;color:var(--text-secondary);">${a.detail}</div>` : ''}
+                </div>
+            </div>`).join('');
 
         let modal = document.getElementById('activityDrawer');
         if (!modal) {
@@ -1565,7 +975,7 @@ document.getElementById('btnActivityLog')?.addEventListener('click', async () =>
             modal.innerHTML = `<div style="background:var(--bg-secondary);border-radius:24px 24px 0 0;width:100%;max-width:580px;max-height:70vh;padding:1.5rem;overflow-y:auto;">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
                     <h5 style="font-family:'Cinzel',serif;font-weight:700;margin:0;">Riwayat Aktivitas</h5>
-                    <button onclick="document.getElementById('activityDrawer').remove()" style="background:var(--bg-primary);border:1px solid var(--border-subtle);border-radius:50%;width:32px;height:32px;cursor:pointer;color:var(--text-muted);">x</button>
+                    <button onclick="document.getElementById('activityDrawer').remove()" style="background:var(--bg-primary);border:1px solid var(--border-subtle);border-radius:50%;width:32px;height:32px;cursor:pointer;color:var(--text-muted);">✕</button>
                 </div>
                 <div id="activityDrawerBody"></div></div>`;
             document.body.appendChild(modal);
@@ -1575,8 +985,230 @@ document.getElementById('btnActivityLog')?.addEventListener('click', async () =>
     } catch { showToast('Gagal memuat riwayat.', 'error'); }
 });
 
+// ── Export CSV ─────────────────────────────────────────────
 document.getElementById('btnExportData')?.addEventListener('click', () => {
     window.location.href = `/api/taman/${TAMAN.id}/export.csv`;
 });
+
+// ── Sensor Config Wizard ───────────────────────────────────
+const sensorConfigModal = document.getElementById('sensorConfigModal');
+const configWizardSteps = Array.from(document.querySelectorAll('[data-sensor-step]'));
+let currentConfigStep = 1;
+
+const updateSensorWizardStep = (n) => {
+    currentConfigStep = n;
+    configWizardSteps.forEach(s => s.classList.toggle('active', Number(s.dataset.sensorStep) === n));
+};
+
+const refreshSensorConfigSummary = () => {
+    const selected = Array.from(document.querySelectorAll('#sensorConfigForm input[name="sensor_types[]"]:checked')).map(i => i.value);
+    const summary = document.getElementById('sensorConfigSummary');
+    if (!summary) return;
+    if (!selected.length) { summary.innerHTML = '<div class="wizard-summary-empty">Belum ada sensor dipilih.</div>'; return; }
+    const labels = { moisture:'Kelembapan', temperature:'Suhu', ph:'pH', ec:'EC' };
+    const rows = selected.map(t => {
+        const model = document.querySelector(`#sensorConfigForm select[name="sensor_models[${t}]"]`)?.value || 'Belum dipilih';
+        return `<div class="wizard-summary-item"><span>${labels[t]||t}</span><strong>${model}</strong></div>`;
+    }).join('');
+    const ctrl = document.querySelector('#sensorConfigForm select[name="controller_type"]')?.value || 'esp32';
+    summary.innerHTML = `<div class="wizard-summary-item"><span>Sensor</span><strong>${selected.length} tipe aktif</strong></div>${rows}<div class="wizard-summary-item"><span>Board</span><strong>${ctrl.toUpperCase()}</strong></div>`;
+};
+
+document.querySelectorAll('.btn-sensor-step-next').forEach(b => b.addEventListener('click', () => { if (currentConfigStep < 3) updateSensorWizardStep(currentConfigStep + 1); refreshSensorConfigSummary(); }));
+document.querySelectorAll('.btn-sensor-step-prev').forEach(b => b.addEventListener('click', () => { if (currentConfigStep > 1) updateSensorWizardStep(currentConfigStep - 1); }));
+document.querySelectorAll('#sensorConfigForm input[name="sensor_types[]"]').forEach(cb => cb.addEventListener('change', () => {
+    const sel = Array.from(document.querySelectorAll('#sensorConfigForm input[name="sensor_types[]"]:checked')).map(i => i.value);
+    document.querySelectorAll('#sensorConfigForm [data-sensor-row]').forEach(r => { r.style.display = sel.includes(r.dataset.sensorRow) ? 'block' : 'none'; });
+    refreshSensorConfigSummary();
+}));
+
+document.getElementById('btnEditSensorConfig')?.addEventListener('click', () => {
+    updateSensorWizardStep(1); refreshSensorConfigSummary();
+    sensorConfigModal?.classList.add('active'); document.body.style.overflow = 'hidden';
+});
+document.getElementById('closeSensorConfigModal')?.addEventListener('click', () => { sensorConfigModal?.classList.remove('active'); document.body.style.overflow = ''; });
+sensorConfigModal?.addEventListener('click', e => { if (e.target === sensorConfigModal) { sensorConfigModal.classList.remove('active'); document.body.style.overflow = ''; } });
+
+// ── Connect Sensor Modal ───────────────────────────────────
+const connectSensorModal = document.getElementById('connectSensorModal');
+const closeConnectSensor = () => { connectSensorModal?.classList.remove('active'); document.body.style.overflow = ''; };
+
+document.getElementById('btnConnectSensor')?.addEventListener('click', () => {
+    connectSensorModal?.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => document.getElementById('sensorIdInput')?.focus(), 50);
+});
+document.getElementById('closeConnectSensorModal')?.addEventListener('click', closeConnectSensor);
+connectSensorModal?.addEventListener('click', e => { if (e.target === connectSensorModal) closeConnectSensor(); });
+
+document.getElementById('confirmConnectSensor')?.addEventListener('click', async () => {
+    const sensorId = document.getElementById('sensorIdInput')?.value.trim();
+    if (!sensorId) return showToast('Masukkan Sensor ID terlebih dahulu.', 'error');
+    const boardType = document.querySelector('#sensorConfigForm select[name="controller_type"]')?.value || null;
+    closeConnectSensor();
+    showToast('Memasangkan sensor...');
+    appendLog(`pairing: sensor_id=${sensorId}`);
+    try {
+        const data = await apiFetch(`/taman/${TAMAN.id}/sensor/connect`, 'POST', { sensor_id: sensorId, board_type: boardType });
+        if (data.success || data.connected) {
+            setCard('displaySensorId', sensorId);
+            applyConnectionState(true);
+            appendLog(`sensor paired: ${sensorId}`, 'success');
+            pushFarmNotification(`Sensor ${sensorId} berhasil dipasangkan.`, 'bi-link-45deg');
+            showToast('Sensor berhasil dipasangkan!');
+            setTimeout(() => window.location.reload(), 800);
+        } else showToast('Gagal memasangkan sensor.', 'error');
+    } catch (e) {
+        showToast(e.message || 'Pairing gagal.', 'error');
+        appendLog(`pairing error: ${e.message}`, 'error');
+    }
+});
+
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+        sensorConfigModal?.classList.remove('active');
+        connectSensorModal?.classList.remove('active');
+        closeFarmAction();
+        document.body.style.overflow = '';
+    }
+});
 </script>
+
+<style>
+/* ── IoT Flow Diagram ─────────────────────────────── */
+.iot-flow-section { padding: 1.5rem; }
+
+.iot-flow-diagram {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: rgba(0,0,0,.25);
+    border-radius: 16px;
+    border: 1px solid var(--border-subtle);
+    position: relative;
+}
+
+.flow-node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 14px 18px;
+    border-radius: 14px;
+    background: rgba(255,255,255,.04);
+    border: 1.5px solid rgba(148,163,184,.25);
+    transition: all .4s ease;
+    min-width: 90px;
+    opacity: 0.55;
+}
+.flow-node.node-active {
+    opacity: 1;
+    border-color: rgba(27,196,146,.6);
+    background: rgba(27,196,146,.08);
+    box-shadow: 0 0 16px rgba(27,196,146,.15);
+    animation: node-pulse 2.5s ease infinite;
+}
+.flow-node.node-brain.node-active {
+    border-color: rgba(251,191,36,.6);
+    background: rgba(251,191,36,.08);
+    box-shadow: 0 0 16px rgba(251,191,36,.15);
+}
+.flow-node-icon { font-size: 1.5rem; color: var(--color-accent-highlight); }
+.flow-node.node-brain .flow-node-icon { color: #fbbf24; }
+.flow-node-label { font-size: .78rem; font-weight: 700; color: var(--text-primary); white-space: nowrap; }
+.flow-node-sub   { font-size: .66rem; color: var(--text-muted); white-space: nowrap; }
+
+.flow-arrow { color: var(--text-muted); font-size: 1.1rem; flex-shrink: 0; }
+.flow-arrow-down {
+    position: absolute;
+    right: calc(90px + 1.5rem);
+    bottom: -32px;
+    font-size: 1.1rem;
+    color: var(--text-muted);
+}
+.flow-node-relay {
+    position: absolute;
+    right: 0;
+    bottom: -80px;
+    border-color: rgba(239,68,68,.3);
+}
+.flow-node-relay.node-active {
+    border-color: rgba(239,68,68,.7);
+    background: rgba(239,68,68,.08);
+    box-shadow: 0 0 16px rgba(239,68,68,.15);
+}
+.flow-node-relay .flow-node-icon { color: #ef4444; }
+
+@keyframes node-pulse {
+    0%,100% { box-shadow: 0 0 14px rgba(27,196,146,.15); }
+    50%      { box-shadow: 0 0 28px rgba(27,196,146,.35); }
+}
+
+/* ── Cloud Log Terminal ──────────────────────────── */
+.cloud-log-terminal {
+    border-radius: 12px;
+    border: 1px solid var(--border-subtle);
+    overflow: hidden;
+    background: rgba(0,0,0,.45);
+}
+.terminal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: .5rem 1rem;
+    background: rgba(255,255,255,.04);
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: .78rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+.terminal-body {
+    padding: .75rem 1rem;
+    max-height: 140px;
+    overflow-y: auto;
+    font-family: 'Courier New', monospace;
+    font-size: .73rem;
+}
+.t-line   { padding: 2px 0; color: var(--text-muted); }
+.t-prompt { margin-right: 8px; color: var(--color-accent-highlight); }
+.t-success .t-prompt { color: #4ade80; }
+.t-warn   .t-prompt  { color: #fbbf24; }
+.t-error  .t-prompt  { color: #ef4444; }
+.t-success { color: rgba(74,222,128,.85); }
+.t-warn    { color: rgba(251,191,36,.85); }
+.t-error   { color: rgba(239,68,68,.85); }
+
+/* ── Live dot ──────────────────────────────────────── */
+.live-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--text-muted);
+    transition: background .3s;
+}
+.live-dot.dot-online {
+    background: var(--color-accent-highlight);
+    box-shadow: 0 0 0 0 rgba(27,196,146,.5);
+    animation: blink 1.4s ease infinite;
+}
+@keyframes blink {
+    0%,100% { box-shadow: 0 0 0 0 rgba(27,196,146,.5); }
+    70%     { box-shadow: 0 0 0 8px rgba(27,196,146,0); }
+}
+
+/* ── Alert IoT info box ────────────────────────────── */
+.alert-iot {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: .85rem 1rem;
+    background: rgba(27,196,146,.08);
+    border: 1px solid rgba(27,196,146,.3);
+    border-radius: 12px;
+}
+
+/* ── Border Mint ───────────────────────────────────── */
+.border-mint  { border-color: var(--color-accent-highlight) !important; }
+</style>
 @endsection
