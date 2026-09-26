@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 | Semua route di bawah membutuhkan session auth (bukan token Sanctum).
 | Ownership per-taman divalidasi di dalam TelemetryController.
+*/
+
 // Endpoint Publik Khusus ESP32 (Wireless IoT)
 Route::post('/iot/telemetry', [TelemetryController::class, 'ingestDeviceTelemetry']);
 
