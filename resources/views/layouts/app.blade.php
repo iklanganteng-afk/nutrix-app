@@ -149,7 +149,7 @@
     <div class="modal-overlay" id="authModal">
         <div class="web3-modal-box auth-modal-box">
             <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-secondary pb-3">
-                <div class="auth-tab-group">
+                <div class="auth-tab-group" id="authTabGroup">
                     <button class="auth-tab active" data-tab="signin" data-i18n="ui-sign-in">Sign In</button>
                     <button class="auth-tab" data-tab="signup" data-i18n="ui-sign-up">Sign Up</button>
                 </div>
@@ -190,6 +190,45 @@
                 </div>
                 <button class="btn btn-connect-node w-100 mt-3" id="btnSignUp" data-i18n="ui-create-account">Create Account</button>
                 <p class="text-center text-muted mt-3 mb-0" style="font-size:0.85rem;"><span data-i18n="ui-sign-up-help">Already have an account?</span> <a href="#" class="text-mint auth-switch" data-tab="signin" data-i18n="ui-sign-in">Sign In</a></p>
+            </div>
+
+            <!-- STEP 2: VERIFIKASI OTP 2 MENIT -->
+            <div class="auth-form" id="form-otp" style="display:none;">
+                <div class="text-center mb-3">
+                    <div class="d-inline-flex p-3 rounded-circle bg-dark border border-secondary mb-2">
+                        <i class="bi bi-envelope-open text-mint fs-3"></i>
+                    </div>
+                    <h5 class="fw-bold mb-1 text-white" id="otpHeadingTitle" data-i18n="auth-verify-email-title">Verifikasi Email Anda</h5>
+                    <p class="text-muted small mb-0">Kode verifikasi 6 digit telah dikirimkan ke:</p>
+                    <div class="fw-bold text-mint font-monospace small" id="otpTargetEmail">user@example.com</div>
+                </div>
+
+                <!-- Live 2-Minute Timer Box -->
+                <div class="d-flex justify-content-between align-items-center p-2 mb-3 rounded-3 bg-dark border border-secondary">
+                    <span class="text-secondary small"><i class="bi bi-hourglass-split me-1 text-warning"></i> <span data-i18n="auth-time-left">Sisa Waktu Berlaku:</span></span>
+                    <span class="badge bg-danger bg-opacity-25 text-danger border border-danger border-opacity-50 fs-6 font-monospace" id="otpTimerDisplay">
+                        02:00
+                    </span>
+                </div>
+
+                <div class="auth-input-group mb-3 text-center">
+                    <label class="text-secondary small mb-2 d-block" data-i18n="auth-enter-6-digit">Masukkan 6 Digit Kode Verifikasi</label>
+                    <input type="text" class="auth-input text-center fw-bold fs-3 font-monospace tracking-wider" 
+                           maxlength="6" placeholder="000000" id="inputOtpCode" style="letter-spacing: 8px;">
+                </div>
+
+                <button class="btn btn-connect-node w-100 mb-2" id="btnVerifyOtp">
+                    <span data-i18n="auth-verify-login">Verifikasi & Masuk</span>
+                </button>
+
+                <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top border-secondary">
+                    <button type="button" class="btn btn-link text-secondary text-decoration-none p-0 small" id="btnBackFromOtp">
+                        <i class="bi bi-arrow-left me-1"></i> <span data-i18n="auth-back-change">Kembali / Ganti</span>
+                    </button>
+                    <button type="button" class="btn btn-link text-mint text-decoration-none p-0 small fw-bold" id="btnResendOtp" disabled>
+                        <i class="bi bi-arrow-clockwise me-1"></i> <span data-i18n="auth-resend-code">Kirim Ulang Kode</span>
+                    </button>
+                </div>
             </div>
         </div>
     </div>

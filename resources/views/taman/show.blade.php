@@ -87,6 +87,14 @@
                 <strong>{{ $controller }}</strong>
             </div>
             <div class="sensor-connection-row">
+                <span data-i18n="detail-laptop-port">Port laptop / Gateway</span>
+                <strong>{{ $computerPort }}</strong>
+            </div>
+            <div class="sensor-connection-row">
+                <span data-i18n="detail-device-port">Port alat / Catu Daya</span>
+                <strong>{{ $devicePort }}</strong>
+            </div>
+            <div class="sensor-connection-row">
                 <span data-i18n="detail-network-mode">Mode Jaringan</span>
                 <strong>WiFi 2.4 GHz (Hotspot GG)</strong>
             </div>
@@ -106,6 +114,7 @@
             <div>
                 <span class="badge-web3" data-i18n="detail-wireless-node">Wireless IoT Architecture</span>
                 <h3 class="mb-0 mt-2" data-i18n="detail-wireless-status">Status Koneksi Node & Topologi Nirkabel</h3>
+                <small class="text-muted d-block mt-1">Panduan kabel & transmisi nirkabel node IoT</small>
             </div>
         </div>
 
