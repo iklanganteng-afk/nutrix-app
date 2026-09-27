@@ -18,7 +18,9 @@
         default   => 'Board belum dipilih',
     };
     $sensorId = $taman->sensor_id ?? null;
+    $deviceToken = $taman->device_token ?? null;
     $isConnected = (bool) $taman->sensor_connected;
+    $lastSeen = $taman->last_seen_at ? $taman->last_seen_at->diffForHumans() : null;
     $selectedSoil = $taman->soil_type ?? '';
     $selectedSensorTypes  = $taman->sensor_types  ?? [];
     $selectedSensorModels = $taman->sensor_models ?? [];
@@ -211,9 +213,9 @@
 
                 {{-- Action Strip --}}
                 <div class="nx-action-strip mt-4 pt-3 border-top border-secondary">
-                    <div class="nx-strip-btn" id="btnSyncData" data-requires-sensor title="Sinkronkan Telemetri">
-                        <i class="bi bi-arrow-down-up"></i>
-                        <span>Sync</span>
+                    <div class="nx-strip-btn" id="btnSyncData" data-requires-sensor title="Uji Coba Simulasi Data Sensor">
+                        <i class="bi bi-cpu"></i>
+                        <span>Uji Simulasi</span>
                     </div>
                     <div class="nx-strip-btn highlight" id="btnWaterAction" data-requires-sensor title="Siram Manual (Database Action)">
                         <i class="bi bi-droplet-fill"></i>
@@ -265,18 +267,22 @@
                             <strong>{{ $controllerName }}</strong>
                         </div>
                         <div class="nx-spec-item">
-                            <span><i class="bi bi-qr-code me-2 text-muted"></i>Sensor ID</span>
+                            <span><i class="bi bi-key-fill me-2 text-muted"></i>Pairing Token</span>
+                            <strong id="displayDeviceToken" class="text-warning font-monospace">{{ $deviceToken ?? 'Belum dibuat' }}</strong>
+                        </div>
+                        <div class="nx-spec-item">
+                            <span><i class="bi bi-qr-code me-2 text-muted"></i>Sensor Node ID</span>
                             <strong id="displaySensorId" class="text-mint">{{ $sensorId ?? 'Belum terpasang' }}</strong>
                         </div>
                         <div class="nx-spec-item">
-                            <span><i class="bi bi-cloud-check me-2 text-muted"></i>Status Cloud</span>
+                            <span><i class="bi bi-cloud-check me-2 text-muted"></i>Status Telemetri</span>
                             <strong id="displayCloudStatus" class="{{ $isConnected ? 'text-mint' : 'text-muted' }}">
-                                {{ $isConnected ? 'Online (Railway HTTPS)' : 'Offline' }}
+                                {{ $isConnected ? 'Online (Railway HTTPS)' : 'Offline / Standby' }}
                             </strong>
                         </div>
                         <div class="nx-spec-item">
-                            <span><i class="bi bi-gear-wide-connected me-2 text-muted"></i>Decision Engine</span>
-                            <strong class="text-warning">Moisture &lt; 30% ➔ Auto Siram</strong>
+                            <span><i class="bi bi-clock-history me-2 text-muted"></i>Heartbeat Terakhir</span>
+                            <strong id="displayLastSeen" class="text-light">{{ $lastSeen ?? 'Belum ada transmisi' }}</strong>
                         </div>
                     </div>
                 </div>
@@ -594,35 +600,64 @@
 </div>
 
 {{-- ════════════════════════════════════════════
-     MODAL: Hubungkan Sensor (Pairing via Sensor ID)
+     MODAL: Hubungkan Sensor (Real Claim Token Pairing System)
      ════════════════════════════════════════════ --}}
 <div class="modal-overlay" id="connectSensorModal" role="dialog" aria-modal="true" aria-labelledby="connectSensorTitle">
-    <div class="web3-modal-box">
-        <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-secondary pb-3">
+    <div class="web3-modal-box" style="max-width: 540px;">
+        <div class="d-flex justify-content-between align-items-center mb-3 border-bottom border-secondary pb-3">
             <div>
-                <span class="badge-web3 mb-2">Pairing Sensor</span>
-                <h4 class="mb-0 fw-bold" id="connectSensorTitle" style="font-family:'Cinzel',serif;">Hubungkan ESP32</h4>
+                <span class="badge-web3 mb-1"><i class="bi bi-shield-lock-fill me-1"></i>Secure Device Pairing</span>
+                <h4 class="mb-0 fw-bold text-white" id="connectSensorTitle" style="font-family:'Cinzel',serif; font-size:1.25rem;">Pairing Mikrokontroler ESP32</h4>
             </div>
             <button type="button" class="btn-close-custom" id="closeConnectSensorModal" aria-label="Close"><i class="bi bi-x-lg"></i></button>
         </div>
 
-        <div class="alert-iot mb-3">
-            <i class="bi bi-info-circle text-mint me-2"></i>
-            <div>
-                <strong class="text-white d-block mb-1">Cara mendapat Sensor ID</strong>
-                <span class="small text-muted">Nyalakan ESP32 → sambungkan ke WiFi → buka Serial Monitor Arduino IDE. Sensor ID tampil di baris pertama log boot (contoh: <code>ESP32-NUTRIX-01</code>).</span>
+        {{-- Step 1: Token Display & Generator --}}
+        <div class="p-3 mb-3" style="background: rgba(16, 185, 129, 0.06); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 14px;">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-white" style="font-size:0.85rem; font-weight:700;"><i class="bi bi-key-fill text-warning me-1"></i> Device Claim Token</span>
+                <button type="button" class="btn btn-sm btn-outline-success" id="btnGenerateToken" style="font-size:0.75rem; padding: 3px 10px; border-radius:8px;">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Buat Token Baru
+                </button>
+            </div>
+            <div class="input-group">
+                <input type="text" id="activeTokenDisplay" class="form-control font-monospace text-center fw-bold" 
+                    value="{{ $deviceToken ?? 'Belum ada token — klik Buat Token Baru' }}" readonly 
+                    style="background: rgba(0,0,0,0.5); color: #34d399; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px 0 0 8px; font-size: 1.05rem;">
+                <button class="btn btn-outline-secondary" type="button" id="btnCopyToken" title="Salin Token" style="border-radius: 0 8px 8px 0;">
+                    <i class="bi bi-clipboard-check"></i>
+                </button>
+            </div>
+            <small class="text-muted d-block mt-2" style="font-size: 0.78rem;">
+                Token ini mengaitkan hardware fisik Anda langsung ke database taman ini tanpa data palsu.
+            </small>
+        </div>
+
+        {{-- Step 2: Step-by-step instructions --}}
+        <div class="alert-iot mb-3" style="font-size: 0.82rem; line-height: 1.45;">
+            <strong class="text-white d-block mb-1"><i class="bi bi-terminal-split text-mint me-1"></i> Alur Pairing Fisik ESP32:</strong>
+            <ol class="mb-0 ps-3 text-secondary">
+                <li class="mb-1">Colokkan ESP32 ke adaptor daya 5V / USB.</li>
+                <li class="mb-1">Buka WiFi HP, sambungkan ke WiFi Access Point: <code class="text-mint">NUTRIX-ESP32-PAIR</code></li>
+                <li class="mb-1">Browser otomatis membuka form konfigurasi WiFi (Captive Portal).</li>
+                <li class="mb-1">Pilih WiFi rumah/hotspot Anda, lalu <strong>tempel (paste) Token di atas</strong> pada kolom <em>Device Pairing Token</em>.</li>
+                <li>Simpan. ESP32 otomatis streaming telemetri riil & status di dashboard ini langsung LIVE!</li>
+            </ol>
+        </div>
+
+        {{-- Fallback / Manual Node ID --}}
+        <div class="border-top border-secondary pt-3 mt-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <label for="sensorIdInput" class="text-white small mb-0 fw-semibold">Label Sensor Node ID (Opsional)</label>
+                <small class="text-muted">Untuk penamaan di Serial Monitor</small>
+            </div>
+            <div class="input-group mb-3">
+                <input type="text" id="sensorIdInput" class="auth-input mb-0" placeholder="ESP32-NODE-01" value="{{ $sensorId ?? 'ESP32-NODE-01' }}" autocomplete="off">
+                <button type="button" class="btn btn-connect-node px-3" id="confirmConnectSensor">
+                    <i class="bi bi-check-lg me-1"></i> Simpan ID
+                </button>
             </div>
         </div>
-
-        <div class="auth-input-group mb-3">
-            <label for="sensorIdInput">Sensor ID (dari firmware ESP32)</label>
-            <input type="text" id="sensorIdInput" class="auth-input" placeholder="ESP32-NUTRIX-01" autocomplete="off">
-            <small class="text-muted">Sesuaikan dengan nilai <code>custom_sensor_id</code> di firmware ESP32 kamu.</small>
-        </div>
-
-        <button type="button" class="btn btn-connect-node w-100" id="confirmConnectSensor">
-            <i class="bi bi-link-45deg me-1"></i> Pasangkan Sensor
-        </button>
     </div>
 </div>
 @endsection
@@ -807,12 +842,22 @@ function updateCards(t) {
     }
 }
 
-function markFresh(source) {
+function markFresh(source, lastSeen) {
     const now = new Date().toLocaleTimeString('id-ID');
     const srcEl = document.getElementById('sourceText');
     const timeEl = document.getElementById('lastUpdatedTime');
-    if (srcEl) srcEl.textContent = source === 'esp32_device' ? 'ESP32 Wireless' : source === 'simulator' ? 'Simulator' : source || 'API';
+    const lastSeenEl = document.getElementById('displayLastSeen');
+    if (srcEl) {
+        if (source === 'esp32_device') {
+            srcEl.innerHTML = '<span class="text-mint fw-bold"><i class="bi bi-broadcast me-1"></i>ESP32 Wireless (RIIL)</span>';
+        } else if (source === 'simulator') {
+            srcEl.innerHTML = '<span class="text-warning"><i class="bi bi-cpu me-1"></i>Simulator Testing</span>';
+        } else {
+            srcEl.textContent = source || 'API Stream';
+        }
+    }
     if (timeEl) timeEl.textContent = now;
+    if (lastSeenEl && lastSeen) lastSeenEl.textContent = lastSeen;
 }
 
 // ── Load Telemetry ─────────────────────────────────────────
@@ -824,14 +869,21 @@ async function loadLatestTelemetry(silent = false) {
         const connected = data.available_sensors?.length > 0 || data.lifecycle === 'live' || data.lifecycle === 'stale';
         applyConnectionState(connected);
 
+        if (data.device_token) {
+            setCard('displayDeviceToken', data.device_token);
+        }
+        if (data.sensor_id) {
+            setCard('displaySensorId', data.sensor_id);
+        }
+
         if (data.lifecycle === 'never_received' && !data.recorded_at) {
             setCard('aiHealthScore', '--');
-            setCard('aiHealthStatus', 'Menunggu data pertama dari ESP32...');
+            setCard('aiHealthStatus', 'Menunggu telemetri riil dari ESP32...');
             return;
         }
 
         updateCards(data);
-        markFresh(data.source);
+        markFresh(data.source, data.last_seen_at ? new Date(data.last_seen_at).toLocaleTimeString('id-ID') : null);
 
         if (!silent) {
             appendLog(`telemetry ok — lifecycle: ${data.lifecycle} — source: ${data.source}`, 'success');
@@ -1068,38 +1120,76 @@ document.getElementById('btnEditSensorConfig')?.addEventListener('click', () => 
 document.getElementById('closeSensorConfigModal')?.addEventListener('click', () => { sensorConfigModal?.classList.remove('active'); document.body.style.overflow = ''; });
 sensorConfigModal?.addEventListener('click', e => { if (e.target === sensorConfigModal) { sensorConfigModal.classList.remove('active'); document.body.style.overflow = ''; } });
 
-// ── Connect Sensor Modal ───────────────────────────────────
+// ── Connect Sensor Modal & Claim Token Pairing ────────────
 const connectSensorModal = document.getElementById('connectSensorModal');
 const closeConnectSensor = () => { connectSensorModal?.classList.remove('active'); document.body.style.overflow = ''; };
 
 document.getElementById('btnConnectSensor')?.addEventListener('click', () => {
     connectSensorModal?.classList.add('active');
     document.body.style.overflow = 'hidden';
-    setTimeout(() => document.getElementById('sensorIdInput')?.focus(), 50);
 });
 document.getElementById('closeConnectSensorModal')?.addEventListener('click', closeConnectSensor);
 connectSensorModal?.addEventListener('click', e => { if (e.target === connectSensorModal) closeConnectSensor(); });
+
+// Action: Generate Claim Token Baru
+document.getElementById('btnGenerateToken')?.addEventListener('click', async () => {
+    const btn = document.getElementById('btnGenerateToken');
+    const origHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Membuat...';
+    try {
+        const res = await apiFetch(`/taman/${TAMAN.id}/token/generate`, 'POST');
+        if (res.success && res.token) {
+            const tokenInput = document.getElementById('activeTokenDisplay');
+            if (tokenInput) tokenInput.value = res.token;
+            setCard('displayDeviceToken', res.token);
+            appendLog(`Pairing token aktif: ${res.token}`, 'success');
+            showToast('Token pairing baru berhasil dibuat!');
+            pushFarmNotification(`Token pairing baru dibuat: ${res.token}`, 'bi-key-fill');
+        } else {
+            showToast(res.message || 'Gagal generate token', 'error');
+        }
+    } catch (err) {
+        showToast(err.message || 'Gagal membuat token', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+    }
+});
+
+// Action: Copy Token ke Clipboard
+document.getElementById('btnCopyToken')?.addEventListener('click', () => {
+    const tokenVal = document.getElementById('activeTokenDisplay')?.value;
+    if (!tokenVal || tokenVal.includes('Belum ada token')) {
+        return showToast('Klik Buat Token Baru terlebih dahulu.', 'error');
+    }
+    navigator.clipboard.writeText(tokenVal).then(() => {
+        showToast('Token disalin ke clipboard!');
+    }).catch(() => {
+        showToast('Gagal menyalin token', 'error');
+    });
+});
 
 document.getElementById('confirmConnectSensor')?.addEventListener('click', async () => {
     const sensorId = document.getElementById('sensorIdInput')?.value.trim();
     if (!sensorId) return showToast('Masukkan Sensor ID terlebih dahulu.', 'error');
     const boardType = document.querySelector('#sensorConfigForm select[name="controller_type"]')?.value || null;
     closeConnectSensor();
-    showToast('Memasangkan sensor...');
-    appendLog(`pairing: sensor_id=${sensorId}`);
+    showToast('Menyimpan Node ID...');
+    appendLog(`Simpan Node ID: ${sensorId}`);
     try {
         const data = await apiFetch(`/taman/${TAMAN.id}/sensor/connect`, 'POST', { sensor_id: sensorId, board_type: boardType });
         if (data.success || data.connected) {
             setCard('displaySensorId', sensorId);
             applyConnectionState(true);
-            appendLog(`sensor paired: ${sensorId}`, 'success');
-            pushFarmNotification(`Sensor ${sensorId} berhasil dipasangkan.`, 'bi-link-45deg');
-            showToast('Sensor berhasil dipasangkan!');
+            appendLog(`Sensor Node ID terhubung: ${sensorId}`, 'success');
+            pushFarmNotification(`Sensor Node ID ${sensorId} disimpan.`, 'bi-link-45deg');
+            showToast('Node ID berhasil disimpan!');
             setTimeout(() => window.location.reload(), 800);
         } else showToast('Gagal memasangkan sensor.', 'error');
     } catch (e) {
         showToast(e.message || 'Pairing gagal.', 'error');
-        appendLog(`pairing error: ${e.message}`, 'error');
+        appendLog(`Pairing error: ${e.message}`, 'error');
     }
 });
 

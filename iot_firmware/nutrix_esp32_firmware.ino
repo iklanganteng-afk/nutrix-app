@@ -2,12 +2,13 @@
  * ==============================================================================
  * SISTEM IoT NUTRIX — SMART AGRICULTURE WIRELESS CONTROLLER (ESP32)
  * ==============================================================================
- * Fitur:
- * 1. WiFi Captive Portal (WiFiManager): Setting WiFi lewat HP tanpa edit kodingan
- * 2. Sensor Kelembapan Tanah (Analog Moisture Sensor)
- * 3. Relay Valve (Keran Air Otomatis)
- * 4. Buzzer & LED Status Indikator
- * 5. Komunikasi HTTP POST JSON ke Railway Cloud API NUTRIX
+ * Fitur Utama:
+ * 1. WiFi Captive Portal (WiFiManager): Setting WiFi & Pairing Token lewat HP
+ * 2. Autentikasi Kredensial via Claim Token (device_token) yang digenerate Dashboard
+ * 3. Sensor Kelembapan Tanah (Analog Moisture Sensor ADC1 GPIO 34)
+ * 4. Kontrol Relay Solenoid Valve Otomatis dari Cloud Decision Engine (GPIO 26)
+ * 5. Buzzer Bip Alert & LED Indikator Status WiFi & Transmisi Data
+ * 6. Komunikasi Aman HTTP/HTTPS POST JSON ke Railway Cloud Server API NUTRIX
  * ==============================================================================
  */
 
@@ -18,160 +19,180 @@
 
 // ── 1. DEFINISI PIN ESP32 ──────────────────────────────────────────────────
 #define PIN_MOISTURE    34     // Sensor Kelembapan Tanah (Analog ADC1)
-#define PIN_RELAY       26     // Modul Relay (Keran Air / Pompa)
-#define PIN_BUZZER      27     // Buzzer Aktif
-#define PIN_LED_STATUS  2      // LED Bawaan Board ESP32 (Indikator Status)
+#define PIN_RELAY       26     // Modul Relay (Keran Air / Pompa Irigasi)
+#define PIN_BUZZER      27     // Buzzer Aktif 5V
+#define PIN_LED_STATUS  2      // LED Onboard ESP32 (Indikator Status Jaringan)
 
-// ── 2. KONFIGURASI SERVER RAILWAY ──────────────────────────────────────────
+// ── 2. KONFIGURASI SERVER RAILWAY NUTRIX ───────────────────────────────────
 const char* serverUrl = "https://nutrix-app-production.up.railway.app/api/iot/telemetry";
 
-// Parameter ID Taman (Bisa diisi default atau disesuaikan dengan ID di Web)
-char custom_taman_id[8] = "1";
-char custom_sensor_id[32] = "ESP32-NUTRIX-01";
+// Parameter Pairing Token & Sensor ID
+// Token ini didapatkan dari dashboard web NUTRIX (Contoh format: NTX-XXXXXXXXXXXX)
+char custom_device_token[40] = "";
+char custom_sensor_id[32]    = "ESP32-NODE-01";
+char custom_taman_id[8]      = "1"; // Fallback opsional
 
-// Hotspot Cadangan Default Langsung Konek
-const char* DEFAULT_SSID = "GG";
-const char* DEFAULT_PASS = "celino96969";
-
-// Waktu interval pengiriman data ke server (misal tiap 5 detik)
+// Interval pengiriman data telemetri (Default: 5000ms = 5 detik)
 unsigned long previousMillis = 0;
 const long interval = 5000; 
 
 void setup() {
     Serial.begin(115200);
     delay(1000);
-    Serial.println("\n--- MEMULAI NUTRIX SMART AGRI IoT SYSTEM ---");
+    Serial.println("\n=======================================================");
+    Serial.println("     NUTRIX SMART AGRICULTURE IoT CONTROLLER (ESP32)   ");
+    Serial.println("=======================================================");
 
-    // Inisialisasi Pin
+    // Inisialisasi Hardware Pin
     pinMode(PIN_RELAY, OUTPUT);
     pinMode(PIN_BUZZER, OUTPUT);
     pinMode(PIN_LED_STATUS, OUTPUT);
 
-    // Default kondisi relay & buzzer mati (Relay aktif LOW pada umumnya)
-    digitalWrite(PIN_RELAY, HIGH); // HIGH = MATI untuk modul relay active-low
+    // Default kondisi: Relay OFF (Active LOW relay -> set HIGH)
+    digitalWrite(PIN_RELAY, HIGH);
     digitalWrite(PIN_BUZZER, LOW);
     digitalWrite(PIN_LED_STATUS, LOW);
 
-    // ── 3. WIFIMANAGER CAPTIVE PORTAL SETUP ───────────────────────────────
+    // ── 3. WIFIMANAGER CAPTIVE PORTAL SETUP & PAIRING ────────────────────
     WiFiManager wm;
 
-    // Tambahkan custom input untuk ID Taman & Sensor ID di halaman web HP
-    WiFiManagerParameter custom_param_taman("taman_id", "ID Taman di Web NUTRIX", custom_taman_id, 8);
-    WiFiManagerParameter custom_param_sensor("sensor_id", "Sensor ID", custom_sensor_id, 32);
-    wm.addParameter(&custom_param_taman);
+    // Custom input form di Captive Portal HP:
+    WiFiManagerParameter custom_param_token("device_token", "Device Pairing Token (Dari Web NUTRIX)", custom_device_token, 40);
+    WiFiManagerParameter custom_param_sensor("sensor_id", "Sensor Node ID", custom_sensor_id, 32);
+    WiFiManagerParameter custom_param_taman("taman_id", "ID Taman (Fallback)", custom_taman_id, 8);
+
+    wm.addParameter(&custom_param_token);
     wm.addParameter(&custom_param_sensor);
+    wm.addParameter(&custom_param_taman);
 
-    Serial.println("Mengecek koneksi WiFi tersimpan...");
-    // Nyalakan LED tanda sedang mencari / membuka portal
-    digitalWrite(PIN_LED_STATUS, HIGH);
+    Serial.println("[WIFI] Memeriksa konfigurasi WiFi & Kredensial...");
+    digitalWrite(PIN_LED_STATUS, HIGH); // Nyalakan LED saat portal/koneksi aktif
 
-    // Jika belum ada WiFi tersimpan, ESP32 otomatis jadi Access Point: "NUTRIX-ESP32-SETUP"
-    // Buka HP, sambungkan ke WiFi "NUTRIX-ESP32-SETUP", lalu isi form di browser HP!
-    if (!wm.autoConnect("NUTRIX-ESP32-SETUP")) {
-        Serial.println("Gagal terhubung ke WiFi atau timeout. Merestart ESP32...");
+    // Jika belum terkoneksi, ESP32 membuat WiFi Access Point: "NUTRIX-ESP32-PAIR"
+    // Pengguna membuka HP, hubungkan ke SSID "NUTRIX-ESP32-PAIR", dan masukkan Token Pairing
+    if (!wm.autoConnect("NUTRIX-ESP32-PAIR")) {
+        Serial.println("[ERROR] Gagal konek ke WiFi atau waktu habis. Merestart...");
         delay(3000);
         ESP.restart();
     }
 
-    // Jika berhasil tersambung:
-    strcpy(custom_taman_id, custom_param_taman.getValue());
-    strcpy(custom_sensor_id, custom_param_sensor.getValue());
+    // Ambil data konfigurasi dari portal
+    strncpy(custom_device_token, custom_param_token.getValue(), sizeof(custom_device_token));
+    strncpy(custom_sensor_id, custom_param_sensor.getValue(), sizeof(custom_sensor_id));
+    strncpy(custom_taman_id, custom_param_taman.getValue(), sizeof(custom_taman_id));
 
     Serial.println("\n>>> SUKSES TERHUBUNG KE WIFI! <<<");
-    Serial.print("IP Address ESP32: ");
-    Serial.println(WiFi.localIP());
+    Serial.print("IP Address ESP32 : "); Serial.println(WiFi.localIP());
+    Serial.print("Node ID          : "); Serial.println(custom_sensor_id);
+    Serial.print("Pairing Token    : "); Serial.println(strlen(custom_device_token) > 0 ? custom_device_token : "(Kosong / Menggunakan Taman ID)");
 
-    // Indikator sukses: Bunyikan buzzer 2x bip pendek
+    // Indikator audio 2x bip pertanda hardware siap
     beepSuccess();
 }
 
 void loop() {
     unsigned long currentMillis = millis();
 
-    // Jalankan siklus setiap interval (5 detik sekali)
+    // Loop transmisi data telemetri berkala
     if (currentMillis - previousMillis >= interval) {
         previousMillis = currentMillis;
 
         if (WiFi.status() == WL_CONNECTED) {
             bacaSensorDanKirimKeWeb();
         } else {
-            Serial.println("WiFi terputus! Mencoba menyambung kembali...");
+            Serial.println("[WIFI] Koneksi terputus! Mencoba rekoneksi...");
             digitalWrite(PIN_LED_STATUS, LOW);
         }
     }
 }
 
-// ── 4. FUNGSI PEMBACAAN SENSOR & PENGIRIMAN DATA ────────────────────────────
+// ── 4. AKUISISI SENSOR TANAH & PENGIRIMAN DATA TELEMETRI KE CLOUD ──────────
 void bacaSensorDanKirimKeWeb() {
-    // 1. Baca nilai analog dari Sensor Kelembapan Tanah (Rentang ESP32 ADC: 0 - 4095)
-    int rawValue = analogRead(PIN_MOISTURE);
-    
-    // Kalibrasi kasar: di udara kering ~3500-4000, di air basah ~1200-1500
-    // Konversi ke persentase 0% - 100%
-    float moisturePct = map(rawValue, 3600, 1200, 0, 100);
+    // Kedipkan LED status saat sedang mengirim paket
+    digitalWrite(PIN_LED_STATUS, HIGH);
+
+    // 1. Baca nilai analog dari Sensor Kelembapan Tanah (ADC1: 0 - 4095)
+    // Lakukan oversampling 5 sampel untuk stabilitas pembacaan
+    long adcSum = 0;
+    for (int i = 0; i < 5; i++) {
+        adcSum += analogRead(PIN_MOISTURE);
+        delay(10);
+    }
+    int rawValue = adcSum / 5;
+
+    // Kalibrasi ADC Capasitive / Resistive Soil Moisture:
+    // Sensor kering (di udara): ~3500 - 4000
+    // Sensor basah (di dalam air): ~1200 - 1500
+    float moisturePct = map(rawValue, 3600, 1300, 0, 100);
     moisturePct = constrain(moisturePct, 0.0, 100.0);
 
-    Serial.println("\n-------------------------------------------");
-    Serial.print("Nilai Sensor Mentah: "); Serial.println(rawValue);
-    Serial.print("Kelembapan Tanah: "); Serial.print(moisturePct); Serial.println("%");
+    Serial.println("\n-------------------------------------------------------");
+    Serial.print("[SENSOR] Raw ADC: "); Serial.print(rawValue);
+    Serial.print(" | Kelembapan Tanah: "); Serial.print(moisturePct, 1); Serial.println("%");
 
-    // 2. Siapkan Payload JSON untuk Web NUTRIX
+    // 2. Siapkan Payload JSON
     StaticJsonDocument<256> jsonDoc;
+    if (strlen(custom_device_token) > 0) {
+        jsonDoc["device_token"] = custom_device_token;
+    }
     jsonDoc["taman_id"]  = atoi(custom_taman_id);
     jsonDoc["sensor_id"] = custom_sensor_id;
-    jsonDoc["moisture"]  = moisturePct;
+    jsonDoc["moisture"]  = round(moisturePct * 10) / 10.0;
 
     String requestBody;
     serializeJson(jsonDoc, requestBody);
 
-    // 3. Kirim HTTP POST ke Railway Cloud Server
+    // 3. Kirim HTTP POST ke Cloud Railway NUTRIX
     HTTPClient http;
     http.begin(serverUrl);
     http.addHeader("Content-Type", "application/json");
+    http.setTimeout(4000);
 
-    Serial.print("Mengirim data ke Railway: ");
+    Serial.print("[CLOUD] POST Telemetri ke Railway: ");
     Serial.println(serverUrl);
 
     int httpResponseCode = http.POST(requestBody);
 
     if (httpResponseCode > 0) {
         String response = http.getString();
-        Serial.print("Respon HTTP ["); Serial.print(httpResponseCode); Serial.println("]:");
+        Serial.print("[CLOUD] Respon ["); Serial.print(httpResponseCode); Serial.println("]:");
         Serial.println(response);
 
-        // 4. Baca Keputusan Otak Website NUTRIX dari Respon JSON
+        // 4. Parsing Perintah Kendali Otomatis (Relay / Buzzer) dari Decision Engine Cloud
         StaticJsonDocument<512> responseDoc;
         DeserializationError error = deserializeJson(responseDoc, response);
 
         if (!error) {
             const char* waterValve = responseDoc["commands"]["water_valve"];
-            bool buzzerAlert = responseDoc["commands"]["buzzer_alert"];
-            int durationSec = responseDoc["commands"]["duration_sec"];
+            int durationSec        = responseDoc["commands"]["duration_sec"] | 0;
 
-            // Eksekusi Keran / Pompa Relay
-            if (String(waterValve) == "ON") {
-                Serial.println(">>> PERINTAH DARI WEB: BUKA KERAN (RELAY AKTIF)! <<<");
-                digitalWrite(PIN_RELAY, LOW); // Aktifkan relay (Active LOW)
+            // Jika Cloud memerintahkan penyiraman otomatis
+            if (String(waterValve) == "ON" && durationSec > 0) {
+                Serial.println(">>> [AKTUATOR] PERINTAH CLOUD: BUKA VALVE RELAY! <<<");
+                digitalWrite(PIN_RELAY, LOW); // Aktifkan Relay (Active LOW)
                 digitalWrite(PIN_BUZZER, HIGH);
-                delay(1000);
+                delay(600);
                 digitalWrite(PIN_BUZZER, LOW);
-                
-                // Durasi siram
+
+                // Jalankan penyiraman sesuai durasi kalkulasi cloud
                 delay(durationSec * 1000);
-                digitalWrite(PIN_RELAY, HIGH); // Matikan kembali relay
-                Serial.println(">>> PENYIRAMAN SELESAI. KERAN DITUTUP KEMBALI. <<<");
+
+                digitalWrite(PIN_RELAY, HIGH); // Tutup kembali relay
+                Serial.println(">>> [AKTUATOR] PENYIRAMAN SELESAI. RELAY KEMBALI STANDBY. <<<");
             } else {
-                digitalWrite(PIN_RELAY, HIGH); // Pastikan relay mati
+                digitalWrite(PIN_RELAY, HIGH); // Pastikan relay selalu tertutup
             }
         }
     } else {
-        Serial.print("Gagal mengirim HTTP, Error code: ");
+        Serial.print("[ERROR] Gagal mengirim HTTP, Error code: ");
         Serial.println(httpResponseCode);
     }
 
     http.end();
+    digitalWrite(PIN_LED_STATUS, LOW);
 }
 
+// ── INDIKATOR SUARA BUZZER ─────────────────────────────────────────────────
 void beepSuccess() {
     digitalWrite(PIN_BUZZER, HIGH);
     delay(100);

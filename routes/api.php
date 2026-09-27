@@ -20,7 +20,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/taman/{taman}/telemetry', [TelemetryController::class, 'index']);
     Route::get('/taman/{taman}/telemetry/latest', [TelemetryController::class, 'latest']);
 
-    // Pairing sensor fisik ketika perangkat sudah tersedia.
+    // Pairing sensor fisik & Claim Token ESP32
+    Route::post('/taman/{taman}/token/generate', [TelemetryController::class, 'generateDeviceToken']);
     Route::post('/taman/{taman}/sensor/connect', [TelemetryController::class, 'connectSensor']);
     Route::delete('/taman/{taman}/sensor', [TelemetryController::class, 'disconnectSensor']);
 
