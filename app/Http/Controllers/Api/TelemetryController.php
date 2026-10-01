@@ -359,6 +359,11 @@ class TelemetryController extends Controller
 
     private function authorizeOwner(Taman $taman): void
     {
+        $token = request()->query('token') ?? request()->header('X-Device-Token') ?? request()->input('device_token');
+        if ($token && $taman->device_token && hash_equals($taman->device_token, $token)) {
+            return;
+        }
+
         abort_unless($taman->user_id === Auth::id(), 403, 'Akses ditolak.');
     }
 

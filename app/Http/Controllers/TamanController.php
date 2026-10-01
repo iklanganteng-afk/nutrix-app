@@ -105,7 +105,10 @@ class TamanController extends Controller
     {
         abort_unless($taman->user_id === Auth::id(), 403);
 
-        return view('taman.show', compact('taman'));
+        $latest = $taman->latestTelemetry;
+        $telemetries = $taman->telemetries()->latest('recorded_at')->limit(20)->get();
+
+        return view('taman.show', compact('taman', 'latest', 'telemetries'));
     }
 
     // PATCH /taman/{taman} -> edit taman

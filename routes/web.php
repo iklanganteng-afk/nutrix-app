@@ -80,4 +80,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/taman/{taman}', [TamanController::class, 'show'])->name('taman.show');
     Route::patch('/taman/{taman}', [TamanController::class, 'update'])->name('taman.update');
     Route::delete('/taman/{taman}', [TamanController::class, 'destroy'])->name('taman.destroy');
+
+    // Telemetri & Aksi Taman (Direct Web Routes - 100% Session & Cookie Sync)
+    Route::get('/taman/{taman}/telemetry/latest', [\App\Http\Controllers\Api\TelemetryController::class, 'latest'])->name('taman.telemetry.latest');
+    Route::post('/taman/{taman}/sync', [\App\Http\Controllers\Api\TelemetryController::class, 'sync'])->name('taman.telemetry.sync');
+    Route::post('/taman/{taman}/actions/water', [\App\Http\Controllers\Api\TelemetryController::class, 'water'])->name('taman.actions.water');
+    Route::post('/taman/{taman}/actions/fertilize', [\App\Http\Controllers\Api\TelemetryController::class, 'fertilize'])->name('taman.actions.fertilize');
+    Route::get('/taman/{taman}/activities', [\App\Http\Controllers\Api\TelemetryController::class, 'activities'])->name('taman.activities');
+    Route::get('/taman/{taman}/export.csv', [\App\Http\Controllers\Api\TelemetryController::class, 'exportCsv'])->name('taman.export.csv');
 });
