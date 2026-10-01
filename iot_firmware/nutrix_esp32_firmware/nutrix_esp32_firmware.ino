@@ -43,8 +43,8 @@ const char* DEVICE_NAME     = "Kelompok Nutrix";
 const char* serverUrl = "https://nutrix-app-production.up.railway.app/api/iot/telemetry";
 
 // Token Pairing dari Dashboard Web NUTRIX
-char custom_device_token[40] = "NTX-DEMO-2026"; 
-char custom_taman_id[8]      = "3";
+char custom_device_token[40] = "NTX-OYR3IOAYWXX2"; 
+char custom_taman_id[8]      = "15";
 
 unsigned long previousMillis = 0;
 const long telemetryInterval = 5000; // Kirim tiap 5 detik
