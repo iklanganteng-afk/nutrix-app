@@ -78,11 +78,26 @@ class TamanController extends Controller
         $validated['indicator_mode'] = $validated['indicator_mode'] ?? 'active_only';
         $validated['sensor_config'] = $this->sensorConfigFromLegacy($validated['sensor_types']);
 
+        $token = 'NTX-' . strtoupper(\Illuminate\Support\Str::random(12));
+        $expiresAt = now()->addDays(30);
+
         $taman = Auth::user()->tamans()->create([
             ...$validated,
+            'device_token' => $token,
+            'device_token_expires_at' => $expiresAt,
+            'device_name' => 'Kelompok Nutrix',
         ]);
 
-        return redirect()->route('taman.show', $taman);
+        FarmActivity::create([
+            'taman_id' => $taman->id,
+            'user_id'  => Auth::id(),
+            'type'     => 'connection',
+            'title'    => 'Taman Baru Dibuat & Token Siap',
+            'detail'   => "Token Pairing IoT: {$token}. Siap dihubungkan ke ESP32 secara wireless.",
+            'status'   => 'info',
+        ]);
+
+        return redirect()->route('taman.show', $taman)->with('newly_created_token', $token);
     }
 
     // GET /taman/{taman} -> halaman detail (4 kartu sensor + health score, dsb)

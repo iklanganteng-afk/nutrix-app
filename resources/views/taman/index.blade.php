@@ -272,36 +272,61 @@
             </div>
 
             <div class="wizard-step" data-step="4">
-                <div class="auth-input-group">
-                    <label data-i18n="wizard-select-controller">Pilih otak perangkat</label>
-                    <select class="auth-input" name="controller_type">
-                        <option value="esp32">ESP32</option>
-                        <option value="arduino">Arduino Uno / Nano</option>
-                        <option value="esp8266">ESP8266</option>
+                <div class="auth-input-group mb-3">
+                    <label class="fw-bold text-white"><i class="bi bi-cpu-fill text-mint me-1"></i> Mikrokontroler / IoT Controller</label>
+                    <select class="auth-input" name="controller_type" id="wizardControllerType">
+                        <option value="esp32" selected>ESP32 DevKit V1 (Dual-Core, WiFi 2.4GHz + Bluetooth)</option>
+                        <option value="esp8266">ESP8266 (WiFi Standalone)</option>
+                        <option value="arduino">Arduino (Modem Serial)</option>
                     </select>
                 </div>
-                <div class="row g-2">
-                    <div class="col-6 auth-input-group">
-                        <label data-i18n="wizard-laptop-port">Port laptop</label>
-                        <select class="auth-input" name="device_connection[computer_port]">
-                            <option value="USB-A">USB-A</option>
-                            <option value="USB-C">USB-C</option>
-                            <option value="USB-B">USB-B</option>
-                        </select>
-                    </div>
-                    <div class="col-6 auth-input-group">
-                        <label data-i18n="wizard-device-port">Port alat</label>
-                        <select class="auth-input" name="device_connection[device_port]">
-                            <option value="USB-C">USB-C</option>
-                            <option value="USB-B">USB-B</option>
-                            <option value="UART">UART</option>
-                        </select>
+
+                <div class="auth-input-group mb-3">
+                    <label class="fw-bold text-white mb-2"><i class="bi bi-broadcast text-mint me-1"></i> Metode Transmisi Data</label>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="sensor-check-card active" style="border-color: var(--color-mint); background: rgba(16,185,129,0.08);">
+                                <input type="radio" name="device_connection[method]" value="wifi_cloud" checked>
+                                <span><i class="bi bi-wifi text-mint"></i> <strong>Wireless (WiFi / Hotspot)</strong></span>
+                            </label>
+                        </div>
+                        <div class="col-6">
+                            <label class="sensor-check-card" style="opacity: 0.7;">
+                                <input type="radio" name="device_connection[method]" value="serial_cable">
+                                <span><i class="bi bi-usb-symbol"></i> <strong>Kabel Serial (USB)</strong></span>
+                            </label>
+                        </div>
                     </div>
                 </div>
+
+                {{-- Opsi Wireless (Default & Rekomendasi) --}}
+                <div id="wirelessConfigSection" class="p-3 mb-3 rounded-3 border border-secondary" style="background: rgba(16, 185, 129, 0.03);">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-mint fw-bold small"><i class="bi bi-shield-check me-1"></i> Mode Nirkabel Real-Time (Cloud IoT)</span>
+                        <span class="badge bg-success bg-opacity-25 text-mint border border-success" style="font-size: 0.7rem;">Aktif 24/7</span>
+                    </div>
+                    <p class="text-muted small mb-2">ESP32 akan mengirimkan telemetri secara wireless melalui Hotspot/WiFi tanpa perlu dicolok terus ke laptop.</p>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="text-muted small mb-1">Target Hotspot / SSID:</label>
+                            <input type="text" class="auth-input py-1" name="device_connection[wifi_ssid]" value="GG" placeholder="Nama WiFi / Hotspot HP">
+                        </div>
+                        <div class="col-6">
+                            <label class="text-muted small mb-1">Karakter Identity:</label>
+                            <input type="text" class="auth-input py-1" name="device_connection[hostname]" value="Kelompok-Nutrix" placeholder="Hostname ESP32">
+                        </div>
+                    </div>
+                </div>
+
                 <div class="auth-input-group">
-                    <label data-i18n="wizard-connection-note">Catatan koneksi</label>
-                    <textarea class="auth-input" name="device_connection[note]" rows="3" data-i18n-placeholder="wizard-placeholder-note" placeholder="Hubungkan laptop ke ESP32 melalui kabel USB-C. Semua sensor dipasang pada board yang sama."></textarea>
+                    <label class="text-muted small mb-1"><i class="bi bi-card-text me-1"></i> Catatan Pemasangan / Lokasi Lapangan (Opsional)</label>
+                    <textarea class="auth-input" name="device_connection[note]" rows="2" placeholder="Contoh: ESP32 ditaruh di kotak panel kebun, sensor capacitive dan resistive ditancap di bedengan jagung."></textarea>
                 </div>
+
+                {{-- Hidden fallbacks agar schema tetap aman --}}
+                <input type="hidden" name="device_connection[computer_port]" value="Wireless (WiFi)">
+                <input type="hidden" name="device_connection[device_port]" value="WiFi 2.4GHz HTTP Cloud">
+
                 <div class="d-flex justify-content-between mt-3">
                     <button type="button" class="btn btn-outline-secondary btn-prev-step" data-i18n="wizard-back">Kembali</button>
                     <button type="button" class="btn btn-connect-node btn-next-step" data-i18n="wizard-review">Review</button>
@@ -400,15 +425,18 @@
                 return `<div class="wizard-summary-item"><span>${text(typeKey)}</span><strong>${model}</strong></div>`;
             }).join('');
 
-            const controller = document.querySelector('select[name="controller_type"]')?.value || 'esp32';
-            const portLaptop = document.querySelector('select[name="device_connection[computer_port]"]')?.value || 'USB-A';
-            const portDevice = document.querySelector('select[name="device_connection[device_port]"]')?.value || 'USB-C';
+            const controllerEl = document.querySelector('select[name="controller_type"]');
+            const controllerText = controllerEl ? controllerEl.options[controllerEl.selectedIndex].text.split('(')[0].trim() : 'ESP32';
+            const method = document.querySelector('input[name="device_connection[method]"]:checked')?.value || 'wifi_cloud';
+            const methodLabel = method === 'wifi_cloud' ? 'Wireless (WiFi / Hotspot)' : 'Kabel Serial USB';
+            const ssid = document.querySelector('input[name="device_connection[wifi_ssid]"]')?.value || 'GG';
 
             summary.innerHTML = `
                 <div class="wizard-summary-item"><span>${text('wizard-sensor')}</span><strong>${text('wizard-selected-sensors', { count: selected.length })}</strong></div>
                 ${rows}
-                <div class="wizard-summary-item"><span>${text('wizard-board')}</span><strong>${controller.toUpperCase()}</strong></div>
-                <div class="wizard-summary-item"><span>${text('wizard-connection')}</span><strong>${portLaptop} → ${portDevice}</strong></div>
+                <div class="wizard-summary-item"><span>${text('wizard-board')}</span><strong>${controllerText}</strong></div>
+                <div class="wizard-summary-item"><span>Transmisi Telemetri</span><strong class="text-mint">${methodLabel}</strong></div>
+                ${method === 'wifi_cloud' ? `<div class="wizard-summary-item"><span>Target Network</span><strong>SSID: ${ssid}</strong></div>` : ''}
             `;
         };
 
@@ -429,7 +457,16 @@
                     if (slot2Wrapper) slot2Wrapper.style.display = isDual ? 'block' : 'none';
                     refreshSensorSummary();
                 }
-                if (event.target.matches('select[name="controller_type"], select[name="device_connection[computer_port]"], select[name="device_connection[device_port]"]') || event.target.matches('select[name="sensor_models[moisture]"], select[name="sensor_models_slot2[moisture]"], select[name="sensor_models[temperature]"], select[name="sensor_models[ph]"], select[name="sensor_models[ec]"]')) {
+                if (event.target.matches('input[name="device_connection[method]"]')) {
+                    const isWireless = event.target.value === 'wifi_cloud';
+                    const wirelessSec = document.getElementById('wirelessConfigSection');
+                    if (wirelessSec) wirelessSec.style.display = isWireless ? 'block' : 'none';
+                    document.querySelectorAll('input[name="device_connection[method]"]').forEach(r => {
+                        r.closest('.sensor-check-card')?.classList.toggle('active', r.checked);
+                    });
+                    refreshSensorSummary();
+                }
+                if (event.target.matches('select[name="controller_type"], input[name="device_connection[wifi_ssid]"], textarea[name="device_connection[note]"]') || event.target.matches('select[name="sensor_models[moisture]"], select[name="sensor_models_slot2[moisture]"], select[name="sensor_models[temperature]"], select[name="sensor_models[ph]"], select[name="sensor_models[ec]"]')) {
                     refreshSensorSummary();
                 }
             });

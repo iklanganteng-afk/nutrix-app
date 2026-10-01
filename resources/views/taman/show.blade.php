@@ -94,6 +94,26 @@
         </div>
     </div>
 
+    @if(session('newly_created_token') || (!$isConnected && $deviceToken))
+        <div class="p-3 mb-4 rounded-3 border border-success" style="background: linear-gradient(135deg, rgba(16,185,129,0.12) 0%, rgba(6,78,59,0.25) 100%);">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <span class="badge bg-mint text-dark fw-bold mb-1"><i class="bi bi-key-fill me-1"></i> TOKEN PAIRING ESP32 WIRELESS</span>
+                    <h5 class="text-white mb-0 fw-bold">Token Siap Digunakan untuk ESP32</h5>
+                    <small class="text-muted">Masukkan token ini ke file firmware Arduino IDE agar data sensor wireless langsung masuk ke taman ini.</small>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="px-3 py-2 rounded bg-black border border-mint text-mint fw-bold font-monospace fs-5">
+                        {{ session('newly_created_token') ?? $deviceToken }}
+                    </span>
+                    <button type="button" class="btn btn-outline-mint" onclick="navigator.clipboard.writeText('{{ session('newly_created_token') ?? $deviceToken }}'); alert('Token berhasil disalin!');">
+                        <i class="bi bi-clipboard me-1"></i> Salin
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
     {{-- ═══════════════════════════════════════════════════════════
          BAGIAN 0: DUAL SENSOR SCIENTIFIC MONITOR (SCOPUS GRADE)
          ═══════════════════════════════════════════════════════════ --}}

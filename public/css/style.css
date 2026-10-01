@@ -1692,23 +1692,27 @@ body {
 }
 
 .wizard-progress {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 8px;
+    width: 100%;
 }
 
 .wizard-progress-step {
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
     border-radius: 50%;
-    display: grid;
-    place-items: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     border: 1px solid var(--border-subtle);
     background: rgba(255, 255, 255, 0.04);
     color: var(--text-muted);
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     font-weight: 700;
+    transition: all 0.3s ease;
 }
 
 .wizard-progress-step.active {
@@ -1719,8 +1723,10 @@ body {
 }
 
 .wizard-progress-line {
+    flex: 1;
     height: 2px;
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.12);
+    min-width: 12px;
 }
 
 .wizard-step {
