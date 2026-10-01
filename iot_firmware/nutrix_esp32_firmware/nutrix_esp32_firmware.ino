@@ -79,45 +79,60 @@ void setup() {
     digitalWrite(PIN_BUZZER, LOW);
     digitalWrite(PIN_LED_STATUS, LOW);
 
-    // Set Hostname sebelum WiFi connect agar muncul sebagai "Kelompok-Nutrix" di HP
+    // Matikan WiFi lama & bersihkan sisa konfigurasi NVS yang bentrok
+    WiFi.disconnect(true);
+    delay(500);
+
     WiFi.mode(WIFI_STA);
+    WiFi.setSleep(false); // Nonaktifkan power saving agar stabil connect ke HP
     WiFi.setHostname(DEVICE_HOSTNAME);
 
-    Serial.print("[WIFI] Menghubungkan ke hotspot: ");
+    Serial.print("[WIFI] Mencari & menghubungkan ke hotspot: ");
     Serial.println(WIFI_SSID);
     digitalWrite(PIN_LED_STATUS, HIGH);
 
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
+    // Timeout diperpanjang hingga 70 iterasi (35 detik) khusus negosiasi DHCP HP
     int attempts = 0;
-    while (WiFi.status() != WL_CONNECTED && attempts < 35) {
+    while (WiFi.status() != WL_CONNECTED && attempts < 70) {
         delay(500);
         Serial.print(".");
+        // Berikan visualisasi LED berkedip saat proses mencari WiFi
+        digitalWrite(PIN_LED_STATUS, (attempts % 2 == 0) ? HIGH : LOW);
         attempts++;
     }
 
     if (WiFi.status() == WL_CONNECTED) {
-        Serial.println("\n>>> SUKSES TERHUBUNG KE HOTSPOT! <<<");
+        digitalWrite(PIN_LED_STATUS, HIGH);
+        Serial.println("\n\n=======================================================");
+        Serial.println("  >>> SUKSES TERHUBUNG KE HOTSPOT HP! <<<");
+        Serial.println("=======================================================");
         Serial.printf("SSID         : %s\n", WiFi.SSID().c_str());
         Serial.printf("Hostname     : %s\n", WiFi.getHostname());
         Serial.print("IP Address   : "); Serial.println(WiFi.localIP());
-        Serial.printf("RSSI Sinyal  : %d dBm\n", WiFi.RSSI());
+        Serial.printf("Sinyal RSSI  : %d dBm (Sangat Baik)\n", WiFi.RSSI());
+        Serial.println("=======================================================\n");
+        beepSuccess();
     } else {
-        // Fallback jika hotspot mati: Aktifkan Captive Portal
-        Serial.println("\n[WIFI] Hotspot belum terdeteksi. Buka mode AP...");
+        digitalWrite(PIN_LED_STATUS, LOW);
+        Serial.println("\n\n[WARNING] Tidak dapat terhubung otomatis ke SSID: " + String(WIFI_SSID));
+        Serial.println("[INFO] Membuka Portal Darurat WiFiManager...");
+        Serial.println("[INFO] Hubungkan HP Anda ke WiFi: 'Kelompok-Nutrix-Setup' untuk atur SSID!");
+
         WiFiManager wm;
+        wm.setConfigPortalTimeout(120); // 2 menit timeout agar tidak macet selamanya
         WiFiManagerParameter custom_token("device_token", "Device Token (NUTRIX)", custom_device_token, 40);
         wm.addParameter(&custom_token);
 
         if (!wm.autoConnect("Kelompok-Nutrix-Setup")) {
-            Serial.println("[ERROR] Gagal koneksi. Merestart...");
+            Serial.println("[ERROR] Gagal konfigurasi via Portal. Merestart modul...");
             delay(2000);
             ESP.restart();
         }
         strncpy(custom_device_token, custom_token.getValue(), sizeof(custom_device_token));
+        beepSuccess();
     }
-
-    beepSuccess();
 }
 
 void loop() {
@@ -129,9 +144,10 @@ void loop() {
         if (WiFi.status() == WL_CONNECTED) {
             bacaSensorDanKirimKeWeb();
         } else {
-            Serial.println("[WIFI] Terputus. Menghubungkan kembali...");
-            WiFi.reconnect();
+            Serial.println("[WIFI] Sinyal terputus. Mencoba reconnect ke " + String(WIFI_SSID) + "...");
             digitalWrite(PIN_LED_STATUS, LOW);
+            WiFi.disconnect();
+            WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
         }
     }
 }
