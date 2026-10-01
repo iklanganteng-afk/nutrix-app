@@ -82,10 +82,6 @@ class TamanController extends Controller
             ...$validated,
         ]);
 
-        if ($taman->sensor_connected) {
-            $this->createInitialTelemetry($taman);
-        }
-
         return redirect()->route('taman.show', $taman);
     }
 

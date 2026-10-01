@@ -47,7 +47,7 @@ return [
     ],
     'metrics' => ['moisture', 'ph', 'temperature', 'ec'],
     'sensor_models' => [
-        'moisture' => ['SEN0193', 'YL-69', 'Capacitive-1'],
+        'moisture' => ['Capacitive-V2', 'HD-38', 'SEN0193', 'YL-69', 'Capacitive-1'],
         'temperature' => ['DHT22', 'DS18B20', 'LM35'],
         'ph' => ['PH-4502C', 'Atlas-pH', 'PH-1'],
         'ec' => ['DFRobot-EC', 'DFRobot EC', 'Atlas-EC', 'TDS-V1'],

@@ -21,6 +21,8 @@ class SensorTelemetry extends Model
         'recorded_at',
         'source',
         'quality',
+        'metadata',
+        'sensor_source',
     ];
 
     protected $casts = [
@@ -30,7 +32,8 @@ class SensorTelemetry extends Model
         'ec'           => 'float',
         'health_score' => 'float',
         'recorded_at'  => 'datetime',
-        'quality' => 'array',
+        'quality'      => 'array',
+        'metadata'     => 'array',
     ];
 
     public function taman(): BelongsTo

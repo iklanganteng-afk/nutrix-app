@@ -190,41 +190,77 @@
 
             <div class="wizard-step" data-step="3">
                 <div class="auth-input-group">
-                    <label data-i18n="wizard-select-models">Pilih model sensor per tipe</label>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="mb-0 fw-bold text-white"><i class="bi bi-cpu-fill text-mint me-1"></i> Konfigurasi Sensor & Jumlah Node</label>
+                        <span class="badge bg-dark text-mint border border-secondary" style="font-size:0.75rem;">Multi-Sensor Scopus Grade</span>
+                    </div>
+                    <p class="text-muted" style="font-size: 0.83rem;">Pilih apakah Anda ingin memasang <strong>1 sensor</strong> atau <strong>2 sensor sekaligus</strong> (misal Capacitive + Resistive untuk pembanding akurasi).</p>
+
                     <div id="sensorModelRows">
-                        <div class="sensor-model-row" data-sensor-type="moisture">
-                            <div class="sensor-model-label"><i class="bi bi-moisture"></i> <span data-i18n="sensor-moisture-label">Kelembapan</span></div>
-                            <select class="auth-input" name="sensor_models[moisture]">
-                                <option value="SEN0193">SEN0193 - Soil Moisture Sensor</option>
-                                <option value="YL-69">YL-69 - Resistive Soil Sensor</option>
-                                <option value="Capacitive-1">Capacitive Soil Sensor</option>
-                            </select>
+                        {{-- Kategori Kelembapan Tanah (Multi-sensor ready) --}}
+                        <div class="sensor-model-row p-3 mb-3 border border-secondary rounded-3" data-sensor-type="moisture" style="background: rgba(255,255,255,0.02);">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div class="sensor-model-label fw-bold text-white">
+                                    <i class="bi bi-moisture text-mint me-1"></i> <span data-i18n="sensor-moisture-label">Kelembapan Tanah</span>
+                                </div>
+                                <div class="btn-group btn-group-sm" role="group" id="moistureCountGroup">
+                                    <input type="radio" class="btn-check" name="sensor_config_count[moisture]" id="moistCount1" value="1" autocomplete="off">
+                                    <label class="btn btn-outline-secondary" for="moistCount1">1 Sensor</label>
+                                    <input type="radio" class="btn-check" name="sensor_config_count[moisture]" id="moistCount2" value="2" checked autocomplete="off">
+                                    <label class="btn btn-outline-mint" for="moistCount2">2 Sensor (Dual)</label>
+                                </div>
+                            </div>
+
+                            <div class="row g-2 mt-1">
+                                <div class="col-12 col-md-6">
+                                    <label class="text-muted small mb-1">Slot Sensor 1 (Pin D34 [S]):</label>
+                                    <select class="auth-input" name="sensor_models[moisture]" id="moistureModel1">
+                                        <option value="Capacitive-V2" selected>Capacitive Soil Moisture V2.0 (Pin D34)</option>
+                                        <option value="HD-38">Resistive Soil Moisture HD-38 (Pin D34)</option>
+                                        <option value="SEN0193">SEN0193 Waterproof Analog</option>
+                                    </select>
+                                </div>
+                                <div class="col-12 col-md-6" id="slotMoisture2Wrapper">
+                                    <label class="text-muted small mb-1">Slot Sensor 2 (Pin D35 [S]):</label>
+                                    <select class="auth-input" name="sensor_models_slot2[moisture]" id="moistureModel2">
+                                        <option value="HD-38" selected>Resistive Soil Moisture HD-38 (Pin D35)</option>
+                                        <option value="Capacitive-V2">Capacitive Soil Moisture V2.0 (Pin D35)</option>
+                                        <option value="YL-69">YL-69 Resistive Probe</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mt-2 p-2 rounded bg-black border border-secondary text-mint" style="font-size:0.75rem; font-family:monospace;">
+                                <i class="bi bi-info-circle me-1"></i> <strong>Wiring Shield:</strong> Sensor 1 ke Baris <strong>D34 [G-V-S]</strong>, Sensor 2 ke Baris <strong>D35 [G-V-S]</strong>.
+                            </div>
                         </div>
 
-                        <div class="sensor-model-row" data-sensor-type="temperature">
-                            <div class="sensor-model-label"><i class="bi bi-thermometer-half"></i> <span data-i18n="sensor-temperature-label">Suhu</span></div>
+                        {{-- Kategori Suhu Lingkungan --}}
+                        <div class="sensor-model-row p-3 mb-3 border border-secondary rounded-3" data-sensor-type="temperature" style="background: rgba(255,255,255,0.02);">
+                            <div class="sensor-model-label fw-bold text-white mb-2"><i class="bi bi-thermometer-half text-warning me-1"></i> <span data-i18n="sensor-temperature-label">Suhu</span></div>
                             <select class="auth-input" name="sensor_models[temperature]">
-                                <option value="DHT22">DHT22 - Temperature & Humidity</option>
+                                <option value="DHT22">DHT22 - Temperature & Humidity (Digital)</option>
                                 <option value="DS18B20">DS18B20 - Waterproof Temperature</option>
                                 <option value="LM35">LM35 - Analog Temperature</option>
                             </select>
                         </div>
 
-                        <div class="sensor-model-row" data-sensor-type="ph">
-                            <div class="sensor-model-label"><i class="bi bi-droplet-half"></i> <span data-i18n="sensor-ph-label">pH</span></div>
+                        {{-- Kategori pH Tanah --}}
+                        <div class="sensor-model-row p-3 mb-3 border border-secondary rounded-3" data-sensor-type="ph" style="background: rgba(255,255,255,0.02);">
+                            <div class="sensor-model-label fw-bold text-white mb-2"><i class="bi bi-droplet-half text-info me-1"></i> <span data-i18n="sensor-ph-label">pH Tanah</span></div>
                             <select class="auth-input" name="sensor_models[ph]">
-                                <option value="PH-4502C">PH-4502C - pH Sensor</option>
-                                <option value="Atlas-pH">Atlas Scientific pH</option>
-                                <option value="PH-1">PH-1 - Analog pH Module</option>
+                                <option value="PH-4502C">PH-4502C - Analog pH Sensor Probe</option>
+                                <option value="Atlas-pH">Atlas Scientific Lab pH</option>
+                                <option value="PH-1">PH-1 - Industrial pH Module</option>
                             </select>
                         </div>
 
-                        <div class="sensor-model-row" data-sensor-type="ec">
-                            <div class="sensor-model-label"><i class="bi bi-lightning-charge-fill"></i> <span data-i18n="sensor-ec-label">EC</span></div>
+                        {{-- Kategori EC / Nutrisi --}}
+                        <div class="sensor-model-row p-3 mb-3 border border-secondary rounded-3" data-sensor-type="ec" style="background: rgba(255,255,255,0.02);">
+                            <div class="sensor-model-label fw-bold text-white mb-2"><i class="bi bi-lightning-charge-fill text-success me-1"></i> <span data-i18n="sensor-ec-label">EC / Konduktivitas</span></div>
                             <select class="auth-input" name="sensor_models[ec]">
-                                <option value="DFRobot-EC">DFRobot EC</option>
-                                <option value="Atlas-EC">Atlas Scientific EC</option>
-                                <option value="TDS-V1">TDS Sensor V1</option>
+                                <option value="DFRobot-EC">DFRobot Analog EC Meter</option>
+                                <option value="Atlas-EC">Atlas Scientific K1.0 EC</option>
+                                <option value="TDS-V1">TDS Meter Sensor V1.0</option>
                             </select>
                         </div>
                     </div>
@@ -387,7 +423,13 @@
                     });
                     refreshSensorSummary();
                 }
-                if (event.target.matches('select[name="controller_type"], select[name="device_connection[computer_port]"], select[name="device_connection[device_port]"]') || event.target.matches('select[name="sensor_models[moisture]"], select[name="sensor_models[temperature]"], select[name="sensor_models[ph]"], select[name="sensor_models[ec]"]')) {
+                if (event.target.matches('input[name="sensor_config_count[moisture]"]')) {
+                    const isDual = event.target.value === '2';
+                    const slot2Wrapper = document.getElementById('slotMoisture2Wrapper');
+                    if (slot2Wrapper) slot2Wrapper.style.display = isDual ? 'block' : 'none';
+                    refreshSensorSummary();
+                }
+                if (event.target.matches('select[name="controller_type"], select[name="device_connection[computer_port]"], select[name="device_connection[device_port]"]') || event.target.matches('select[name="sensor_models[moisture]"], select[name="sensor_models_slot2[moisture]"], select[name="sensor_models[temperature]"], select[name="sensor_models[ph]"], select[name="sensor_models[ec]"]')) {
                     refreshSensorSummary();
                 }
             });

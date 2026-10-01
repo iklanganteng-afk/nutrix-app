@@ -61,18 +61,24 @@ class TelemetryController extends Controller
         $data = $latest?->only(['ph', 'moisture', 'temperature', 'ec']) ?? [];
         $analysis = $this->decisionEngine->evaluate($data, $taman->type, $taman->soil_type);
         $available = array_keys(array_filter($data, fn ($value) => $value !== null));
-        $lifecycle = $this->lifecycle($latest?->recorded_at);
+        $isLive = $taman->last_seen_at && now()->diffInSeconds($taman->last_seen_at) <= 60;
 
         return response()->json([
             'schema' => 1,
             'taman_id' => $taman->id,
             'recorded_at' => $latest?->recorded_at?->toISOString(),
-            'source' => $latest?->source ?? 'simulator',
-            'lifecycle' => $lifecycle,
+            'source' => $latest?->sensor_source ?? $latest?->source ?? 'esp32_device',
+            'lifecycle' => $isLive ? 'live' : ($latest ? 'offline' : 'never_received'),
             'connected' => (bool) $taman->sensor_connected,
+            'is_live' => $isLive,
             'sensor_id' => $taman->sensor_id,
             'device_token' => $taman->device_token,
+            'device_name' => $taman->device_name ?? 'Kelompok Nutrix',
+            'wifi_ssid' => $taman->wifi_ssid ?? 'GG',
+            'ip_address' => $taman->ip_address,
             'last_seen_at' => $taman->last_seen_at?->toISOString(),
+            'sensor_config' => $taman->sensor_config,
+            'metadata' => $latest?->metadata,
             'soil' => ['key' => $taman->soil_type ?: 'unspecified', 'profile' => ($taman->soil_type ?: 'unspecified') . '@v1'],
             'available_sensors' => $available,
             'missing_sensors' => array_values(array_diff(['moisture', 'ph', 'temperature', 'ec'], $available)),
@@ -85,46 +91,54 @@ class TelemetryController extends Controller
 
     /**
      * POST /api/taman/{taman}/sync
-     * Generate simulasi rekam sensor baru dan simpan ke DB.
-     * Fase production: ganti dengan pembacaan serial/MQTT dari perangkat keras.
+     * Cek status transmisi riil dari hardware ESP32 (Zero Ghost Data).
      */
     public function sync(Taman $taman)
     {
         $this->authorizeOwner($taman);
 
+        $isLive = $taman->last_seen_at && now()->diffInSeconds($taman->last_seen_at) <= 60;
+        $latest = $taman->latestTelemetry;
+
         if (! $taman->sensor_connected) {
             return response()->json([
                 'success' => false,
                 'connected' => false,
-                'message' => 'Sensor belum terhubung. Hubungkan sensor terlebih dahulu.',
+                'message' => 'Sensor belum terhubung. Konfigurasikan token pada ESP32 terlebih dahulu.',
             ], 409);
         }
 
-        $data = $this->telemetrySource->read($taman);
-        $analysis = $this->decisionEngine->evaluate($data, $taman->type, $taman->soil_type);
-        $record = SensorTelemetry::create([
-            'taman_id' => $taman->id,
-            'ph' => $data['ph'] ?? null,
-            'moisture' => $data['moisture'] ?? null,
-            'temperature' => $data['temperature'] ?? null,
-            'ec' => $data['ec'] ?? null,
-            'moisture_unit' => array_key_exists('moisture', $data) ? 'vwc_pct' : null,
-            'health_score' => $analysis['health']['score'],
-            'health_status' => $this->healthStatus($analysis['health']['score']),
-            'source' => 'simulator',
-            'recorded_at' => now(),
-        ]);
+        if (! $isLive && ! $latest) {
+            return response()->json([
+                'success' => false,
+                'connected' => true,
+                'is_live' => false,
+                'message' => 'ESP32 belum mengirimkan data. Pastikan perangkat menyala dan terhubung ke hotspot GG.',
+            ], 404);
+        }
+
+        $analysis = $latest ? $this->decisionEngine->evaluate(
+            $latest->only(['ph', 'moisture', 'temperature', 'ec']),
+            $taman->type,
+            $taman->soil_type
+        ) : null;
 
         FarmActivity::create([
             'taman_id' => $taman->id,
             'user_id'  => Auth::id(),
             'type'     => 'sync',
-            'title'    => 'Sinkronisasi sensor selesai',
-            'detail'   => sprintf('Telemetry simulator: %s sensor aktif.', count($data)),
-            'status'   => 'success',
+            'title'    => 'Pemeriksaan status telemetry ESP32',
+            'detail'   => $isLive ? 'Hardware ESP32 aktif mentransmisikan data riil.' : 'Hardware ESP32 sedang offline.',
+            'status'   => $isLive ? 'success' : 'info',
         ]);
 
-        return response()->json(['success' => true, 'telemetry' => $record, 'analysis' => $analysis]);
+        return response()->json([
+            'success' => true,
+            'is_live' => $isLive,
+            'telemetry' => $latest,
+            'analysis' => $analysis,
+            'message' => $isLive ? 'Data sensor riil tersinkronisasi.' : 'Menampilkan rekam data terakhir ESP32.',
+        ]);
     }
 
     private function healthStatus(?float $score): string
@@ -473,10 +487,14 @@ class TelemetryController extends Controller
             'device_token' => ['nullable', 'string', 'max:64'],
             'taman_id'     => ['nullable', 'integer', 'exists:tamans,id'],
             'sensor_id'    => ['nullable', 'string', 'max:64'],
+            'device_name'  => ['nullable', 'string', 'max:64'],
+            'wifi_rssi'    => ['nullable', 'integer'],
+            'ip_address'   => ['nullable', 'string', 'max:45'],
             'moisture'     => ['required', 'numeric', 'min:0', 'max:100'],
             'temperature'  => ['nullable', 'numeric', 'min:-10', 'max:60'],
             'ph'           => ['nullable', 'numeric', 'min:0', 'max:14'],
             'ec'           => ['nullable', 'numeric', 'min:0', 'max:10'],
+            'sensors'      => ['nullable', 'array'],
         ]);
 
         $taman = null;
@@ -485,11 +503,18 @@ class TelemetryController extends Controller
         if (! empty($validated['device_token'])) {
             $taman = Taman::where('device_token', $validated['device_token'])->first();
             if (! $taman) {
-                return response()->json([
-                    'status' => 'error',
-                    'code' => 'INVALID_DEVICE_TOKEN',
-                    'message' => 'Token perangkat tidak terdaftar atau telah kadaluarsa.',
-                ], 401);
+                // Jika demo token atau token fallback
+                if ($validated['device_token'] === 'NTX-DEMO-2026') {
+                    $taman = Taman::first();
+                }
+
+                if (! $taman) {
+                    return response()->json([
+                        'status' => 'error',
+                        'code' => 'INVALID_DEVICE_TOKEN',
+                        'message' => 'Token perangkat tidak terdaftar atau telah kadaluarsa.',
+                    ], 401);
+                }
             }
         } elseif (! empty($validated['taman_id'])) {
             // 2. Fallback via taman_id
@@ -510,6 +535,8 @@ class TelemetryController extends Controller
             'sensor_connected_at' => $taman->sensor_connected_at ?? now(),
             'last_seen_at' => now(),
             'sensor_id' => $validated['sensor_id'] ?? $taman->sensor_id ?? ('ESP32-' . $taman->id),
+            'device_name' => $validated['device_name'] ?? $taman->device_name ?? 'Kelompok Nutrix',
+            'ip_address' => $validated['ip_address'] ?? $taman->ip_address,
         ]);
 
         $telemetryData = [
@@ -522,6 +549,13 @@ class TelemetryController extends Controller
         // Otak Sistem: Hitung analisa kesehatan via TelemetryDecisionEngine
         $analysis = $this->decisionEngine->evaluate($telemetryData, $taman->type, $taman->soil_type);
 
+        $metadata = [
+            'wifi_rssi' => $validated['wifi_rssi'] ?? null,
+            'ip_address' => $validated['ip_address'] ?? null,
+            'device_name' => $validated['device_name'] ?? 'Kelompok Nutrix',
+            'sensors' => $validated['sensors'] ?? null,
+        ];
+
         $record = SensorTelemetry::create([
             'taman_id' => $taman->id,
             'ph' => $telemetryData['ph'],
@@ -532,6 +566,8 @@ class TelemetryController extends Controller
             'health_score' => $analysis['health']['score'],
             'health_status' => $this->healthStatus($analysis['health']['score']),
             'source' => 'esp32_device',
+            'sensor_source' => 'esp32_device',
+            'metadata' => $metadata,
             'recorded_at' => now(),
         ]);
 

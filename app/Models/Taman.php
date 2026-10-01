@@ -30,6 +30,9 @@ class Taman extends Model
         'sensor_models',
         'controller_type',
         'device_connection',
+        'device_name',
+        'wifi_ssid',
+        'ip_address',
         'sensor_config',
     ];
 

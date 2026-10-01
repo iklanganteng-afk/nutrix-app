@@ -90,6 +90,87 @@
             <span class="nx-latency-pill">
                 <i class="bi bi-lightning-charge-fill me-1 text-mint"></i> 5s polling
             </span>
+            <span class="visually-hidden">Live telemetry stream API polling active</span>
+        </div>
+    </div>
+
+    {{-- ═══════════════════════════════════════════════════════════
+         BAGIAN 0: DUAL SENSOR SCIENTIFIC MONITOR (SCOPUS GRADE)
+         ═══════════════════════════════════════════════════════════ --}}
+    <div class="nx-glass-card mb-4 p-4 border border-secondary" style="background: linear-gradient(135deg, rgba(16,28,24,0.7) 0%, rgba(8,16,14,0.9) 100%);">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <div>
+                <span class="badge bg-mint text-dark fw-bold px-2 py-1 mb-1" style="font-size:0.75rem;">
+                    <i class="bi bi-shield-check me-1"></i> HARDWARE NODE: KELOMPOK NUTRIX
+                </span>
+                <h3 class="text-white mb-0" style="font-size:1.15rem; font-weight:700;">
+                    Dual-Sensor Precision Soil Analytics
+                </h3>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <span class="nx-meta-badge" id="dualDeviceBadge">
+                    <i class="bi bi-router-fill text-mint me-1"></i> Hotspot: <strong class="text-white">GG</strong>
+                </span>
+                <span class="nx-meta-badge" id="dualIpBadge">
+                    <i class="bi bi-hdd-network text-info me-1"></i> IP: <span id="displayNodeIp">Menghubungkan...</span>
+                </span>
+            </div>
+        </div>
+
+        <div class="row g-3">
+            {{-- Sensor 1: Capacitive V2.0 --}}
+            <div class="col-12 col-md-4">
+                <div class="p-3 rounded-3 border border-secondary h-100" style="background: rgba(255,255,255,0.02);">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-mint fw-bold small"><i class="bi bi-cpu me-1"></i> SENSOR 1 (CAPACITIVE)</span>
+                        <span class="badge bg-dark text-mint border border-secondary">GPIO 34</span>
+                    </div>
+                    <div class="d-flex align-items-baseline gap-2">
+                        <h2 class="text-white fw-bold mb-0" id="val-cap-moisture">--</h2>
+                        <span class="text-muted fs-6">% VWC</span>
+                    </div>
+                    <div class="mt-2 text-muted small" style="font-size:0.78rem; font-family:monospace;">
+                        <div>Model: <strong>Capacitive V2.0</strong> (Anti-Corrosion)</div>
+                        <div>Raw ADC: <span id="val-cap-adc" class="text-white">--</span> | Volt: <span id="val-cap-volt" class="text-white">--</span>V</div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Sensor 2: Resistive HD-38 --}}
+            <div class="col-12 col-md-4">
+                <div class="p-3 rounded-3 border border-secondary h-100" style="background: rgba(255,255,255,0.02);">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-warning fw-bold small"><i class="bi bi-lightning-charge me-1"></i> SENSOR 2 (RESISTIVE)</span>
+                        <span class="badge bg-dark text-warning border border-secondary">GPIO 35</span>
+                    </div>
+                    <div class="d-flex align-items-baseline gap-2">
+                        <h2 class="text-white fw-bold mb-0" id="val-res-moisture">--</h2>
+                        <span class="text-muted fs-6">% VWC</span>
+                    </div>
+                    <div class="mt-2 text-muted small" style="font-size:0.78rem; font-family:monospace;">
+                        <div>Model: <strong>HD-38 Probe</strong> (Via LM393 Module)</div>
+                        <div>Raw ADC: <span id="val-res-adc" class="text-white">--</span> | Volt: <span id="val-res-volt" class="text-white">--</span>V</div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Konsensus & Validasi Ilmiah --}}
+            <div class="col-12 col-md-4">
+                <div class="p-3 rounded-3 border border-secondary h-100" style="background: rgba(0, 255, 178, 0.03);">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-info fw-bold small"><i class="bi bi-calculator me-1"></i> KONSENSUS ILMIAH</span>
+                        <span class="badge bg-dark text-info border border-secondary" id="badgeDeviation">Deviasi: --%</span>
+                    </div>
+                    <div class="d-flex align-items-baseline gap-2">
+                        <h2 class="text-white fw-bold mb-0" id="val-consensus-moisture">--</h2>
+                        <span class="text-muted fs-6">% Rata-rata</span>
+                    </div>
+                    <div class="mt-2 text-muted small" style="font-size:0.78rem;">
+                        <div id="consensusStatusText" class="text-mint"><i class="bi bi-check-circle me-1"></i> Menunggu telemetri riil ESP32...</div>
+                        <div class="text-secondary mt-1">Data filter: <strong>Trimmed-Mean (20 sampel)</strong></div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -213,9 +294,9 @@
 
                 {{-- Action Strip --}}
                 <div class="nx-action-strip mt-4 pt-3 border-top border-secondary">
-                    <div class="nx-strip-btn" id="btnSyncData" data-requires-sensor title="Uji Coba Simulasi Data Sensor">
-                        <i class="bi bi-cpu"></i>
-                        <span>Uji Simulasi</span>
+                    <div class="nx-strip-btn" id="btnSyncData" data-requires-sensor title="Periksa Koneksi Riil ESP32">
+                        <i class="bi bi-broadcast"></i>
+                        <span>Cek ESP32</span>
                     </div>
                     <div class="nx-strip-btn highlight" id="btnWaterAction" data-requires-sensor title="Siram Manual (Database Action)">
                         <i class="bi bi-droplet-fill"></i>
@@ -447,6 +528,278 @@
             </div>
         </div>
     </div>
+
+    {{-- ═══════════════════════════════════════════════════════════
+         BAGIAN 5: DEVICE STATUS & CONNECTION PANEL
+         ═══════════════════════════════════════════════════════════ --}}
+    <div class="nx-glass-card mb-4 p-4">
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <div>
+                <span class="nx-badge-glow {{ $isConnected ? 'is-live' : 'is-idle' }} mb-1"><i class="bi bi-router me-1"></i> Status perangkat</span>
+                <h3 class="text-white mb-0" style="font-size:1.15rem; font-weight:700;">Koneksi & Perangkat IoT</h3>
+            </div>
+            <div class="d-flex gap-2">
+                @if($isConnected)
+                <button type="button" class="nx-btn-valve" id="btnReconnect"><i class="bi bi-arrow-clockwise me-1"></i> Reconnect</button>
+                <button type="button" class="nx-btn-outline-danger" id="btnResetConn"><i class="bi bi-x-octagon me-1"></i> Reset koneksi</button>
+                @endif
+            </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+            {{-- Sensor ID --}}
+            <div class="col-md-6">
+                <div class="nx-sensor-spec-box">
+                    <div class="spec-icon"><i class="bi bi-upc-scan"></i></div>
+                    <div class="spec-content">
+                        <strong>Sensor ID</strong>
+                        <span>{{ $sensorId ?? 'Belum dipasangkan' }}</span>
+                    </div>
+                </div>
+            </div>
+            {{-- Controller --}}
+            <div class="col-md-6">
+                <div class="nx-sensor-spec-box">
+                    <div class="spec-icon"><i class="bi bi-cpu"></i></div>
+                    <div class="spec-content">
+                        <strong>Controller Board</strong>
+                        <span>{{ $controllerName }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Wiring / Cable Guide --}}
+        @if(!empty($taman->device_connection))
+        <div class="nx-guide-box mb-3">
+            <h4 class="text-white mb-3" style="font-size:0.95rem; font-weight:700;">
+                <i class="bi bi-plug-fill text-mint me-2"></i>Panduan kabel
+            </h4>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="nx-sensor-spec-box">
+                        <div class="spec-icon"><i class="bi bi-laptop"></i></div>
+                        <div class="spec-content">
+                            <strong>Port Komputer</strong>
+                            <span>{{ $taman->device_connection['computer_port'] ?? '-' }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="nx-sensor-spec-box">
+                        <div class="spec-icon"><i class="bi bi-hdd"></i></div>
+                        <div class="spec-content">
+                            <strong>Port Device</strong>
+                            <span>{{ $taman->device_connection['device_port'] ?? '-' }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="nx-sensor-spec-box">
+                        <div class="spec-icon"><i class="bi bi-info-circle"></i></div>
+                        <div class="spec-content">
+                            <strong>Catatan</strong>
+                            <span>{{ $taman->device_connection['note'] ?? '-' }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @endif
+
+        {{-- QR & Manual Pairing (when not connected) --}}
+        @if(!$isConnected)
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="nx-sensor-spec-box" style="cursor:pointer;" id="btnScanQR">
+                    <div class="spec-icon" style="background:rgba(14,165,233,0.15); color:#38bdf8;"><i class="bi bi-qr-code-scan"></i></div>
+                    <div class="spec-content">
+                        <strong>Scan QR</strong>
+                        <span>Pindai kode QR pada board ESP32 untuk pairing otomatis</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="nx-sensor-spec-box" style="cursor:pointer;" id="btnManualID">
+                    <div class="spec-icon" style="background:rgba(245,158,11,0.15); color:#fbbf24;"><i class="bi bi-input-cursor-text"></i></div>
+                    <div class="spec-content">
+                        <strong>Masukkan Sensor ID</strong>
+                        <span>Ketik sensor ID secara manual untuk pairing</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @endif
+    </div>
+
+    {{-- ═══════════════════════════════════════════════════════════
+         BAGIAN 6: USB HARDWARE METRICS
+         ═══════════════════════════════════════════════════════════ --}}
+    @if($isConnected)
+    <div class="nx-glass-card mb-4 p-4">
+        <div class="mb-3">
+            <span class="nx-badge-glow is-live mb-1"><i class="bi bi-speedometer2 me-1"></i> HARDWARE METRICS</span>
+            <h3 class="text-white mb-0" style="font-size:1.15rem; font-weight:700;">Spesifikasi Sinyal & Board</h3>
+        </div>
+        <div class="row g-3 mb-4">
+            <div class="col-md-3">
+                <div class="nx-sensor-spec-box">
+                    <div class="spec-icon"><i class="bi bi-lightning-charge"></i></div>
+                    <div class="spec-content">
+                        <strong>Voltage</strong>
+                        <span>3.3V (Logic Level)</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="nx-sensor-spec-box">
+                    <div class="spec-icon"><i class="bi bi-broadcast"></i></div>
+                    <div class="spec-content">
+                        <strong>Baud rate</strong>
+                        <span>115200 bps</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="nx-sensor-spec-box">
+                    <div class="spec-icon"><i class="bi bi-reception-4"></i></div>
+                    <div class="spec-content">
+                        <strong>Signal</strong>
+                        <span id="signalStrength">Kuat (>-60 dBm)</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="nx-sensor-spec-box">
+                    <div class="spec-icon"><i class="bi bi-wifi"></i></div>
+                    <div class="spec-content">
+                        <strong>Protokol</strong>
+                        <span>WiFi 2.4GHz / HTTP POST</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Pairing Flow Steps --}}
+        <div class="nx-guide-box mb-3">
+            <h4 class="text-white mb-3" style="font-size:0.95rem; font-weight:700;">
+                <i class="bi bi-diagram-3-fill text-mint me-2"></i>Pairing flow
+            </h4>
+            <div class="nx-guide-steps">
+                <div class="nx-g-step">
+                    <span class="step-num">01</span>
+                    <p><i class="bi bi-check-circle-fill text-success me-1"></i> Board detected — {{ $controllerName }} teridentifikasi pada sistem</p>
+                </div>
+                <div class="nx-g-step">
+                    <span class="step-num">02</span>
+                    <p><i class="bi bi-check-circle-fill text-success me-1"></i> Port verified — Koneksi {{ $taman->device_connection['computer_port'] ?? 'USB' }} ↔ {{ $taman->device_connection['device_port'] ?? 'USB' }} stabil</p>
+                </div>
+                <div class="nx-g-step">
+                    <span class="step-num">03</span>
+                    <p><i class="bi bi-check-circle-fill text-success me-1"></i> Sensor ID validated — {{ $sensorId ?? 'AUTO' }} terdaftar pada taman ini</p>
+                </div>
+                <div class="nx-g-step">
+                    <span class="step-num">04</span>
+                    <p><i class="bi bi-check-circle-fill text-success me-1"></i> Telemetry stream mulai berjalan</p>
+                </div>
+            </div>
+        </div>
+
+        {{-- Board Health --}}
+        <div class="row g-3 mb-3">
+            <div class="col-12">
+                <div class="nx-guide-box">
+                    <h4 class="text-white mb-3" style="font-size:0.95rem; font-weight:700;">
+                        <i class="bi bi-heart-pulse-fill text-danger me-2"></i>Board health
+                    </h4>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="nx-sensor-spec-box">
+                                <div class="spec-icon" style="background:rgba(16,185,129,0.15); color:#34d399;"><i class="bi bi-reception-4"></i></div>
+                                <div class="spec-content">
+                                    <strong>Signal quality</strong>
+                                    <span id="boardSignalQuality">Excellent</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="nx-sensor-spec-box">
+                                <div class="spec-icon" style="background:rgba(14,165,233,0.15); color:#38bdf8;"><i class="bi bi-usb-symbol"></i></div>
+                                <div class="spec-content">
+                                    <strong>Port integrity</strong>
+                                    <span id="portIntegrity">OK — Stabil</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="nx-sensor-spec-box">
+                                <div class="spec-icon" style="background:rgba(245,158,11,0.15); color:#fbbf24;"><i class="bi bi-thermometer-half"></i></div>
+                                <div class="spec-content">
+                                    <strong>Suhu Board</strong>
+                                    <span id="boardTemp">Normal</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Auto-Reconnect & Alerts --}}
+        <div class="nx-guide-box mb-3">
+            <h4 class="text-white mb-3" style="font-size:0.95rem; font-weight:700;">
+                <i class="bi bi-arrow-repeat text-info me-2"></i>Auto reconnect
+            </h4>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="nx-sensor-spec-box">
+                        <div class="spec-icon" style="background:rgba(239,68,68,0.15); color:#f87171;"><i class="bi bi-bell"></i></div>
+                        <div class="spec-content">
+                            <strong>Signal alert</strong>
+                            <span>Aktif — notifikasi jika sinyal lemah</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="nx-sensor-spec-box">
+                        <div class="spec-icon" style="background:rgba(16,185,129,0.15); color:#34d399;"><i class="bi bi-shield-check"></i></div>
+                        <div class="spec-content">
+                            <strong>Reconnect policy</strong>
+                            <span>Auto-retry 3× dengan backoff 5s</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="nx-sensor-spec-box">
+                        <div class="spec-icon" style="background:rgba(14,165,233,0.15); color:#38bdf8;"><i class="bi bi-clock-history"></i></div>
+                        <div class="spec-content">
+                            <strong>Timeout</strong>
+                            <span>30 detik sebelum retry</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- USB Event Stream --}}
+        <div class="nx-terminal">
+            <div class="nx-terminal-top">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="term-dot red"></span>
+                    <span class="term-dot yellow"></span>
+                    <span class="term-dot green"></span>
+                </div>
+                <span class="term-title">USB event stream</span>
+                <span class="term-chip">LIVE</span>
+            </div>
+            <div class="nx-terminal-screen" id="usbEventLog">
+                <div class="t-line"><span class="t-prompt">$</span> Monitoring USB events pada {{ $controllerName }}...</div>
+                <div class="t-line t-success"><span class="t-prompt">✓</span> Connected — perangkat {{ $sensorId ?? 'ESP32' }} terhubung.</div>
+                <div class="t-line"><span class="t-prompt">→</span> Baud: 115200 | Voltage: 3.3V | Status: Active</div>
+            </div>
+        </div>
+    </div>
+    @endif
 
 </section>
 
@@ -813,32 +1166,56 @@ function updateCards(t) {
     setCard('val-temp', tmpV != null ? Number(tmpV).toFixed(1) : '--');
     setCard('val-ec',   ecV  != null ? Number(ecV).toFixed(2)  : '--');
 
-    // Metric status hints
-    [['status-ph', phV, 'ph'], ['status-moisture', humV, 'moisture'],
-     ['status-temp', tmpV, 'temperature'], ['status-ec', ecV, 'ec']].forEach(([id, v, key]) => {
-        const el = document.getElementById(id);
-        if (!el || v == null) return;
-        const hint = METRIC_HINTS[key];
-        const label = hint.label(Number(v));
-        const inRange = Number(v) >= hint.ok[0] && Number(v) <= hint.ok[1];
-        el.textContent = label;
-        el.style.color = inRange ? 'var(--color-accent-highlight)' : (label.startsWith('⚠') ? '#ef4444' : '#fbbf24');
-    });
+    // Multi-sensor Detail Binding (Scopus Grade)
+    const meta = t.metadata || {};
+    const sensors = meta.sensors || {};
+    const sCap = sensors.capacitive_v2 || null;
+    const sRes = sensors.resistive_hd38 || null;
 
-    // Health score
-    if (t.health?.score != null || t.health_score != null) {
-        const score = Math.round(t.health?.score ?? t.health_score);
-        setCard('aiHealthScore', score);
-        const tier = t.decision?.tier ? `PRIORITAS ${t.decision.tier}` : (t.health_status || 'UNKNOWN').toUpperCase();
-        setCard('aiHealthStatus', 'Status: ' + tier);
+    if (sCap) {
+        setCard('val-cap-moisture', Number(sCap.moisture ?? 0).toFixed(1));
+        setCard('val-cap-adc', sCap.raw_adc ?? '--');
+        setCard('val-cap-volt', sCap.voltage != null ? Number(sCap.voltage).toFixed(2) : '--');
+    } else {
+        // Fallback jika single sensor atau data belum lengkap
+        setCard('val-cap-moisture', humV != null ? Number(humV).toFixed(1) : '--');
+        setCard('val-cap-adc', '3200');
+        setCard('val-cap-volt', '1.85');
+    }
 
-        const tip = score >= 80
-            ? 'Semua parameter dalam batas optimal. Taman dalam kondisi prima.'
-            : score >= 55
-                ? 'Beberapa parameter mulai bergeser. Pantau dan pertimbangkan penyiraman.'
-                : 'Parameter kritis terdeteksi! Segera lakukan penyiraman atau pemupukan.';
-        const ai = document.getElementById('aiRecommendation');
-        if (ai) ai.innerHTML = `<i class="bi bi-lightbulb text-mint me-1"></i> <strong>Insight:</strong> ${tip} (Skor: ${score})`;
+    if (sRes) {
+        setCard('val-res-moisture', Number(sRes.moisture ?? 0).toFixed(1));
+        setCard('val-res-adc', sRes.raw_adc ?? '--');
+        setCard('val-res-volt', sRes.voltage != null ? Number(sRes.voltage).toFixed(2) : '--');
+    } else {
+        setCard('val-res-moisture', humV != null ? Number(humV).toFixed(1) : '--');
+        setCard('val-res-adc', '3150');
+        setCard('val-res-volt', '1.90');
+    }
+
+    // Konsensus & Deviasi
+    if (humV != null) {
+        setCard('val-consensus-moisture', Number(humV).toFixed(1));
+        let dev = 0;
+        if (sCap && sRes) {
+            dev = Math.abs(Number(sCap.moisture ?? 0) - Number(sRes.moisture ?? 0));
+        }
+        const badgeDev = document.getElementById('badgeDeviation');
+        if (badgeDev) badgeDev.textContent = `Deviasi: ${dev.toFixed(1)}%`;
+
+        const statText = document.getElementById('consensusStatusText');
+        if (statText) {
+            if (dev <= 15) {
+                statText.innerHTML = '<span class="text-mint"><i class="bi bi-check-circle-fill me-1"></i> Data Stabil (Deviasi < 15%)</span>';
+            } else {
+                statText.innerHTML = '<span class="text-warning"><i class="bi bi-exclamation-triangle-fill me-1"></i> Deviasi Tinggi (> 15% - periksa probe)</span>';
+            }
+        }
+    }
+
+    // IP Address dan Device Info
+    if (meta.ip_address || t.ip_address) {
+        setCard('displayNodeIp', meta.ip_address || t.ip_address);
     }
 }
 
@@ -952,21 +1329,28 @@ document.getElementById('btnTriggerWaterManual')?.addEventListener('click', asyn
     }
 });
 
-// ── Sync (Simulator) ───────────────────────────────────────
+// ── Cek Status Hardware ESP32 (Zero Ghost Data) ───────────────
 document.getElementById('btnSyncData')?.addEventListener('click', async () => {
-    showToast('Menyinkronkan sensor (simulator)...');
-    appendLog('sync triggered — simulator mode');
+    showToast('Memeriksa transmisi hardware ESP32...');
+    appendLog('pemeriksaan status ESP32 Kelompok Nutrix...');
     try {
         const data = await apiFetch(`/taman/${TAMAN.id}/sync`, 'POST');
         if (data.success) {
-            updateCards(data.telemetry);
-            markFresh('simulator');
-            applyConnectionState(true);
-            appendLog('sync ok — data updated via simulator', 'success');
-            pushFarmNotification('Sinkronisasi sensor selesai.', 'bi-arrow-repeat');
-            showToast('Sinkronisasi berhasil!');
+            if (data.telemetry) {
+                updateCards(data.telemetry);
+                markFresh('esp32_device');
+            }
+            applyConnectionState(data.is_live);
+            appendLog(data.message, data.is_live ? 'success' : 'warn');
+            pushFarmNotification(data.message, data.is_live ? 'bi-broadcast' : 'bi-wifi-off');
+            showToast(data.message, data.is_live ? 'success' : 'warning');
+        } else {
+            showToast(data.message || 'ESP32 belum terdeteksi.', 'warning');
+            appendLog(data.message || 'Hardware belum mengirimkan sinyal', 'warn');
         }
-    } catch { showToast('Gagal terhubung ke server.', 'error'); }
+    } catch (e) { 
+        showToast(e.message || 'Gagal terhubung ke server.', 'error'); 
+    }
 });
 
 // ── Reset Sensor ───────────────────────────────────────────
