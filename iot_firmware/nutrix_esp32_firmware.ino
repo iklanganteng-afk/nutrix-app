@@ -26,6 +26,10 @@
 // ── 2. KONFIGURASI SERVER RAILWAY NUTRIX ───────────────────────────────────
 const char* serverUrl = "https://nutrix-app-production.up.railway.app/api/iot/telemetry";
 
+// ── WIFI CREDENTIALS (Hardcoded untuk testing cepat) ──────────────────────
+const char* WIFI_SSID     = "GG";
+const char* WIFI_PASSWORD  = "krauss74";
+
 // Parameter Pairing Token & Sensor ID
 // Token ini didapatkan dari dashboard web NUTRIX (Contoh format: NTX-XXXXXXXXXXXX)
 char custom_device_token[40] = "";
@@ -53,38 +57,40 @@ void setup() {
     digitalWrite(PIN_BUZZER, LOW);
     digitalWrite(PIN_LED_STATUS, LOW);
 
-    // ── 3. WIFIMANAGER CAPTIVE PORTAL SETUP & PAIRING ────────────────────
-    WiFiManager wm;
+    // ── 3. KONEKSI WIFI (Langsung ke Hotspot) ─────────────────────────────
+    Serial.print("[WIFI] Menghubungkan ke hotspot: ");
+    Serial.println(WIFI_SSID);
+    digitalWrite(PIN_LED_STATUS, HIGH);
 
-    // Custom input form di Captive Portal HP:
-    WiFiManagerParameter custom_param_token("device_token", "Device Pairing Token (Dari Web NUTRIX)", custom_device_token, 40);
-    WiFiManagerParameter custom_param_sensor("sensor_id", "Sensor Node ID", custom_sensor_id, 32);
-    WiFiManagerParameter custom_param_taman("taman_id", "ID Taman (Fallback)", custom_taman_id, 8);
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
-    wm.addParameter(&custom_param_token);
-    wm.addParameter(&custom_param_sensor);
-    wm.addParameter(&custom_param_taman);
-
-    Serial.println("[WIFI] Memeriksa konfigurasi WiFi & Kredensial...");
-    digitalWrite(PIN_LED_STATUS, HIGH); // Nyalakan LED saat portal/koneksi aktif
-
-    // Jika belum terkoneksi, ESP32 membuat WiFi Access Point: "NUTRIX-ESP32-PAIR"
-    // Pengguna membuka HP, hubungkan ke SSID "NUTRIX-ESP32-PAIR", dan masukkan Token Pairing
-    if (!wm.autoConnect("NUTRIX-ESP32-PAIR")) {
-        Serial.println("[ERROR] Gagal konek ke WiFi atau waktu habis. Merestart...");
-        delay(3000);
-        ESP.restart();
+    int attempts = 0;
+    while (WiFi.status() != WL_CONNECTED && attempts < 40) {
+        delay(500);
+        Serial.print(".");
+        attempts++;
     }
 
-    // Ambil data konfigurasi dari portal
-    strncpy(custom_device_token, custom_param_token.getValue(), sizeof(custom_device_token));
-    strncpy(custom_sensor_id, custom_param_sensor.getValue(), sizeof(custom_sensor_id));
-    strncpy(custom_taman_id, custom_param_taman.getValue(), sizeof(custom_taman_id));
+    if (WiFi.status() == WL_CONNECTED) {
+        Serial.println("\n>>> SUKSES TERHUBUNG KE WIFI! <<<");
+        Serial.print("IP Address ESP32 : "); Serial.println(WiFi.localIP());
+    } else {
+        // Fallback: Buka WiFiManager Captive Portal jika hotspot tidak ditemukan
+        Serial.println("\n[WIFI] Hotspot tidak ditemukan. Membuka portal setup...");
+        WiFiManager wm;
+        WiFiManagerParameter custom_param_token("device_token", "Device Pairing Token (Dari Web NUTRIX)", custom_device_token, 40);
+        wm.addParameter(&custom_param_token);
 
-    Serial.println("\n>>> SUKSES TERHUBUNG KE WIFI! <<<");
-    Serial.print("IP Address ESP32 : "); Serial.println(WiFi.localIP());
+        if (!wm.autoConnect("NUTRIX-ESP32-PAIR")) {
+            Serial.println("[ERROR] Gagal konek WiFi. Merestart...");
+            delay(3000);
+            ESP.restart();
+        }
+        strncpy(custom_device_token, custom_param_token.getValue(), sizeof(custom_device_token));
+    }
+
     Serial.print("Node ID          : "); Serial.println(custom_sensor_id);
-    Serial.print("Pairing Token    : "); Serial.println(strlen(custom_device_token) > 0 ? custom_device_token : "(Kosong / Menggunakan Taman ID)");
+    Serial.print("Pairing Token    : "); Serial.println(strlen(custom_device_token) > 0 ? custom_device_token : "(Belum diset — generate dari web)");
 
     // Indikator audio 2x bip pertanda hardware siap
     beepSuccess();
