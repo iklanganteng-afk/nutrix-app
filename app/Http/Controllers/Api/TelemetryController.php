@@ -125,7 +125,7 @@ class TelemetryController extends Controller
 
         FarmActivity::create([
             'taman_id' => $taman->id,
-            'user_id'  => Auth::id(),
+            'user_id'  => Auth::id() ?? $taman->user_id,
             'type'     => 'sync',
             'title'    => 'Pemeriksaan status telemetry ESP32',
             'detail'   => $isLive ? 'Hardware ESP32 aktif mentransmisikan data riil.' : 'Hardware ESP32 sedang offline.',
