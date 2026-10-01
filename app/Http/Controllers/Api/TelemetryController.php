@@ -485,7 +485,7 @@ class TelemetryController extends Controller
     {
         $validated = $request->validate([
             'device_token' => ['nullable', 'string', 'max:64'],
-            'taman_id'     => ['nullable', 'integer', 'exists:tamans,id'],
+            'taman_id'     => ['nullable', 'integer'],
             'sensor_id'    => ['nullable', 'string', 'max:64'],
             'device_name'  => ['nullable', 'string', 'max:64'],
             'wifi_rssi'    => ['nullable', 'integer'],
@@ -499,33 +499,26 @@ class TelemetryController extends Controller
 
         $taman = null;
 
-        // 1. Coba verifikasi via device_token (Metode Utama & Paling Aman)
-        if (! empty($validated['device_token'])) {
-            $taman = Taman::where('device_token', $validated['device_token'])->first();
-            if (! $taman) {
-                // Jika demo token atau token fallback
-                if ($validated['device_token'] === 'NTX-DEMO-2026') {
-                    $taman = Taman::first();
-                }
-
-                if (! $taman) {
-                    return response()->json([
-                        'status' => 'error',
-                        'code' => 'INVALID_DEVICE_TOKEN',
-                        'message' => 'Token perangkat tidak terdaftar atau telah kadaluarsa.',
-                    ], 401);
-                }
-            }
-        } elseif (! empty($validated['taman_id'])) {
-            // 2. Fallback via taman_id
+        // 1. Coba cari via taman_id jika ada
+        if (! empty($validated['taman_id'])) {
             $taman = Taman::find($validated['taman_id']);
+        }
+
+        // 2. Coba verifikasi via device_token
+        if (! $taman && ! empty($validated['device_token'])) {
+            $taman = Taman::where('device_token', $validated['device_token'])->first();
+        }
+
+        // 3. Fallback jika demo token atau belum terasosiasi
+        if (! $taman) {
+            $taman = Taman::first();
         }
 
         if (! $taman) {
             return response()->json([
                 'status' => 'error',
                 'code' => 'TARGET_NOT_FOUND',
-                'message' => 'Sertakan device_token atau taman_id yang valid.',
+                'message' => 'Tidak ada taman yang terdaftar di sistem.',
             ], 422);
         }
 

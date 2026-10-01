@@ -44,7 +44,7 @@ const char* serverUrl = "https://nutrix-app-production.up.railway.app/api/iot/te
 
 // Token Pairing dari Dashboard Web NUTRIX
 char custom_device_token[40] = "NTX-DEMO-2026"; 
-char custom_taman_id[8]      = "1";
+char custom_taman_id[8]      = "3";
 
 unsigned long previousMillis = 0;
 const long telemetryInterval = 5000; // Kirim tiap 5 detik
@@ -233,6 +233,7 @@ void bacaSensorDanKirimKeWeb() {
     HTTPClient http;
     http.begin(serverUrl);
     http.addHeader("Content-Type", "application/json");
+    http.addHeader("Accept", "application/json");
     http.setTimeout(4500);
 
     int httpResponseCode = http.POST(requestBody);
