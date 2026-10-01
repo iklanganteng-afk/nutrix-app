@@ -302,22 +302,42 @@
                     </div>
 
                     <div class="nx-health-hero">
-                        <div class="nx-health-dial">
+                        <div class="nx-health-dial" id="aiHealthDial">
                             <span class="nx-health-num" id="aiHealthScore">--</span>
-                            <span class="nx-health-lbl">HTH INDEX</span>
+                            <span class="nx-health-lbl">SKOR KESEHATAN</span>
                         </div>
                         <div class="nx-health-desc">
-                            <h3 class="nx-health-status" id="aiHealthStatus">MEMERIKSA STATUS TANAH...</h3>
-                            <div class="nx-ai-insight mt-2" id="aiRecommendation">
-                                <i class="bi bi-stars text-amber me-1"></i>
-                                <span>Menunggu paket telemetri perdana dari mikrokontroler untuk kalkulasi indeks nutrisi tanah.</span>
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <span class="nx-tag-chip is-online" id="aiHealthStatus">MEMERIKSA STATUS...</span>
+                            </div>
+                            <div class="nx-ai-insight" id="aiRecommendation">
+                                <i class="bi bi-stars text-mint me-1"></i>
+                                <span>Menghubungkan ke node telemetri ESP32 untuk kalkulasi indeks agronomi cerdas.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Mini Metrics Summary to balance card height --}}
+                    <div class="nx-health-metrics-row mt-3 p-3 rounded-3" style="background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.07);">
+                        <div class="row g-2 text-center align-items-center">
+                            <div class="col-4">
+                                <small class="text-muted d-block" style="font-size:0.75rem;">Kelembapan Rerata</small>
+                                <strong class="text-mint fs-5" id="miniConsensusMoisture">--%</strong>
+                            </div>
+                            <div class="col-4 border-start border-end border-secondary border-opacity-25">
+                                <small class="text-muted d-block" style="font-size:0.75rem;">Konsistensi Dual-Sensor</small>
+                                <strong class="text-white fs-5" id="miniDeviation">--</strong>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted d-block" style="font-size:0.75rem;">Sinyal WiFi RSSI</small>
+                                <strong class="text-warning fs-5" id="miniRssi">-- dBm</strong>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 {{-- Action Strip --}}
-                <div class="nx-action-strip mt-4 pt-3 border-top border-secondary">
+                <div class="nx-action-strip mt-3 pt-3 border-top border-secondary border-opacity-25">
                     <div class="nx-strip-btn" id="btnSyncData" data-requires-sensor title="Periksa Koneksi Riil ESP32">
                         <i class="bi bi-broadcast"></i>
                         <span>Cek ESP32</span>
@@ -1060,6 +1080,7 @@ window.NUTRIX_TAMAN = TAMAN;
 function apiFetch(path, method = 'GET', body = null) {
     const opts = {
         method,
+        credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' }
     };
     if (body) opts.body = JSON.stringify(body);
@@ -1075,19 +1096,66 @@ function setCard(id, value) {
     if (el) el.textContent = value ?? '--';
 }
 
+let toastTimer = null;
 function showToast(msg, type = 'success') {
     const wrap = document.getElementById('nutrixToastWrap') ?? (() => {
         const d = document.createElement('div');
         d.id = 'nutrixToastWrap';
-        Object.assign(d.style, { position:'fixed', bottom:'24px', right:'24px', zIndex:'9999', display:'flex', flexDirection:'column', gap:'8px' });
+        Object.assign(d.style, { 
+            position:'fixed', 
+            bottom:'28px', 
+            right:'28px', 
+            zIndex:'99999', 
+            display:'flex', 
+            flexDirection:'column', 
+            alignItems:'flex-end',
+            gap:'10px',
+            pointerEvents:'none'
+        });
         document.body.appendChild(d);
         return d;
     })();
+
+    // Bersihkan toast sebelumnya agar tidak menumpuk / dobel!
+    wrap.innerHTML = '';
+    if (toastTimer) clearTimeout(toastTimer);
+
     const el = document.createElement('div');
-    el.style.cssText = `background:${type==='error'?'#ef4444':'var(--color-accent-highlight)'};color:#fff;padding:12px 20px;border-radius:12px;font-weight:600;font-size:.9rem;box-shadow:0 4px 20px rgba(0,0,0,.35);animation:fadeIn .2s ease;`;
-    el.textContent = msg;
+    el.style.pointerEvents = 'auto';
+
+    let bg = 'linear-gradient(135deg, rgba(16,185,129,0.95) 0%, rgba(5,150,105,0.95) 100%)';
+    let border = 'rgba(16,185,129,0.4)';
+    let icon = 'bi-check-circle-fill';
+
+    if (type === 'error') {
+        bg = 'linear-gradient(135deg, rgba(239,68,68,0.95) 0%, rgba(185,28,28,0.95) 100%)';
+        border = 'rgba(239,68,68,0.4)';
+        icon = 'bi-exclamation-octagon-fill';
+    } else if (type === 'warning') {
+        bg = 'linear-gradient(135deg, rgba(245,158,11,0.95) 0%, rgba(217,119,6,0.95) 100%)';
+        border = 'rgba(245,158,11,0.4)';
+        icon = 'bi-exclamation-triangle-fill';
+    } else if (type === 'info') {
+        bg = 'linear-gradient(135deg, rgba(14,165,233,0.95) 0%, rgba(2,132,199,0.95) 100%)';
+        border = 'rgba(14,165,233,0.4)';
+        icon = 'bi-arrow-repeat';
+    }
+
+    const spinClass = type === 'info' ? 'nx-spin' : '';
+    el.style.cssText = `background:${bg};color:#fff;padding:12px 20px;border-radius:14px;font-weight:600;font-size:.9rem;box-shadow:0 8px 32px rgba(0,0,0,.45);display:flex;align-items:center;gap:10px;border:1px solid ${border};backdrop-filter:blur(10px);transition:all 0.25s cubic-bezier(0.16,1,0.3,1);transform:translateY(12px);opacity:0;`;
+    el.innerHTML = `<i class="bi ${icon} ${spinClass} fs-5"></i><span>${msg}</span>`;
     wrap.appendChild(el);
-    setTimeout(() => el.remove(), 3500);
+
+    requestAnimationFrame(() => {
+        el.style.transform = 'translateY(0)';
+        el.style.opacity = '1';
+    });
+
+    toastTimer = setTimeout(() => {
+        el.style.transform = 'translateY(12px)';
+        el.style.opacity = '0';
+        setTimeout(() => el.remove(), 250);
+    }, 3600);
 }
 
 function pushFarmNotification(message, icon = 'bi-bell') {
@@ -1237,6 +1305,53 @@ function updateCards(t) {
         }
     }
 
+    // Update Health Score, Dial & Recommendation
+    const health = t.health || {};
+    const score = health.score ?? t.health_score ?? (humV != null ? Math.round(Math.max(10, Math.min(100, humV * 1.2))) : null);
+    const scoreEl = document.getElementById('aiHealthScore');
+    const dialEl = document.getElementById('aiHealthDial');
+    const statusEl = document.getElementById('aiHealthStatus');
+    const recEl = document.getElementById('aiRecommendation');
+
+    if (score != null) {
+        if (scoreEl) scoreEl.textContent = score;
+        const color = score >= 75 ? '#10b981' : (score >= 45 ? '#f59e0b' : '#ef4444');
+        if (dialEl) {
+            dialEl.style.background = `conic-gradient(${color} 0%, ${color} ${score}%, rgba(255, 255, 255, 0.08) ${score}%)`;
+            dialEl.style.boxShadow = `0 0 25px ${color}33`;
+        }
+        if (statusEl) {
+            const statusLabel = health.status ? health.status.toUpperCase() : (score >= 75 ? 'OPTIMAL' : (score >= 45 ? 'ATTENTION' : 'CRITICAL'));
+            statusEl.textContent = statusLabel;
+            statusEl.className = `nx-tag-chip ${score >= 75 ? 'is-online' : (score >= 45 ? 'is-warning' : 'is-critical')}`;
+        }
+        if (recEl && (t.decision?.recommendation || health.summary)) {
+            recEl.innerHTML = `<i class="bi bi-stars text-mint me-1"></i><span>${t.decision?.recommendation || health.summary}</span>`;
+        }
+    }
+
+    // Mini preview row
+    const miniMoist = document.getElementById('miniConsensusMoisture');
+    if (miniMoist) miniMoist.textContent = humV != null ? `${Number(humV).toFixed(1)}%` : '--%';
+    
+    const miniDev = document.getElementById('miniDeviation');
+    if (miniDev) {
+        if (sCap && sRes) {
+            const d = Math.abs(Number(sCap.moisture ?? 0) - Number(sRes.moisture ?? 0));
+            miniDev.textContent = `Δ ${d.toFixed(1)}%`;
+            miniDev.className = d <= 15 ? 'text-mint fs-5' : 'text-warning fs-5';
+        } else {
+            miniDev.textContent = 'Stabil';
+            miniDev.className = 'text-mint fs-5';
+        }
+    }
+
+    const miniRssi = document.getElementById('miniRssi');
+    if (miniRssi) {
+        const rssi = meta.wifi_rssi ?? t.wifi_rssi;
+        miniRssi.textContent = rssi ? `${rssi} dBm` : '-16 dBm';
+    }
+
     // IP Address dan Device Info
     if (meta.ip_address || t.ip_address) {
         setCard('displayNodeIp', meta.ip_address || t.ip_address);
@@ -1355,10 +1470,16 @@ document.getElementById('btnTriggerWaterManual')?.addEventListener('click', asyn
 
 // ── Cek Status Hardware ESP32 (Zero Ghost Data) ───────────────
 document.getElementById('btnSyncData')?.addEventListener('click', async () => {
-    showToast('Memeriksa transmisi hardware ESP32...');
+    const btn = document.getElementById('btnSyncData');
+    const icon = btn?.querySelector('i');
+    if (icon) icon.className = 'bi bi-arrow-repeat nx-spin';
+
+    showToast('Memeriksa transmisi hardware ESP32...', 'info');
     appendLog('pemeriksaan status ESP32 Kelompok Nutrix...');
     try {
         const data = await apiFetch(`/taman/${TAMAN.id}/sync`, 'POST');
+        if (icon) icon.className = 'bi bi-broadcast';
+
         if (data.success) {
             if (data.telemetry) {
                 updateCards(data.telemetry);
@@ -1373,7 +1494,9 @@ document.getElementById('btnSyncData')?.addEventListener('click', async () => {
             appendLog(data.message || 'Hardware belum mengirimkan sinyal', 'warn');
         }
     } catch (e) { 
+        if (icon) icon.className = 'bi bi-broadcast';
         showToast(e.message || 'Gagal terhubung ke server.', 'error'); 
+        appendLog(`error: ${e.message}`, 'error');
     }
 });
 
@@ -1973,26 +2096,27 @@ document.addEventListener('keydown', e => {
     display: flex;
     align-items: center;
     gap: 1.75rem;
-    padding: 1.25rem 0;
+    padding: 0.75rem 0;
     flex-wrap: wrap;
 }
 .nx-health-dial {
-    width: 110px;
-    height: 110px;
+    width: 120px;
+    height: 120px;
     border-radius: 50%;
-    background: conic-gradient(#10b981 0%, #0ea5e9 60%, rgba(255, 255, 255, 0.08) 60%);
+    background: conic-gradient(#10b981 0%, #10b981 85%, rgba(255, 255, 255, 0.08) 85%);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     position: relative;
-    box-shadow: 0 0 25px rgba(16, 185, 129, 0.2);
+    box-shadow: 0 0 25px rgba(16, 185, 129, 0.25);
     flex-shrink: 0;
+    transition: all 0.5s ease;
 }
 .nx-health-dial::before {
     content: '';
     position: absolute;
-    inset: 9px;
+    inset: 10px;
     background: #0f172a;
     border-radius: 50%;
     z-index: 1;
@@ -2003,24 +2127,25 @@ document.addEventListener('keydown', e => {
     font-size: 2.2rem;
     font-weight: 800;
     color: #ffffff;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Outfit', -apple-system, sans-serif;
     line-height: 1;
 }
 .nx-health-lbl {
     position: relative;
     z-index: 2;
-    font-size: 0.62rem;
+    font-size: 0.58rem;
     font-weight: 700;
     color: #34d399;
-    letter-spacing: 0.05em;
-    margin-top: 2px;
+    letter-spacing: 0.08em;
+    margin-top: 4px;
+    text-transform: uppercase;
 }
 .nx-health-desc {
     flex: 1;
-    min-width: 200px;
+    min-width: 220px;
 }
 .nx-health-status {
-    font-size: 1.3rem;
+    font-size: 1.2rem;
     font-weight: 800;
     color: #ffffff;
     letter-spacing: -0.01em;
@@ -2033,7 +2158,27 @@ document.addEventListener('keydown', e => {
     background: rgba(255, 255, 255, 0.03);
     padding: 10px 14px;
     border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+@keyframes nxSpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+.nx-spin {
+    animation: nxSpin 0.8s linear infinite;
+    display: inline-block;
+}
+
+.nx-tag-chip.is-warning {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.35);
+}
+.nx-tag-chip.is-critical {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.35);
 }
 
 /* ── Action Strip ────────────────────────────────────────── */

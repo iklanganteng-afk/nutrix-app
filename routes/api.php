@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Route;
 // Endpoint Publik Khusus ESP32 (Wireless IoT)
 Route::post('/iot/telemetry', [TelemetryController::class, 'ingestDeviceTelemetry']);
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['web', 'auth'])->group(function () {
 
     // Ambil data sensor terbaru + 20 riwayat
     Route::get('/taman/{taman}/telemetry', [TelemetryController::class, 'index']);
