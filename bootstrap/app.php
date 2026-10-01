@@ -17,6 +17,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             'api/*',
             'api/iot/*',
+            'taman/*/sync',
+            'taman/*/actions/*',
+            'taman/*/telemetry/*',
         ]);
 
         $middleware->alias([
