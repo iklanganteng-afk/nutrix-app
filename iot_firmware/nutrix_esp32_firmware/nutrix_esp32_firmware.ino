@@ -79,54 +79,39 @@ void setup() {
     digitalWrite(PIN_BUZZER, LOW);
     digitalWrite(PIN_LED_STATUS, LOW);
 
-    // Matikan WiFi lama & bersihkan sisa konfigurasi NVS yang bentrok
-    WiFi.disconnect(true);
-    delay(500);
-
+    // Inisialisasi WiFi Mode Station
     WiFi.mode(WIFI_STA);
-    WiFi.setSleep(false); // Nonaktifkan power saving agar stabil connect ke HP
-    WiFi.setHostname(DEVICE_HOSTNAME);
 
-    Serial.print("[WIFI] Mencari & menghubungkan ke hotspot: ");
+    Serial.print("[WIFI] Menghubungkan ke hotspot: ");
     Serial.println(WIFI_SSID);
     digitalWrite(PIN_LED_STATUS, HIGH);
 
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
-    // Timeout diperpanjang hingga 70 iterasi (35 detik) khusus negosiasi DHCP HP
     int attempts = 0;
-    while (WiFi.status() != WL_CONNECTED && attempts < 70) {
+    while (WiFi.status() != WL_CONNECTED && attempts < 50) {
         delay(500);
         Serial.print(".");
-        // Berikan visualisasi LED berkedip saat proses mencari WiFi
-        digitalWrite(PIN_LED_STATUS, (attempts % 2 == 0) ? HIGH : LOW);
         attempts++;
     }
 
     if (WiFi.status() == WL_CONNECTED) {
         digitalWrite(PIN_LED_STATUS, HIGH);
         Serial.println("\n\n=======================================================");
-        Serial.println("  >>> SUKSES TERHUBUNG KE HOTSPOT HP! <<<");
+        Serial.println("  >>> SUKSES TERHUBUNG KE WIFI HOTSPOT! <<<");
         Serial.println("=======================================================");
-        Serial.printf("SSID         : %s\n", WiFi.SSID().c_str());
-        Serial.printf("Hostname     : %s\n", WiFi.getHostname());
-        Serial.print("IP Address   : "); Serial.println(WiFi.localIP());
-        Serial.printf("Sinyal RSSI  : %d dBm (Sangat Baik)\n", WiFi.RSSI());
+        Serial.print("IP Address ESP32 : "); Serial.println(WiFi.localIP());
+        Serial.print("Sinyal RSSI      : "); Serial.print(WiFi.RSSI()); Serial.println(" dBm");
         Serial.println("=======================================================\n");
         beepSuccess();
     } else {
-        digitalWrite(PIN_LED_STATUS, LOW);
-        Serial.println("\n\n[WARNING] Tidak dapat terhubung otomatis ke SSID: " + String(WIFI_SSID));
-        Serial.println("[INFO] Membuka Portal Darurat WiFiManager...");
-        Serial.println("[INFO] Hubungkan HP Anda ke WiFi: 'Kelompok-Nutrix-Setup' untuk atur SSID!");
-
+        Serial.println("\n[WIFI] Belum terhubung. Membuka AP darurat: NUTRIX-ESP32-PAIR");
         WiFiManager wm;
-        wm.setConfigPortalTimeout(120); // 2 menit timeout agar tidak macet selamanya
-        WiFiManagerParameter custom_token("device_token", "Device Token (NUTRIX)", custom_device_token, 40);
+        WiFiManagerParameter custom_token("device_token", "Device Pairing Token (Dari Web NUTRIX)", custom_device_token, 40);
         wm.addParameter(&custom_token);
 
-        if (!wm.autoConnect("Kelompok-Nutrix-Setup")) {
-            Serial.println("[ERROR] Gagal konfigurasi via Portal. Merestart modul...");
+        if (!wm.autoConnect("NUTRIX-ESP32-PAIR")) {
+            Serial.println("[ERROR] Gagal konek WiFi. Merestart...");
             delay(2000);
             ESP.restart();
         }
@@ -144,9 +129,8 @@ void loop() {
         if (WiFi.status() == WL_CONNECTED) {
             bacaSensorDanKirimKeWeb();
         } else {
-            Serial.println("[WIFI] Sinyal terputus. Mencoba reconnect ke " + String(WIFI_SSID) + "...");
+            Serial.println("[WIFI] Koneksi terputus! Mencoba rekoneksi...");
             digitalWrite(PIN_LED_STATUS, LOW);
-            WiFi.disconnect();
             WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
         }
     }
