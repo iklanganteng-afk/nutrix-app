@@ -969,7 +969,11 @@ document.addEventListener("DOMContentLoaded", function () {
                         'X-CSRF-TOKEN': csrfToken(),
                         'Accept': 'application/json'
                     },
-                    body: JSON.stringify({ email, password })
+                    body: JSON.stringify({
+                        email,
+                        password,
+                        remember: document.getElementById('signinRemember')?.checked === true
+                    })
                 });
 
                 const data = await response.json();
@@ -1329,7 +1333,26 @@ document.addEventListener("DOMContentLoaded", function () {
     const btnSaveSettings = document.getElementById('btnSaveSettings');
     const pushNotificationsSetting = document.getElementById('settingPushNotifications');
     const autoSyncSetting = document.getElementById('settingAutoSync');
+    const profilePhotoInput = document.getElementById('profilePhotoInput');
+    const profilePhotoPreview = document.getElementById('profilePhotoPreview');
+    let profilePhotoPreviewUrl = null;
     const storedSettings = JSON.parse(localStorage.getItem('nutrixSettings') || '{}');
+
+    profilePhotoInput?.addEventListener('change', () => {
+        const file = profilePhotoInput.files?.[0];
+        if (!file || !profilePhotoPreview) return;
+
+        if (profilePhotoPreviewUrl) URL.revokeObjectURL(profilePhotoPreviewUrl);
+        profilePhotoPreviewUrl = URL.createObjectURL(file);
+        let previewImage = profilePhotoPreview.querySelector('img');
+        if (!previewImage) {
+            previewImage = document.createElement('img');
+            previewImage.className = 'avatar-profile-photo';
+            previewImage.alt = '';
+            profilePhotoPreview.replaceChildren(previewImage);
+        }
+        previewImage.src = profilePhotoPreviewUrl;
+    });
 
     const syncSettingsControls = () => {
         if (pushNotificationsSetting) pushNotificationsSetting.checked = storedSettings.pushNotifications !== false;

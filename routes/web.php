@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TamanController;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
@@ -75,6 +76,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
 Route::middleware('auth')->group(function () {
     // Dashboard Pengguna Biasa
     Route::get('/dashboard', [TamanController::class, 'index'])->name('dashboard');
+    Route::post('/profile/photo', [ProfileController::class, 'updatePhoto'])->name('profile.photo.update');
 
     Route::post('/taman', [TamanController::class, 'store'])->name('taman.store');
     Route::get('/taman/{taman}', [TamanController::class, 'show'])->name('taman.show');

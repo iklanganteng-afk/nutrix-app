@@ -23,6 +23,8 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'profile_photo_data',
+        'profile_photo_mime',
     ];
 
     /**
@@ -31,6 +33,15 @@ class User extends Authenticatable
     public function isAdmin(): bool
     {
         return $this->role === 'admin';
+    }
+
+    public function getProfilePhotoUrlAttribute(): ?string
+    {
+        if (! $this->profile_photo_data || ! $this->profile_photo_mime) {
+            return null;
+        }
+
+        return 'data:' . $this->profile_photo_mime . ';base64,' . $this->profile_photo_data;
     }
 
     /**

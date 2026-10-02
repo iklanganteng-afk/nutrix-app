@@ -164,6 +164,7 @@ class AuthController extends Controller
         $credentials = $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required', 'string'],
+            'remember' => ['sometimes', 'boolean'],
         ]);
 
         $user = User::where('email', $credentials['email'])->first();
@@ -209,6 +210,8 @@ class AuthController extends Controller
                 'message' => 'Kode OTP gagal dikirim. Periksa konfigurasi email lalu coba lagi.',
             ], 503);
         }
+
+        $request->session()->put('auth.remember', $request->boolean('remember'));
 
         return response()->json([
             'status' => 'success',
@@ -276,8 +279,9 @@ class AuthController extends Controller
         // Bersihkan OTP yang sudah digunakan
         $otpRecord->delete();
 
-        // Login user
-        Auth::login($user, $request->boolean('remember'));
+        // Carry the remember choice across the two-step login flow.
+        $remember = (bool) $request->session()->pull('auth.remember', false);
+        Auth::login($user, $remember);
         $request->session()->regenerate();
 
         // Alur pengalihan berdasarkan Role

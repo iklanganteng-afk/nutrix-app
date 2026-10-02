@@ -96,6 +96,32 @@ class AuthOtpTest extends TestCase
         $this->assertAuthenticated();
     }
 
+    public function test_login_remember_choice_survives_otp_and_sets_a_remember_token(): void
+    {
+        $user = User::create([
+            'name' => 'Remembered Farmer',
+            'email' => 'remembered@example.test',
+            'password' => bcrypt('password123'),
+            'role' => 'user',
+        ]);
+        EmailOtp::create([
+            'email' => $user->email,
+            'otp' => Hash::make('654321'),
+            'action' => 'login',
+            'expires_at' => now()->addMinutes(2),
+        ]);
+
+        $this->withSession(['auth.remember' => true])
+            ->postJson('/auth/login/verify-otp', [
+                'email' => $user->email,
+                'otp' => '654321',
+            ])
+            ->assertOk();
+
+        $this->assertNotEmpty($user->fresh()->getRememberToken());
+        $this->assertAuthenticatedAs($user);
+    }
+
     public function test_expired_otp_is_rejected()
     {
         EmailOtp::create([

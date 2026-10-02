@@ -41,7 +41,7 @@
     <!-- NAVBAR -->
     <nav class="navbar navbar-expand-lg fixed-top web3-navbar">
         <div class="container-fluid px-4">
-            <a class="navbar-brand d-flex align-items-center gap-2" href="{{ route('welcome') }}">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="{{ auth()->check() ? route('dashboard') : route('welcome') }}" aria-label="NUTRIX dashboard">
                 <span class="brand-icon">🌱</span> NUTRIX
             </a>
             <div class="user-workspace-title d-none d-md-flex align-items-center">
@@ -104,14 +104,22 @@
                 <!-- Account Avatar (authenticated state, hidden by default) -->
                 <div class="account-avatar-wrapper" id="accountAvatarWrapper" style="display: none;">
                     <div class="account-avatar" id="accountAvatarBtn">
-                        <div class="avatar-identicon" id="avatarIdenticon"></div>
+                        <div class="avatar-identicon" id="avatarIdenticon">
+                            @if(auth()->user()->profile_photo_url)
+                                <img class="avatar-profile-photo" src="{{ auth()->user()->profile_photo_url }}" alt="">
+                            @endif
+                        </div>
                     </div>
                     <span class="user-profile-name d-none d-sm-inline" id="profileNameDisplay">Profil</span>
                     <!-- Expandable Account Panel -->
                     <div class="account-panel" id="accountPanel">
                         <div class="account-panel-header">
                             <div class="d-flex align-items-center gap-3">
-                                <div class="avatar-identicon-lg" id="panelIdenticon"></div>
+                                <div class="avatar-identicon-lg" id="panelIdenticon">
+                                    @if(auth()->user()->profile_photo_url)
+                                        <img class="avatar-profile-photo" src="{{ auth()->user()->profile_photo_url }}" alt="">
+                                    @endif
+                                </div>
                                 <div>
                                     <strong class="d-block user-panel-name" id="panelUsername">Profil</strong>
                                     <small class="text-muted user-panel-address" id="panelEmail">Email tersamarkan</small>
@@ -166,6 +174,10 @@
                     <label data-i18n="ui-password">Password</label>
                     <input type="password" class="auth-input" placeholder="••••••••" id="signinPassword">
                 </div>
+                <label class="form-check d-flex align-items-start gap-2 mt-3 mb-0">
+                    <input class="form-check-input mt-1" type="checkbox" id="signinRemember" checked>
+                    <span><strong class="d-block" data-i18n="auth-remember-me">Ingat saya di perangkat ini</strong><small class="text-muted" data-i18n="auth-remember-help">Tetap masuk antar kunjungan. Gunakan hanya di perangkat tepercaya.</small></span>
+                </label>
                 <button class="btn btn-connect-node w-100 mt-3" id="btnSignIn" data-i18n="ui-sign-in">Sign In</button>
                 <p class="text-center text-muted mt-3 mb-0" style="font-size:0.85rem;"><span data-i18n="ui-sign-in-help">Don't have an account?</span> <a href="#" class="text-mint auth-switch" data-tab="signup" data-i18n="ui-sign-up">Sign Up</a></p>
             </div>
@@ -234,13 +246,39 @@
     </div>
 
     <!-- SETTINGS MODAL -->
-    <div class="modal-overlay" id="settingsModal">
+    <div class="modal-overlay{{ (session('profile_settings_open') || $errors->has('photo')) ? ' active' : '' }}" id="settingsModal">
         <div class="web3-modal-box">
             <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-secondary pb-3">
                 <h4 class="mb-0 fw-bold"><i class="bi bi-gear text-mint me-2"></i> <span data-i18n="popup-settings-title">User Settings</span></h4>
                 <button class="btn-close-custom" id="closeSettingsModal"><i class="bi bi-x-lg"></i></button>
             </div>
             <div class="text-muted mb-4" data-i18n="popup-settings-description">Manage your dashboard preferences and network configurations here.</div>
+
+            <form class="profile-photo-panel mb-4" method="POST" action="{{ route('profile.photo.update') }}" enctype="multipart/form-data">
+                @csrf
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="profile-photo-preview" id="profilePhotoPreview">
+                        @if(auth()->user()->profile_photo_url)
+                            <img class="avatar-profile-photo" src="{{ auth()->user()->profile_photo_url }}" alt="">
+                        @else
+                            <i class="bi bi-person-fill" aria-hidden="true"></i>
+                        @endif
+                    </div>
+                    <div>
+                        <strong class="d-block" data-i18n="profile-photo-label">Foto profil</strong>
+                        <span class="small text-muted" data-i18n="profile-photo-help">JPG, PNG, atau WebP hingga 1 MB. Foto tersimpan bersama akunmu.</span>
+                    </div>
+                </div>
+                <label class="form-label small fw-semibold" for="profilePhotoInput" data-i18n="profile-photo-choose">Pilih gambar</label>
+                <input class="form-control auth-input" type="file" id="profilePhotoInput" name="photo" accept="image/jpeg,image/png,image/webp" required>
+                @if($errors->has('photo'))
+                    <div class="small text-danger mt-2" data-i18n="profile-photo-invalid">Pilih gambar JPG, PNG, atau WebP maksimal 1 MB.</div>
+                @endif
+                @if(session('profile_photo_saved'))
+                    <div class="small text-mint mt-2" role="status" data-i18n="profile-photo-saved">Foto profil berhasil diperbarui.</div>
+                @endif
+                <button class="btn btn-connect-node mt-3" type="submit" data-i18n="profile-photo-save">Simpan foto</button>
+            </form>
             
             <div class="d-flex justify-content-between align-items-center mb-3 bg-dark p-3 rounded-3">
                 <span data-i18n="popup-push-notifications">Push Notifications</span>
