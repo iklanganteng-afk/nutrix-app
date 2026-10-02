@@ -20,7 +20,7 @@
     $sensorId = $taman->sensor_id ?? null;
     $deviceToken = $taman->device_token ?? null;
     $lastSeenAge = $taman->last_seen_at?->diffInSeconds(now());
-    $isConnected = ($taman->sensor_connected ?? false) || ($lastSeenAge !== null && $lastSeenAge <= 60);
+    $isConnected = $lastSeenAge !== null && $lastSeenAge <= 60;
     $lastSeen = $taman->last_seen_at ? $taman->last_seen_at->diffForHumans() : null;
     $selectedSoil = $taman->soil_type ?? '';
     $selectedSensorTypes  = $taman->sensor_types  ?? [];
@@ -29,7 +29,7 @@
     $selectedIndicatorMode = $taman->indicator_mode ?? 'active_only';
 
     // Ekstraksi nilai telemetri awal (Zero Wait - Langsung Muncul saat Page Load)
-    $latest = $latest ?? $taman->latestTelemetry;
+    $latest = $latest ?? $taman->latestHardwareTelemetry;
     $meta = $latest?->metadata ?? [];
     $sensors = $meta['sensors'] ?? [];
     $sCap = $sensors['capacitive_v2'] ?? null;
@@ -47,7 +47,6 @@
     $initDev = ($sCap && $sRes && isset($sCap['moisture'], $sRes['moisture'])) ? number_format(abs($sCap['moisture'] - $sRes['moisture']), 1) : '--';
     $initRssi = $meta['wifi_rssi'] ?? '--';
     $initIp = $meta['ip_address'] ?? $taman->ip_address ?? '--';
-    $initHealthScore = $latest?->health_score ?? '--';
 @endphp
 
 {{-- ────────────────────────────────────────────────────────── --}}
@@ -60,7 +59,7 @@
     <div class="nx-topbar mb-4">
         <a href="{{ route('dashboard') }}#gardens" class="nx-back-btn">
             <i class="bi bi-chevron-left"></i>
-            <span>Taman Saya</span>
+            <span data-i18n="detail-back">Taman Saya</span>
         </a>
         <div class="nx-topbar-meta">
             <span class="nx-badge-glow {{ $isConnected ? 'is-live' : 'is-idle' }}">
@@ -81,14 +80,14 @@
                 @endif
             </div>
             <h1 class="nx-title">{{ $taman->name }}</h1>
-            <p class="nx-subtitle mb-0">Autonomous Smart Agriculture Controller & Real-Time Sensor Telemetry Node</p>
+            <p class="nx-subtitle mb-0" data-i18n="dashboard-tagline">Autonomous Smart Agriculture Controller & Real-Time Sensor Telemetry Node</p>
         </div>
         <div class="nx-hero-actions">
             <button type="button" class="nx-action-btn primary" id="btnConnectSensor">
-                <i class="bi bi-cpu-fill me-2"></i>{{ $isConnected ? 'Konfigurasi Sensor' : 'Hubungkan Node ESP32' }}
+                <i class="bi bi-cpu-fill me-2"></i><span id="connectSensorButtonLabel" data-i18n="{{ $isConnected ? 'detail-config' : 'detail-connect-sensor' }}">{{ $isConnected ? 'Konfigurasi Sensor' : 'Hubungkan Node ESP32' }}</span>
             </button>
             <button type="button" class="nx-action-btn secondary" id="btnRefreshTelemetry">
-                <i class="bi bi-arrow-repeat me-1"></i> Sync Telemetri
+                <i class="bi bi-arrow-repeat me-1"></i> <span data-i18n="dashboard-refresh-telemetry">Sync Telemetri</span>
             </button>
         </div>
     </div>
@@ -101,7 +100,7 @@
             </div>
             <div>
                 <strong class="d-block text-white" style="font-size:0.92rem;">
-                    {{ $isConnected ? 'Koneksi Telemetri ESP32 Aktif' : 'Menunggu Koneksi ESP32' }}
+                    <span id="bannerHeading" data-i18n="{{ $isConnected ? 'dashboard-banner-live' : 'dashboard-banner-waiting' }}">{{ $isConnected ? 'Koneksi Telemetri ESP32 Aktif' : 'Menunggu Koneksi ESP32' }}</span>
                 </strong>
                 <span id="bannerText" class="nx-alert-desc">
                     {{ $isConnected ? 'Data telemetri streaming setiap 5 detik via WiFi ke Railway Cloud.' : 'Belum ada sensor terhubung. Nyalakan ESP32 dan hubungkan ke WiFi.' }}
@@ -109,10 +108,10 @@
             </div>
         </div>
         <div class="d-flex align-items-center gap-2">
-            <span class="nx-latency-pill">
-                <i class="bi bi-lightning-charge-fill me-1 text-mint"></i> 5s polling
+            <span class="nx-latency-pill" data-i18n="dashboard-api-refresh">
+                <i class="bi bi-lightning-charge-fill me-1 text-mint"></i> API refresh · 3s
             </span>
-            <span class="visually-hidden">Live telemetry stream API polling active</span>
+            <span class="visually-hidden" data-i18n="detail-api-polling">Live telemetry stream API polling active</span>
         </div>
     </div>
 
@@ -150,7 +149,7 @@
                     <i class="bi bi-shield-check me-1"></i> HARDWARE NODE: KELOMPOK NUTRIX
                 </span>
                 <h3 class="text-white mb-0" style="font-size:1.15rem; font-weight:700;">
-                    Dual-Sensor Precision Soil Analytics
+                    <span data-i18n="dashboard-dual-sensor-title">Dual-Sensor Precision Soil Analytics</span>
                 </h3>
             </div>
             <div class="d-flex align-items-center gap-2">
@@ -204,16 +203,16 @@
             <div class="col-12 col-md-4">
                 <div class="p-3 rounded-3 border border-secondary h-100" style="background: rgba(0, 255, 178, 0.03);">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="text-info fw-bold small"><i class="bi bi-calculator me-1"></i> KONSENSUS ILMIAH</span>
-                        <span class="badge bg-dark text-info border border-secondary" id="badgeDeviation">Deviasi: {{ $initDev }}%</span>
+                        <span class="text-info fw-bold small"><i class="bi bi-calculator me-1"></i><span data-i18n="dashboard-consensus-heading">RATA-RATA DARI ESP32</span></span>
+                        <span class="badge bg-dark text-info border border-secondary" id="badgeDeviation" data-i18n="dashboard-deviation-unavailable">Deviasi: {{ $initDev === '--' ? '—' : $initDev . ' pp' }}</span>
                     </div>
                     <div class="d-flex align-items-baseline gap-2">
                         <h2 class="text-white fw-bold mb-0" id="val-consensus-moisture">{{ $initMoist }}</h2>
-                        <span class="text-muted fs-6">% Rata-rata</span>
+                        <span class="text-muted fs-6" data-i18n="dashboard-aggregate-unit">% agregat</span>
                     </div>
                     <div class="mt-2 text-muted small" style="font-size:0.78rem;">
-                                <div id="consensusStatusText" class="text-muted">Menunggu bacaan dari dua probe.</div>
-                                <div class="text-secondary mt-1">Filter: <strong>Rata-rata dua probe, 10 sampel per probe</strong></div>
+                                <div id="consensusStatusText" class="text-muted" data-i18n="dashboard-consensus-waiting">Menunggu telemetri perangkat.</div>
+                                <div class="text-secondary mt-1" data-i18n="dashboard-consensus-method">Nilai agregat ESP32; deviasi membandingkan dua probe bila tersedia.</div>
                     </div>
                 </div>
             </div>
@@ -229,14 +228,14 @@
             <div class="nx-metric-card metric-ph">
                 <div class="nx-metric-top">
                     <div class="nx-metric-icon"><i class="bi bi-droplet-half"></i></div>
-                    <span class="nx-metric-chip">Kadar Asam</span>
+                    <span class="nx-metric-chip" data-i18n="sensor-ph">Kadar Asam</span>
                 </div>
                 <div class="nx-metric-main">
                     <div class="nx-metric-val"><span id="val-ph">--</span><span class="unit">pH</span></div>
-                    <div class="nx-metric-label">Derajat Keasaman</div>
+                    <div class="nx-metric-label" data-i18n="sensor-ph-label">Derajat Keasaman</div>
                 </div>
                 <div class="nx-metric-foot">
-                    <span class="nx-hint-badge" id="status-ph">Optimal (6.0 - 7.5)</span>
+                    <span class="nx-hint-badge" id="status-ph" data-i18n="dashboard-not-available">Belum tersedia</span>
                     <span class="trend-icon" id="trend-ph"><i class="bi bi-activity"></i></span>
                 </div>
                 <div class="metric-sparkline" id="spark-ph" style="display:none;"></div>
@@ -248,14 +247,14 @@
             <div class="nx-metric-card metric-moist">
                 <div class="nx-metric-top">
                     <div class="nx-metric-icon"><i class="bi bi-moisture"></i></div>
-                    <span class="nx-metric-chip">Kadar Air</span>
+                    <span class="nx-metric-chip" data-i18n="sensor-moisture">Kadar Air</span>
                 </div>
                 <div class="nx-metric-main">
                     <div class="nx-metric-val"><span id="val-hum">{{ $initMoist }}</span><span class="unit">%</span></div>
-                    <div class="nx-metric-label">Kelembapan Tanah</div>
+                    <div class="nx-metric-label" data-i18n="dashboard-soil-moisture">Kelembapan Tanah</div>
                 </div>
                 <div class="nx-metric-foot">
-                    <span class="nx-hint-badge" id="status-moisture">Optimal (30 - 80%)</span>
+                    <span class="nx-hint-badge" id="status-moisture" data-i18n="dashboard-not-available">Belum tersedia</span>
                     <span class="trend-icon" id="trend-moisture"><i class="bi bi-activity"></i></span>
                 </div>
                 <div class="metric-sparkline" id="spark-hum" style="display:none;"></div>
@@ -267,14 +266,14 @@
             <div class="nx-metric-card metric-temp">
                 <div class="nx-metric-top">
                     <div class="nx-metric-icon"><i class="bi bi-thermometer-sun"></i></div>
-                    <span class="nx-metric-chip">Suhu Media</span>
+                    <span class="nx-metric-chip" data-i18n="sensor-temperature">Suhu Media</span>
                 </div>
                 <div class="nx-metric-main">
                     <div class="nx-metric-val"><span id="val-temp">--</span><span class="unit">°C</span></div>
-                    <div class="nx-metric-label">Temperatur Tanah</div>
+                    <div class="nx-metric-label" data-i18n="dashboard-soil-temperature">Temperatur Tanah</div>
                 </div>
                 <div class="nx-metric-foot">
-                    <span class="nx-hint-badge" id="status-temp">Ideal (15 - 35°C)</span>
+                    <span class="nx-hint-badge" id="status-temp" data-i18n="dashboard-not-available">Belum tersedia</span>
                     <span class="trend-icon" id="trend-temp"><i class="bi bi-activity"></i></span>
                 </div>
                 <div class="metric-sparkline" id="spark-temp" style="display:none;"></div>
@@ -286,14 +285,14 @@
             <div class="nx-metric-card metric-ec">
                 <div class="nx-metric-top">
                     <div class="nx-metric-icon"><i class="bi bi-lightning-charge-fill"></i></div>
-                    <span class="nx-metric-chip">Nutrisi Tanah</span>
+                    <span class="nx-metric-chip" data-i18n="sensor-conductivity">Nutrisi Tanah</span>
                 </div>
                 <div class="nx-metric-main">
                     <div class="nx-metric-val"><span id="val-ec">--</span><span class="unit">mS/cm</span></div>
-                    <div class="nx-metric-label">Konduktivitas Elektrik</div>
+                    <div class="nx-metric-label" data-i18n="dashboard-soil-conductivity">Konduktivitas Elektrik</div>
                 </div>
                 <div class="nx-metric-foot">
-                    <span class="nx-hint-badge" id="status-ec">Nutrisi (0.5 - 3.0)</span>
+                    <span class="nx-hint-badge" id="status-ec" data-i18n="dashboard-not-available">Belum tersedia</span>
                     <span class="trend-icon" id="trend-ec"><i class="bi bi-activity"></i></span>
                 </div>
                 <div class="metric-sparkline" id="spark-ec" style="display:none;"></div>
@@ -311,11 +310,11 @@
                 <div>
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <span class="nx-card-title">
-                            <i class="bi bi-heart-pulse-fill text-mint me-2"></i>Status Kesehatan Kebun (AI Farm Health)
+                            <i class="bi bi-heart-pulse-fill text-mint me-2"></i><span data-i18n="detail-health">Status Kesehatan Kebun (AI Farm Health)</span>
                         </span>
                         <div class="d-flex gap-2">
                             <span class="nx-meta-badge" id="sourceBadge">
-                                <i class="bi bi-broadcast me-1"></i><span id="sourceText">Auto-Stream</span>
+                                <i class="bi bi-broadcast me-1"></i><span id="sourceText" data-i18n="dashboard-source-waiting">Menunggu telemetri</span>
                             </span>
                             <span class="nx-meta-badge" id="lastUpdatedBadge">
                                 <i class="bi bi-clock me-1"></i><span id="lastUpdatedTime">--:--</span>
@@ -325,16 +324,16 @@
 
                     <div class="nx-health-hero">
                         <div class="nx-health-dial" id="aiHealthDial">
-                            <span class="nx-health-num" id="aiHealthScore">{{ $initHealthScore }}</span>
-                            <span class="nx-health-lbl">SKOR KESEHATAN</span>
+                            <span class="nx-health-num" id="aiHealthScore">--</span>
+                            <span class="nx-health-lbl" data-i18n="dashboard-health-score">SKOR KESEHATAN</span>
                         </div>
                         <div class="nx-health-desc">
                             <div class="d-flex align-items-center gap-2 mb-2">
-                                <span class="nx-tag-chip is-online" id="aiHealthStatus">{{ $isConnected ? 'DATA TERHUBUNG' : 'MEMERIKSA STATUS...' }}</span>
+                                <span class="nx-tag-chip" id="aiHealthStatus" data-i18n="dashboard-health-insufficient">{{ $isConnected ? 'DATA TERHUBUNG' : 'MEMERIKSA STATUS...' }}</span>
                             </div>
                             <div class="nx-ai-insight" id="aiRecommendation">
                                 <i class="bi bi-stars text-mint me-1"></i>
-                                <span>{{ $isConnected ? 'Telemetri dual-sensor ESP32 tersinkronisasi secara real-time.' : 'Menghubungkan ke node telemetri ESP32 untuk kalkulasi indeks agronomi cerdas.' }}</span>
+                                <span data-i18n="dashboard-health-waiting">{{ $isConnected ? 'Telemetri dual-sensor ESP32 tersinkronisasi secara real-time.' : 'Menghubungkan ke node telemetri ESP32 untuk kalkulasi indeks agronomi cerdas.' }}</span>
                             </div>
                         </div>
                     </div>
@@ -343,16 +342,16 @@
                     <div class="nx-health-metrics-row mt-3 p-3 rounded-3" style="background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.07);">
                         <div class="row g-2 text-center align-items-center">
                             <div class="col-4">
-                                <small class="text-muted d-block" style="font-size:0.75rem;">Kelembapan Rerata</small>
+                                <small class="text-muted d-block" style="font-size:0.75rem;" data-i18n="dashboard-average-moisture">Kelembapan Rerata</small>
                                 <strong class="text-mint fs-5" id="miniConsensusMoisture">{{ $initMoist }}%</strong>
                             </div>
                             <div class="col-4 border-start border-end border-secondary border-opacity-25">
-                                <small class="text-muted d-block" style="font-size:0.75rem;">Konsistensi Dual-Sensor</small>
-                                <strong class="text-white fs-5" id="miniDeviation">{{ $initDev === '--' ? '--' : 'Δ ' . $initDev . '%' }}</strong>
+                                <small class="text-muted d-block" style="font-size:0.75rem;" data-i18n="dashboard-probe-deviation">Deviasi Dua Probe</small>
+                                <strong class="text-white fs-5" id="miniDeviation">{{ $initDev === '--' ? '—' : $initDev . ' pp' }}</strong>
                             </div>
                             <div class="col-4">
-                                <small class="text-muted d-block" style="font-size:0.75rem;">Sinyal WiFi RSSI</small>
-                                <strong class="text-warning fs-5" id="miniRssi">{{ $initRssi }} dBm</strong>
+                                <small class="text-muted d-block" style="font-size:0.75rem;" data-i18n="dashboard-wifi-rssi">Sinyal WiFi RSSI</small>
+                                <strong class="text-warning fs-5" id="miniRssi">{{ $initRssi === '--' ? '—' : $initRssi . ' dBm' }}</strong>
                             </div>
                         </div>
                     </div>
@@ -362,15 +361,15 @@
                 <div class="nx-action-strip mt-3 pt-3 border-top border-secondary border-opacity-25">
                     <div class="nx-strip-btn" id="btnSyncData" data-requires-sensor title="Periksa Koneksi Riil ESP32">
                         <i class="bi bi-broadcast"></i>
-                        <span>Cek ESP32</span>
+                        <span data-i18n="dashboard-check-device">Cek ESP32</span>
                     </div>
                     <div class="nx-strip-btn" id="btnActivityLog" title="Buka Riwayat Aktivitas">
                         <i class="bi bi-clock-history"></i>
-                        <span>Riwayat Log</span>
+                        <span data-i18n="detail-activity">Riwayat Log</span>
                     </div>
                     <div class="nx-strip-btn" id="btnExportData" data-requires-sensor title="Export CSV">
                         <i class="bi bi-file-earmark-arrow-down"></i>
-                        <span>Export CSV</span>
+                        <span data-i18n="detail-export">Export CSV</span>
                     </div>
                 </div>
             </div>
@@ -382,7 +381,7 @@
                 <div>
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <span class="nx-card-title">
-                            <i class="bi bi-toggles2 text-mint me-2"></i>Aktuator Relay & Hardware
+                            <i class="bi bi-toggles2 text-mint me-2"></i><span data-i18n="dashboard-relay-control">Aktuator Relay & Hardware</span>
                         </span>
                         <span id="relayPill" class="nx-tag-chip">Belum dilaporkan</span>
                     </div>
@@ -421,7 +420,7 @@
                         </div>
                         <div class="nx-spec-item">
                             <span><i class="bi bi-clock-history me-2 text-muted"></i>Heartbeat Terakhir</span>
-                            <strong id="displayLastSeen" class="text-light">{{ $lastSeen ?? 'Belum ada transmisi' }}</strong>
+                            <strong id="displayLastSeen" class="text-light" data-i18n="dashboard-not-available">—</strong>
                         </div>
                     </div>
                 </div>
@@ -442,8 +441,8 @@
     <div class="nx-glass-card mb-4 p-4">
         <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
             <div>
-                <span class="nx-badge-glow is-live mb-1"><i class="bi bi-diagram-3-fill me-1"></i> ARSITEKTUR TELEMETRI</span>
-                <h3 class="text-white mb-0" style="font-size:1.15rem; font-weight:700;">Pipeline Aliran Data Sensor ke Cloud</h3>
+                <span class="nx-badge-glow is-live mb-1"><i class="bi bi-diagram-3-fill me-1"></i> <span data-i18n="dashboard-pipeline">ARSITEKTUR TELEMETRI</span></span>
+                <h3 class="text-white mb-0" style="font-size:1.15rem; font-weight:700;" data-i18n="dashboard-pipeline-title">Pipeline Aliran Data Sensor ke Cloud</h3>
             </div>
             <span id="flowStatusBadge" class="nx-tag-chip {{ $isConnected ? 'is-online' : '' }}">
                 {{ $isConnected ? 'Data Pipeline Active' : 'Menunggu ESP32' }}
@@ -498,26 +497,6 @@
         </div>
 
         {{-- Cloud Console Terminal --}}
-        <div class="nx-terminal mt-4">
-            <div class="nx-terminal-top">
-                <div class="d-flex align-items-center gap-2">
-                    <span class="term-dot red"></span>
-                    <span class="term-dot yellow"></span>
-                    <span class="term-dot green"></span>
-                    <span class="term-title ms-2"><i class="bi bi-terminal-fill me-1 text-mint"></i> Railway Ingestion Console Log</span>
-                </div>
-                <span class="term-chip" id="terminalStatusBadge">{{ $isConnected ? 'LIVE' : 'WAITING' }}</span>
-            </div>
-            <div class="nx-terminal-screen" id="terminalLines">
-                <div class="t-line"><span class="t-prompt">›</span> NUTRIX Cloud Ingest API initialized at /api/iot/telemetry</div>
-                <div class="t-line"><span class="t-prompt">›</span> Mikrokontroler target: {{ $controllerName }} (GPIO 34 sensor, GPIO 26 relay)</div>
-                @if($isConnected)
-                <div class="t-line t-success"><span class="t-prompt">✓</span> Perangkat [{{ $sensorId }}] terverifikasi aktif mengirim paket telemetri.</div>
-                @else
-                <div class="t-line t-warn"><span class="t-prompt">!</span> Belum ada paket masuk. Pastikan daya dan WiFi ESP32 telah aktif.</div>
-                @endif
-            </div>
-        </div>
     </div>
 
     {{-- ═══════════════════════════════════════════════════════════
@@ -527,10 +506,10 @@
         <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
             <div>
                 <span class="nx-badge-glow is-live mb-1"><i class="bi bi-sliders me-1"></i> SPESIFIKASI SENSOR</span>
-                <h3 class="text-white mb-0" style="font-size:1.15rem; font-weight:700;">Daftar Sensor & Panduan Node</h3>
+                <h3 class="text-white mb-0" style="font-size:1.15rem; font-weight:700;" data-i18n="detail-hardware-metrics">Daftar Sensor & Panduan Node</h3>
             </div>
             <button type="button" class="nx-action-btn secondary" id="btnEditSensorConfig">
-                <i class="bi bi-pencil-square me-1"></i> Edit Konfigurasi
+                <i class="bi bi-pencil-square me-1"></i> <span data-i18n="detail-edit-config">Edit Konfigurasi</span>
             </button>
         </div>
 
@@ -553,7 +532,7 @@
             @else
                 <div class="col-12">
                     <div class="p-3 text-center text-muted" style="background:rgba(255,255,255,0.02); border-radius:12px;">
-                        Belum ada sensor spesifik yang dikonfigurasi. Klik tombol Edit Konfigurasi untuk menambahkan.
+                        <span data-i18n="detail-no-sensors">Belum ada sensor spesifik yang dikonfigurasi. Klik tombol Edit Konfigurasi untuk menambahkan.</span>
                     </div>
                 </div>
             @endif
@@ -562,7 +541,7 @@
         {{-- Guide Steps --}}
         <div class="nx-guide-box">
             <h4 class="text-white mb-3" style="font-size:0.95rem; font-weight:700;">
-                <i class="bi bi-info-circle-fill text-mint me-2"></i>Panduan Komisioning IoT Nutrix:
+                <i class="bi bi-info-circle-fill text-mint me-2"></i><span data-i18n="dashboard-commissioning-guide">Panduan Komisioning IoT Nutrix:</span>
             </h4>
             <div class="nx-guide-steps">
                 <div class="nx-g-step">
@@ -592,13 +571,7 @@
         <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
             <div>
                 <span class="nx-badge-glow {{ $isConnected ? 'is-live' : 'is-idle' }} mb-1"><i class="bi bi-router me-1"></i> Status perangkat</span>
-                <h3 class="text-white mb-0" style="font-size:1.15rem; font-weight:700;">Koneksi & Perangkat IoT</h3>
-            </div>
-            <div class="d-flex gap-2">
-                @if($isConnected)
-                <button type="button" class="nx-btn-valve" id="btnReconnect"><i class="bi bi-arrow-clockwise me-1"></i> Reconnect</button>
-                <button type="button" class="nx-btn-outline-danger" id="btnResetConn"><i class="bi bi-x-octagon me-1"></i> Reset koneksi</button>
-                @endif
+                <h3 class="text-white mb-0" style="font-size:1.15rem; font-weight:700;" data-i18n="detail-device-status">Koneksi & Perangkat IoT</h3>
             </div>
         </div>
 
@@ -663,226 +636,9 @@
         </div>
         @endif
 
-        {{-- QR & Manual Pairing (when not connected) --}}
-        @if(!$isConnected)
-        <div class="row g-3">
-            <div class="col-md-6">
-                <div class="nx-sensor-spec-box" style="cursor:pointer;" id="btnScanQR">
-                    <div class="spec-icon" style="background:rgba(14,165,233,0.15); color:#38bdf8;"><i class="bi bi-qr-code-scan"></i></div>
-                    <div class="spec-content">
-                        <strong>Scan QR</strong>
-                        <span>Pindai kode QR pada board ESP32 untuk pairing otomatis</span>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="nx-sensor-spec-box" style="cursor:pointer;" id="btnManualID">
-                    <div class="spec-icon" style="background:rgba(245,158,11,0.15); color:#fbbf24;"><i class="bi bi-input-cursor-text"></i></div>
-                    <div class="spec-content">
-                        <strong>Masukkan Sensor ID</strong>
-                        <span>Ketik sensor ID secara manual untuk pairing</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-        @endif
     </div>
-
-    {{-- ═══════════════════════════════════════════════════════════
-         BAGIAN 6: WIRELESS SIGNAL & CLOUD METRICS
-         ═══════════════════════════════════════════════════════════ --}}
-    @if($isConnected)
-    <div class="nx-glass-card mb-4 p-4">
-        <div class="mb-3">
-            <span class="nx-badge-glow is-live mb-1"><i class="bi bi-speedometer2 me-1"></i> WIRELESS METRICS</span>
-            <h3 class="text-white mb-0" style="font-size:1.15rem; font-weight:700;">Spesifikasi Sinyal & Jaringan Cloud</h3>
-        </div>
-        <div class="row g-3 mb-4">
-            <div class="col-md-3">
-                <div class="nx-sensor-spec-box">
-                    <div class="spec-icon"><i class="bi bi-lightning-charge"></i></div>
-                    <div class="spec-content">
-                        <strong>Voltage</strong>
-                        <span>3.3V (Logic Level)</span>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="nx-sensor-spec-box">
-                    <div class="spec-icon"><i class="bi bi-rss-fill"></i></div>
-                    <div class="spec-content">
-                        <strong>RSSI</strong>
-                        <span>-58 dBm</span>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="nx-sensor-spec-box">
-                    <div class="spec-icon"><i class="bi bi-reception-4"></i></div>
-                    <div class="spec-content">
-                        <strong>Signal</strong>
-                        <span id="signalStrength">Kuat (>-60 dBm)</span>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="nx-sensor-spec-box">
-                    <div class="spec-icon"><i class="bi bi-wifi"></i></div>
-                    <div class="spec-content">
-                        <strong>Protokol</strong>
-                        <span>WiFi 2.4GHz / HTTP POST</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        {{-- Pairing Flow Steps --}}
-        <div class="nx-guide-box mb-3">
-            <h4 class="text-white mb-3" style="font-size:0.95rem; font-weight:700;">
-                <i class="bi bi-diagram-3-fill text-mint me-2"></i>Pairing flow
-            </h4>
-            <div class="nx-guide-steps">
-                <div class="nx-g-step">
-                    <span class="step-num">01</span>
-                    <p><i class="bi bi-check-circle-fill text-success me-1"></i> Board detected — {{ $controllerName }} teridentifikasi pada sistem</p>
-                </div>
-                <div class="nx-g-step">
-                    <span class="step-num">02</span>
-                    <p><i class="bi bi-check-circle-fill text-success me-1"></i> Network verified — Koneksi WiFi / hotspot {{ $taman->device_connection['wifi_ssid'] ?? 'GG' }} aktif dan stabil</p>
-                </div>
-                <div class="nx-g-step">
-                    <span class="step-num">03</span>
-                    <p><i class="bi bi-check-circle-fill text-success me-1"></i> Sensor ID validated — {{ $sensorId ?? 'AUTO' }} terdaftar pada taman ini</p>
-                </div>
-                <div class="nx-g-step">
-                    <span class="step-num">04</span>
-                    <p><i class="bi bi-check-circle-fill text-success me-1"></i> Telemetry stream mulai berjalan</p>
-                </div>
-            </div>
-        </div>
-
-        {{-- Board Health --}}
-        <div class="row g-3 mb-3">
-            <div class="col-12">
-                <div class="nx-guide-box">
-                    <h4 class="text-white mb-3" style="font-size:0.95rem; font-weight:700;">
-                        <i class="bi bi-heart-pulse-fill text-danger me-2"></i>Board health
-                    </h4>
-                    <div class="row g-3">
-                        <div class="col-md-4">
-                            <div class="nx-sensor-spec-box">
-                                <div class="spec-icon" style="background:rgba(16,185,129,0.15); color:#34d399;"><i class="bi bi-reception-4"></i></div>
-                                <div class="spec-content">
-                                    <strong>Signal quality</strong>
-                                    <span id="boardSignalQuality">Excellent</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="nx-sensor-spec-box">
-                                <div class="spec-icon" style="background:rgba(14,165,233,0.15); color:#38bdf8;"><i class="bi bi-wifi"></i></div>
-                                <div class="spec-content">
-                                    <strong>Link integrity</strong>
-                                    <span id="portIntegrity">OK — WiFi stabil</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="nx-sensor-spec-box">
-                                <div class="spec-icon" style="background:rgba(245,158,11,0.15); color:#fbbf24;"><i class="bi bi-thermometer-half"></i></div>
-                                <div class="spec-content">
-                                    <strong>Suhu Board</strong>
-                                    <span id="boardTemp">Normal</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        {{-- Auto-Reconnect & Alerts --}}
-        <div class="nx-guide-box mb-3">
-            <h4 class="text-white mb-3" style="font-size:0.95rem; font-weight:700;">
-                <i class="bi bi-arrow-repeat text-info me-2"></i>Auto reconnect
-            </h4>
-            <div class="row g-3">
-                <div class="col-md-4">
-                    <div class="nx-sensor-spec-box">
-                        <div class="spec-icon" style="background:rgba(239,68,68,0.15); color:#f87171;"><i class="bi bi-bell"></i></div>
-                        <div class="spec-content">
-                            <strong>Signal alert</strong>
-                            <span>Aktif — notifikasi jika sinyal lemah</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="nx-sensor-spec-box">
-                        <div class="spec-icon" style="background:rgba(16,185,129,0.15); color:#34d399;"><i class="bi bi-shield-check"></i></div>
-                        <div class="spec-content">
-                            <strong>Reconnect policy</strong>
-                            <span>Auto-retry 3× dengan backoff 5s</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="nx-sensor-spec-box">
-                        <div class="spec-icon" style="background:rgba(14,165,233,0.15); color:#38bdf8;"><i class="bi bi-clock-history"></i></div>
-                        <div class="spec-content">
-                            <strong>Timeout</strong>
-                            <span>30 detik sebelum retry</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        {{-- Wireless Event Stream --}}
-        <div class="nx-terminal">
-            <div class="nx-terminal-top">
-                <div class="d-flex align-items-center gap-2">
-                    <span class="term-dot red"></span>
-                    <span class="term-dot yellow"></span>
-                    <span class="term-dot green"></span>
-                </div>
-                <span class="term-title">Wireless event stream</span>
-                <span class="term-chip">LIVE</span>
-            </div>
-            <div class="nx-terminal-screen" id="usbEventLog">
-                <div class="t-line"><span class="t-prompt">$</span> Monitoring WiFi telemetry pada {{ $controllerName }}...</div>
-                <div class="t-line t-success"><span class="t-prompt">✓</span> Connected — perangkat {{ $sensorId ?? 'ESP32' }} terhubung.</div>
-                <div class="t-line"><span class="t-prompt">→</span> RSSI: -58 dBm | Voltage: 3.3V | Status: Active</div>
-            </div>
-        </div>
-    </div>
-    @endif
 
 </section>
-
-{{-- ════════════════════════════════════════════
-     MODAL: Farm Action (Siram / Pupuk)
-     ════════════════════════════════════════════ --}}
-<div class="modal-overlay" id="farmActionModal" role="dialog" aria-modal="true" aria-labelledby="farmActionTitle">
-    <div class="web3-modal-box">
-        <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-secondary pb-3">
-            <div>
-                <span class="badge-web3 mb-2">Konfirmasi Aksi</span>
-                <h4 class="mb-0 fw-bold" id="farmActionTitle" style="font-family:'Cinzel',serif;">Farm Action</h4>
-            </div>
-            <button type="button" class="btn-close-custom" id="closeFarmActionModal" aria-label="Close"><i class="bi bi-x-lg"></i></button>
-        </div>
-        <p class="text-muted" id="farmActionDescription">Periksa instruksi sebelum disimpan ke riwayat taman.</p>
-        <div class="workspace-stat mb-4">
-            <span class="workspace-stat-label">Target</span>
-            <strong class="fs-4" id="farmActionTarget">{{ $taman->name }}</strong>
-            <i class="bi bi-broadcast-pin"></i>
-        </div>
-        <div class="d-flex gap-2">
-            <button type="button" class="btn btn-outline-secondary flex-fill" id="cancelFarmAction">Batal</button>
-            <button type="button" class="btn btn-connect-node flex-fill" id="confirmFarmAction">Konfirmasi</button>
-        </div>
-    </div>
-</div>
 
 {{-- ════════════════════════════════════════════
      MODAL: Edit Konfigurasi Sensor (Wizard)
@@ -890,7 +646,7 @@
 <div class="modal-overlay" id="sensorConfigModal" role="dialog" aria-modal="true" aria-labelledby="sensorConfigTitle">
     <div class="web3-modal-box add-taman-wizard-box">
         <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-secondary pb-3">
-            <h4 class="mb-0 fw-bold" id="sensorConfigTitle" style="font-family:'Cinzel',serif;">Edit konfigurasi sensor</h4>
+            <h4 class="mb-0 fw-bold" id="sensorConfigTitle" style="font-family:'Cinzel',serif;" data-i18n="detail-edit-config">Edit konfigurasi sensor</h4>
             <button type="button" class="btn-close-custom" id="closeSensorConfigModal" aria-label="Close"><i class="bi bi-x-lg"></i></button>
         </div>
         <form action="{{ route('taman.update', $taman) }}" method="POST" id="sensorConfigForm">
@@ -899,48 +655,48 @@
 
             <div class="wizard-step active" data-sensor-step="1">
                 <div class="auth-input-group">
-                    <label>Jenis tanah (opsional)</label>
+                    <label data-i18n="detail-soil-optional">Jenis tanah (opsional)</label>
                     <select class="auth-input" name="soil_type">
-                        <option value="" {{ $selectedSoil === '' || $selectedSoil === 'unspecified' ? 'selected' : '' }}>Tidak dipilih</option>
-                        <option value="pasir" {{ $selectedSoil === 'pasir' ? 'selected' : '' }}>Pasir</option>
-                        <option value="liat_berpasir" {{ $selectedSoil === 'liat_berpasir' ? 'selected' : '' }}>Liat berpasir</option>
-                        <option value="latosol" {{ $selectedSoil === 'latosol' ? 'selected' : '' }}>Latosol</option>
-                        <option value="liat" {{ $selectedSoil === 'liat' ? 'selected' : '' }}>Liat</option>
-                        <option value="organosol" {{ $selectedSoil === 'organosol' ? 'selected' : '' }}>Organosol / gambut</option>
+                        <option value="" data-i18n="dashboard-soil-none" {{ $selectedSoil === '' || $selectedSoil === 'unspecified' ? 'selected' : '' }}>Tidak dipilih</option>
+                        <option value="pasir" data-i18n="dashboard-soil-sand" {{ $selectedSoil === 'pasir' ? 'selected' : '' }}>Pasir</option>
+                        <option value="liat_berpasir" data-i18n="dashboard-soil-sandy-loam" {{ $selectedSoil === 'liat_berpasir' ? 'selected' : '' }}>Liat berpasir</option>
+                        <option value="latosol" data-i18n="dashboard-soil-latosol" {{ $selectedSoil === 'latosol' ? 'selected' : '' }}>Latosol</option>
+                        <option value="liat" data-i18n="dashboard-soil-clay" {{ $selectedSoil === 'liat' ? 'selected' : '' }}>Liat</option>
+                        <option value="organosol" data-i18n="dashboard-soil-organic" {{ $selectedSoil === 'organosol' ? 'selected' : '' }}>Organosol / gambut</option>
                     </select>
                 </div>
                 <div class="auth-input-group">
-                    <label>Indikator aktif</label>
+                    <label data-i18n="detail-active-indicators">Indikator aktif</label>
                     <div class="sensor-check-grid">
                         <label class="sensor-check-card">
                             <input type="checkbox" name="sensor_types[]" value="moisture" {{ in_array('moisture', $selectedSensorTypes, true) ? 'checked' : '' }}>
-                            <span><i class="bi bi-moisture"></i> Kelembapan</span>
+                            <span><i class="bi bi-moisture"></i> <span data-i18n="sensor-moisture">Kelembapan</span></span>
                         </label>
                         <label class="sensor-check-card">
                             <input type="checkbox" name="sensor_types[]" value="temperature" {{ in_array('temperature', $selectedSensorTypes, true) ? 'checked' : '' }}>
-                            <span><i class="bi bi-thermometer-half"></i> Suhu</span>
+                            <span><i class="bi bi-thermometer-half"></i> <span data-i18n="sensor-temperature">Suhu</span></span>
                         </label>
                         <label class="sensor-check-card">
                             <input type="checkbox" name="sensor_types[]" value="ph" {{ in_array('ph', $selectedSensorTypes, true) ? 'checked' : '' }}>
-                            <span><i class="bi bi-droplet-half"></i> pH</span>
+                            <span><i class="bi bi-droplet-half"></i> <span data-i18n="sensor-ph">pH</span></span>
                         </label>
                         <label class="sensor-check-card">
                             <input type="checkbox" name="sensor_types[]" value="ec" {{ in_array('ec', $selectedSensorTypes, true) ? 'checked' : '' }}>
-                            <span><i class="bi bi-lightning-charge-fill"></i> EC</span>
+                            <span><i class="bi bi-lightning-charge-fill"></i> <span data-i18n="sensor-conductivity">EC</span></span>
                         </label>
                     </div>
                 </div>
                 <div class="d-flex justify-content-end mt-3">
-                    <button type="button" class="btn btn-connect-node btn-sensor-step-next">Selanjutnya</button>
+                    <button type="button" class="btn btn-connect-node btn-sensor-step-next" data-i18n="dashboard-next">Selanjutnya</button>
                 </div>
             </div>
 
             <div class="wizard-step" data-sensor-step="2">
                 <div class="auth-input-group">
-                    <label>Pilih model sensor</label>
+                    <label data-i18n="dashboard-sensor-model">Pilih model sensor</label>
                     <div id="sensorConfigModelRows">
                         <div class="sensor-model-row" data-sensor-row="moisture">
-                            <div class="sensor-model-label"><i class="bi bi-moisture"></i> Kelembapan</div>
+                            <div class="sensor-model-label"><i class="bi bi-moisture"></i> <span data-i18n="sensor-moisture">Kelembapan</span></div>
                             <select class="auth-input" name="sensor_models[moisture]">
                                 <option value="SEN0193" {{ ($selectedSensorModels['moisture'] ?? '') === 'SEN0193' ? 'selected' : '' }}>SEN0193 - Soil Moisture Sensor</option>
                                 <option value="YL-69" {{ ($selectedSensorModels['moisture'] ?? '') === 'YL-69' ? 'selected' : '' }}>YL-69 - Resistive Soil Sensor</option>
@@ -948,7 +704,7 @@
                             </select>
                         </div>
                         <div class="sensor-model-row" data-sensor-row="temperature">
-                            <div class="sensor-model-label"><i class="bi bi-thermometer-half"></i> Suhu</div>
+                            <div class="sensor-model-label"><i class="bi bi-thermometer-half"></i> <span data-i18n="sensor-temperature">Suhu</span></div>
                             <select class="auth-input" name="sensor_models[temperature]">
                                 <option value="DHT22" {{ ($selectedSensorModels['temperature'] ?? '') === 'DHT22' ? 'selected' : '' }}>DHT22 - Temperature & Humidity</option>
                                 <option value="DS18B20" {{ ($selectedSensorModels['temperature'] ?? '') === 'DS18B20' ? 'selected' : '' }}>DS18B20 - Waterproof Temperature</option>
@@ -956,7 +712,7 @@
                             </select>
                         </div>
                         <div class="sensor-model-row" data-sensor-row="ph">
-                            <div class="sensor-model-label"><i class="bi bi-droplet-half"></i> pH</div>
+                            <div class="sensor-model-label"><i class="bi bi-droplet-half"></i> <span data-i18n="sensor-ph">pH</span></div>
                             <select class="auth-input" name="sensor_models[ph]">
                                 <option value="PH-4502C" {{ ($selectedSensorModels['ph'] ?? '') === 'PH-4502C' ? 'selected' : '' }}>PH-4502C - pH Sensor</option>
                                 <option value="Atlas-pH" {{ ($selectedSensorModels['ph'] ?? '') === 'Atlas-pH' ? 'selected' : '' }}>Atlas Scientific pH</option>
@@ -964,7 +720,7 @@
                             </select>
                         </div>
                         <div class="sensor-model-row" data-sensor-row="ec">
-                            <div class="sensor-model-label"><i class="bi bi-lightning-charge-fill"></i> EC</div>
+                            <div class="sensor-model-label"><i class="bi bi-lightning-charge-fill"></i> <span data-i18n="sensor-conductivity">EC</span></div>
                             <select class="auth-input" name="sensor_models[ec]">
                                 <option value="DFRobot-EC" {{ ($selectedSensorModels['ec'] ?? '') === 'DFRobot-EC' ? 'selected' : '' }}>DFRobot EC</option>
                                 <option value="Atlas-EC" {{ ($selectedSensorModels['ec'] ?? '') === 'Atlas-EC' ? 'selected' : '' }}>Atlas Scientific EC</option>
@@ -974,14 +730,14 @@
                     </div>
                 </div>
                 <div class="d-flex justify-content-between mt-3">
-                    <button type="button" class="btn btn-outline-secondary btn-sensor-step-prev">Kembali</button>
-                    <button type="button" class="btn btn-connect-node btn-sensor-step-next">Selanjutnya</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sensor-step-prev" data-i18n="dashboard-previous">Kembali</button>
+                    <button type="button" class="btn btn-connect-node btn-sensor-step-next" data-i18n="dashboard-next">Selanjutnya</button>
                 </div>
             </div>
 
             <div class="wizard-step" data-sensor-step="3">
                 <div class="auth-input-group">
-                    <label>Jenis board / otak perangkat</label>
+                    <label data-i18n="detail-board-type">Jenis board / otak perangkat</label>
                     <select class="auth-input" name="controller_type">
                         <option value="esp32" {{ $selectedController === 'esp32' ? 'selected' : '' }}>ESP32 (Direkomendasikan)</option>
                         <option value="esp8266" {{ $selectedController === 'esp8266' ? 'selected' : '' }}>ESP8266</option>
@@ -989,19 +745,19 @@
                     </select>
                 </div>
                 <div class="auth-input-group">
-                    <label>Tampilan indikator</label>
+                    <label data-i18n="dashboard-indicator-display">Tampilan indikator</label>
                     <select class="auth-input" name="indicator_mode">
-                        <option value="active_only" {{ $selectedIndicatorMode === 'active_only' ? 'selected' : '' }}>Hanya sensor aktif</option>
-                        <option value="all_with_unavailable" {{ $selectedIndicatorMode === 'all_with_unavailable' ? 'selected' : '' }}>Tampilkan semua, tandai yang tidak tersedia</option>
+                        <option value="active_only" data-i18n="detail-only-active" {{ $selectedIndicatorMode === 'active_only' ? 'selected' : '' }}>Hanya sensor aktif</option>
+                        <option value="all_with_unavailable" data-i18n="detail-all-unavailable" {{ $selectedIndicatorMode === 'all_with_unavailable' ? 'selected' : '' }}>Tampilkan semua, tandai yang tidak tersedia</option>
                     </select>
                 </div>
                 <div class="auth-input-group">
-                    <label>Ringkasan konfigurasi</label>
+                    <label data-i18n="dashboard-config-summary">Ringkasan konfigurasi</label>
                     <div class="wizard-summary" id="sensorConfigSummary"></div>
                 </div>
                 <div class="d-flex justify-content-between mt-3">
-                    <button type="button" class="btn btn-outline-secondary btn-sensor-step-prev">Kembali</button>
-                    <button type="submit" class="btn btn-connect-node">Simpan Konfigurasi</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sensor-step-prev" data-i18n="dashboard-previous">Kembali</button>
+                    <button type="submit" class="btn btn-connect-node" data-i18n="dashboard-save-config">Simpan Konfigurasi</button>
                 </div>
             </div>
         </form>
@@ -1120,6 +876,19 @@ function setCard(id, value) {
     if (el) el.textContent = value ?? '--';
 }
 
+const dashboardTextFallbacks = {
+    'dashboard-state-live': 'ONLINE',
+    'dashboard-state-stale': 'Data lama',
+    'dashboard-state-waiting': 'Menunggu data ESP32',
+    'dashboard-state-offline': 'OFFLINE',
+};
+
+function dashboardText(key, params = {}) {
+    const translation = window.nutrixText?.(key);
+    const template = translation && translation !== key ? translation : (dashboardTextFallbacks[key] || key);
+    return Object.entries(params).reduce((text, [name, value]) => text.replaceAll(`{${name}}`, value), template);
+}
+
 let toastTimer = null;
 function showToast(msg, type = 'success') {
     const wrap = document.getElementById('nutrixToastWrap') ?? (() => {
@@ -1194,45 +963,42 @@ function pushFarmNotification(message, icon = 'bi-bell') {
     if (badge) badge.textContent = panel.querySelectorAll('.notification-item').length || '';
 }
 
-// ── Terminal Log ──────────────────────────────────────────
-function appendLog(msg, type = 'info') {
-    const el = document.getElementById('terminalLines');
-    if (!el) return;
-    const line = document.createElement('div');
-    const cls = type === 'success' ? 't-success' : type === 'warn' ? 't-warn' : type === 'error' ? 't-error' : '';
-    const prompt = type === 'success' ? '✓' : type === 'warn' ? '!' : type === 'error' ? '✗' : '›';
-    line.className = `t-line ${cls}`;
-    line.innerHTML = `<span class="t-prompt">${prompt}</span> ${msg}`;
-    el.appendChild(line);
-    while (el.children.length > 10) el.removeChild(el.firstChild);
-    el.scrollTop = el.scrollHeight;
-}
-
 // ── Connection State UI ────────────────────────────────────
-function applyConnectionState(connected) {
+function applyConnectionState(connected, lifecycle = connected ? 'live' : 'offline') {
     isConnected = connected;
     const badge    = document.getElementById('connectionBadge');
     const dot      = document.getElementById('liveDot');
     const banner   = document.getElementById('connectionBanner');
     const bannerTx = document.getElementById('bannerText');
     const flowBadge = document.getElementById('flowStatusBadge');
-    const termBadge = document.getElementById('terminalStatusBadge');
     const topTx    = document.getElementById('topStatusText');
     const cloudSt  = document.getElementById('displayCloudStatus');
+    const bannerHeading = document.getElementById('bannerHeading');
+    const connectButtonLabel = document.getElementById('connectSensorButtonLabel');
 
-    if (badge) { badge.textContent = connected ? 'ONLINE' : 'OFFLINE'; badge.className = `badge ${connected ? 'bg-success' : 'bg-secondary'} text-white`; }
+    const stateKey = lifecycle === 'live' ? 'dashboard-state-live' : lifecycle === 'stale' ? 'dashboard-state-stale' : lifecycle === 'never_received' ? 'dashboard-state-waiting' : 'dashboard-state-offline';
+    const stateText = dashboardText(stateKey);
+    if (badge) { badge.textContent = stateText; badge.className = `badge ${connected ? 'bg-success' : 'bg-secondary'} text-white`; }
     if (dot)   { dot.classList.toggle('dot-online', connected); }
     if (banner){ banner.className = `sensor-connection-banner ${connected ? 'is-connected' : 'is-disconnected'}`; }
-    if (bannerTx) bannerTx.textContent = connected ? 'ESP32 aktif mengirim telemetri via WiFi ke Railway Cloud.' : 'Belum ada sensor terhubung. Nyalakan ESP32 dan pastikan WiFi aktif.';
-    if (flowBadge) { flowBadge.textContent = connected ? 'Stream Aktif' : 'Menunggu ESP32'; flowBadge.className = `badge ${connected ? 'bg-success' : 'bg-secondary'} text-white`; }
-    if (termBadge) { termBadge.textContent = connected ? 'Live' : 'Waiting'; termBadge.className = `badge ${connected ? 'bg-success' : 'bg-secondary'} text-white`; }
-    if (topTx) topTx.textContent = connected ? 'SENSOR CONNECTED' : 'SENSOR OFFLINE';
-    if (cloudSt) { cloudSt.textContent = connected ? 'Online' : 'Offline'; cloudSt.className = connected ? 'text-mint' : 'text-muted'; }
+    if (bannerTx) bannerTx.textContent = dashboardText(connected ? 'dashboard-connection-live' : stateKey);
+    if (bannerHeading) {
+        bannerHeading.dataset.i18n = stateKey;
+        bannerHeading.textContent = stateText;
+    }
+    if (flowBadge) { flowBadge.textContent = stateText; flowBadge.className = `badge ${connected ? 'bg-success' : 'bg-secondary'} text-white`; }
+    if (topTx) topTx.textContent = stateText;
+    if (cloudSt) { cloudSt.textContent = stateText; cloudSt.className = connected ? 'text-mint' : 'text-muted'; }
+    if (connectButtonLabel) {
+        const key = connected ? 'detail-config' : 'detail-connect-sensor';
+        connectButtonLabel.dataset.i18n = key;
+        connectButtonLabel.textContent = dashboardText(key);
+    }
 
     // Flow nodes
     ['flowNodeSensor','flowNodeEsp','flowNodeCloud','flowNodeBrain','flowNodeRelay'].forEach(id => {
         const n = document.getElementById(id);
-        if (n) n.classList.toggle('node-active', connected);
+        if (n) n.classList.toggle('is-active', connected);
     });
     document.querySelectorAll('[data-requires-sensor]').forEach(el => {
         el.classList.toggle('is-disabled', !connected);
@@ -1252,21 +1018,33 @@ function setRelayStatus(on) {
     const display = document.getElementById('relayStatusDisplay');
     const flow    = document.getElementById('relayFlowStatus');
     const pill    = document.getElementById('relayPill');
-    if (display) { display.textContent = on ? 'AKTIF (KERAN TERBUKA)' : 'STANDBY'; display.className = on ? 'text-mint animate-pulse' : 'text-white'; }
-    if (flow)    flow.textContent = on ? 'GPIO 26 · AKTIF 🟢' : 'GPIO 26 · STANDBY';
-    if (pill)    { pill.textContent = on ? 'AKTIF' : 'STANDBY'; pill.className = `badge ${on ? 'bg-success' : 'bg-secondary'} text-white`; }
+    const stateKey = on === true ? 'dashboard-relay-on' : on === false ? 'dashboard-relay-off' : 'dashboard-not-reported';
+    const stateText = dashboardText(stateKey);
+    if (display) { display.textContent = stateText; display.className = on === true ? 'text-mint animate-pulse' : 'text-white'; }
+    if (flow)    flow.textContent = `GPIO 26 · ${stateText}`;
+    if (pill)    { pill.textContent = stateText; pill.className = `badge ${on === true ? 'bg-success' : 'bg-secondary'} text-white`; }
 }
 
 // ── Update Cards ───────────────────────────────────────────
-const METRIC_HINTS = {
-    ph:          { ok: [6.0, 7.5], label: (v) => v < 6.0 ? 'Asam — perlu kapur' : v > 7.5 ? 'Basa — perlu asam' : 'Optimal' },
-    moisture:    { ok: [30, 80],   label: (v) => v < 30 ? '⚠ Kering — siram segera!' : v > 80 ? 'Terlalu basah' : 'Optimal' },
-    temperature: { ok: [15, 35],  label: (v) => v < 15 ? 'Terlalu dingin' : v > 35 ? 'Terlalu panas' : 'Optimal' },
-    ec:          { ok: [0.5, 3.0], label: (v) => v < 0.5 ? 'Nutrisi rendah' : v > 3.0 ? 'Terlalu tinggi' : 'Optimal' },
-};
+const METRIC_STATUS_IDS = { ph: 'status-ph', moisture: 'status-moisture', temperature: 'status-temp', ec: 'status-ec' };
+let latestTelemetryPayload = null;
+
+function updateMetricStatus(metric, data) {
+    const element = document.getElementById(METRIC_STATUS_IDS[metric]);
+    if (!element) return;
+
+    const band = data?.band;
+    const key = band === 'sensor_fault'
+        ? 'dashboard-sensor-fault'
+        : (!band || band === 'unavailable' ? 'dashboard-not-available' : `dashboard-band-${band.replaceAll('_', '-')}`);
+    element.dataset.i18n = key;
+    element.dataset.severity = data?.severity || 'unknown';
+    element.textContent = dashboardText(key);
+}
 
 function updateCards(t) {
     if (!t) return;
+    latestTelemetryPayload = t;
     const metrics = t.metrics || {};
     const val = (k) => metrics[k]?.value ?? t[k] ?? null;
 
@@ -1276,9 +1054,10 @@ function updateCards(t) {
     const ecV   = val('ec');
 
     setCard('val-ph',   phV  != null ? Number(phV).toFixed(1)  : '--');
-    setCard('val-hum',  humV != null ? Number(humV).toFixed(0) : '--');
+    setCard('val-hum',  humV != null ? Number(humV).toFixed(1) : '--');
     setCard('val-temp', tmpV != null ? Number(tmpV).toFixed(1) : '--');
     setCard('val-ec',   ecV  != null ? Number(ecV).toFixed(2)  : '--');
+    Object.entries(METRIC_STATUS_IDS).forEach(([metric]) => updateMetricStatus(metric, metrics[metric]));
 
     // Multi-sensor Detail Binding (Scopus Grade)
     const meta = t.metadata || {};
@@ -1286,9 +1065,7 @@ function updateCards(t) {
     const sCap = sensors.capacitive_v2 || null;
     const sRes = sensors.resistive_hd38 || null;
     const relayState = meta.actuator?.relay_state;
-    if (relayState === 'on' || relayState === 'off') {
-        setRelayStatus(relayState === 'on');
-    }
+    setRelayStatus(relayState === 'on' ? true : relayState === 'off' ? false : null);
 
     if (sCap) {
         setCard('val-cap-moisture', sCap.moisture != null ? Number(sCap.moisture).toFixed(1) : '--');
@@ -1310,31 +1087,28 @@ function updateCards(t) {
         setCard('val-res-volt', '--');
     }
 
-    // Konsensus & Deviasi
-    if (humV != null) {
-        setCard('val-consensus-moisture', Number(humV).toFixed(1));
-        let dev = null;
-        if (sCap?.moisture != null && sRes?.moisture != null) {
-            dev = Math.abs(Number(sCap.moisture ?? 0) - Number(sRes.moisture ?? 0));
-        }
-        const badgeDev = document.getElementById('badgeDeviation');
-        if (badgeDev) badgeDev.textContent = dev === null ? 'Deviasi: --' : `Deviasi: ${dev.toFixed(1)}%`;
-
-        const statText = document.getElementById('consensusStatusText');
-        if (statText) {
-            if (dev === null) {
-                statText.textContent = 'Menunggu bacaan dari dua probe.';
-            } else if (dev <= 15) {
-                statText.innerHTML = '<span class="text-mint"><i class="bi bi-check-circle-fill me-1"></i> Data Stabil (Deviasi < 15%)</span>';
-            } else {
-                statText.innerHTML = '<span class="text-warning"><i class="bi bi-exclamation-triangle-fill me-1"></i> Deviasi Tinggi (> 15% - periksa probe)</span>';
-            }
-        }
-    }
+    // The canonical moisture value is device-reported; compare probes only when both exist.
+    setCard('val-consensus-moisture', humV != null ? Number(humV).toFixed(1) : '--');
+    const capMoistureValue = sCap?.moisture;
+    const resMoistureValue = sRes?.moisture;
+    const capMoisture = Number(capMoistureValue);
+    const resMoisture = Number(resMoistureValue);
+    const hasBothProbes = capMoistureValue != null && resMoistureValue != null
+        && Number.isFinite(capMoisture) && Number.isFinite(resMoisture);
+    const deviation = hasBothProbes ? Math.abs(capMoisture - resMoisture) : null;
+    const deviationText = deviation === null
+        ? dashboardText('dashboard-deviation-unavailable')
+        : dashboardText('dashboard-deviation-value', { value: deviation.toFixed(1) });
+    setCard('badgeDeviation', deviationText);
+    const consensusKey = humV == null
+        ? 'dashboard-consensus-waiting'
+        : hasBothProbes ? 'dashboard-consensus-probes-available' : 'dashboard-consensus-probes-missing';
+    const consensusText = dashboardText(consensusKey, { value: deviation === null ? '' : deviation.toFixed(1) });
+    setCard('consensusStatusText', consensusText);
 
     // Update Health Score, Dial & Recommendation
     const health = t.health || {};
-    const score = health.score ?? t.health_score ?? null;
+    const score = t.health ? health.score : (t.health_score ?? null);
     const scoreEl = document.getElementById('aiHealthScore');
     const dialEl = document.getElementById('aiHealthDial');
     const statusEl = document.getElementById('aiHealthStatus');
@@ -1347,17 +1121,27 @@ function updateCards(t) {
             dialEl.style.background = `conic-gradient(${color} 0%, ${color} ${score}%, rgba(255, 255, 255, 0.08) ${score}%)`;
             dialEl.style.boxShadow = `0 0 25px ${color}33`;
         }
+        const scope = t.decision?.scope || 'limited';
+        const tier = t.decision?.tier;
+        const scopeKey = `dashboard-scope-${scope}`;
         if (statusEl) {
-            const statusLabel = health.status ? health.status.toUpperCase() : (score >= 75 ? 'OPTIMAL' : (score >= 45 ? 'ATTENTION' : 'CRITICAL'));
-            statusEl.textContent = statusLabel;
-            statusEl.className = `nx-tag-chip ${score >= 75 ? 'is-online' : (score >= 45 ? 'is-warning' : 'is-critical')}`;
+            statusEl.textContent = dashboardText(tier ? `dashboard-tier-${tier.toLowerCase()}` : scopeKey);
+            statusEl.className = `nx-tag-chip ${tier === 'A' ? 'is-critical' : (tier === 'B' ? 'is-warning' : 'is-online')}`;
         }
-        if (recEl && (t.decision?.recommendation || health.summary)) {
-            recEl.innerHTML = `<i class="bi bi-stars text-mint me-1"></i><span>${t.decision?.recommendation || health.summary}</span>`;
-        }
+        const coverage = Math.round(Number(health.coverage || 0) * 100);
+        const confidence = Math.round(Number(t.decision?.confidence || 0) * 100);
+        if (recEl) recEl.textContent = dashboardText('dashboard-health-summary', { coverage, confidence, scope: dashboardText(scopeKey) });
     } else {
         if (scoreEl) scoreEl.textContent = '--';
-        if (statusEl) statusEl.textContent = 'DATA BELUM CUKUP';
+        if (dialEl) {
+            dialEl.style.background = 'conic-gradient(rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.08) 100%)';
+            dialEl.style.boxShadow = 'none';
+        }
+        if (statusEl) {
+            statusEl.textContent = dashboardText('dashboard-health-insufficient');
+            statusEl.className = 'nx-tag-chip';
+        }
+        if (recEl) recEl.textContent = dashboardText('dashboard-health-waiting');
     }
 
     // Mini preview row
@@ -1366,12 +1150,11 @@ function updateCards(t) {
     
     const miniDev = document.getElementById('miniDeviation');
     if (miniDev) {
-        if (sCap?.moisture != null && sRes?.moisture != null) {
-            const d = Math.abs(Number(sCap.moisture ?? 0) - Number(sRes.moisture ?? 0));
-            miniDev.textContent = `Δ ${d.toFixed(1)}%`;
-            miniDev.className = d <= 15 ? 'text-mint fs-5' : 'text-warning fs-5';
+        if (deviation !== null) {
+            miniDev.textContent = `${deviation.toFixed(1)} pp`;
+            miniDev.className = 'text-mint fs-5';
         } else {
-            miniDev.textContent = '--';
+            miniDev.textContent = '—';
             miniDev.className = 'text-muted fs-5';
         }
     }
@@ -1379,27 +1162,26 @@ function updateCards(t) {
     const miniRssi = document.getElementById('miniRssi');
     if (miniRssi) {
         const rssi = meta.wifi_rssi ?? t.wifi_rssi;
-        miniRssi.textContent = rssi !== null && rssi !== undefined ? `${rssi} dBm` : '-- dBm';
+        miniRssi.textContent = rssi !== null && rssi !== undefined ? `${rssi} dBm` : '—';
     }
 
     // IP Address dan Device Info
     setCard('displayNodeIp', meta.ip_address || t.ip_address || '--');
 }
 
-function markFresh(source, lastSeen) {
-    const now = new Date().toLocaleTimeString('id-ID');
+function markFresh(source, recordedAt, lastSeen) {
     const srcEl = document.getElementById('sourceText');
     const timeEl = document.getElementById('lastUpdatedTime');
     const lastSeenEl = document.getElementById('displayLastSeen');
     if (srcEl) {
         if (source === 'esp32_device') {
-            srcEl.innerHTML = '<span class="text-mint fw-bold"><i class="bi bi-broadcast me-1"></i>ESP32 Wireless (RIIL)</span>';
+            srcEl.textContent = dashboardText('dashboard-source-device');
         } else {
-            srcEl.textContent = source || 'API Stream';
+            srcEl.textContent = source || dashboardText('dashboard-source-api');
         }
     }
-    if (timeEl) timeEl.textContent = now;
-    if (lastSeenEl && lastSeen) lastSeenEl.textContent = lastSeen;
+    if (timeEl) timeEl.textContent = recordedAt ? new Date(recordedAt).toLocaleString(window.currentLanguage || 'id') : '--';
+    if (lastSeenEl) lastSeenEl.textContent = lastSeen ? new Date(lastSeen).toLocaleString(window.currentLanguage || 'id') : dashboardText('dashboard-not-available');
 }
 
 // ── Load Telemetry ─────────────────────────────────────────
@@ -1409,7 +1191,7 @@ async function loadLatestTelemetry(silent = false) {
         const data = await apiFetch(`/taman/${TAMAN.id}/telemetry/latest`);
 
         const connected = data.lifecycle === 'live';
-        applyConnectionState(connected);
+        applyConnectionState(connected, data.lifecycle);
 
         if (data.device_token) {
             setCard('displayDeviceToken', data.device_token);
@@ -1419,20 +1201,19 @@ async function loadLatestTelemetry(silent = false) {
         }
 
         if (data.lifecycle === 'never_received' && !data.recorded_at) {
-            setCard('aiHealthScore', '--');
-            setCard('aiHealthStatus', 'Menunggu telemetri riil dari ESP32...');
+            updateCards(data);
+            setCard('sourceText', dashboardText('dashboard-source-waiting'));
+            setCard('lastUpdatedTime', '--:--');
+            setCard('displayLastSeen', dashboardText('dashboard-not-available'));
             return;
         }
 
         updateCards(data);
-        markFresh(data.source, data.last_seen_at ? new Date(data.last_seen_at).toLocaleTimeString('id-ID') : null);
-
-        if (!silent) {
-            appendLog(`telemetry ok — lifecycle: ${data.lifecycle} — source: ${data.source}`, 'success');
-        }
+        markFresh(data.source, data.recorded_at, data.last_seen_at);
 
     } catch (e) {
-        if (!silent) appendLog(`error: ${e.message}`, 'error');
+        if (latestTelemetryPayload) latestTelemetryPayload = { ...latestTelemetryPayload, lifecycle: 'offline' };
+        applyConnectionState(false, 'offline');
     }
 }
 
@@ -1450,9 +1231,17 @@ function stopPolling() {
 
 // ── Init ───────────────────────────────────────────────────
 applyMetricVisibility();
-applyConnectionState(isConnected);
+applyConnectionState(isConnected, isConnected ? 'live' : 'offline');
+setRelayStatus(null);
 loadLatestTelemetry();
 startPolling();
+
+document.addEventListener('nutrix:languagechange', () => {
+    if (latestTelemetryPayload) updateCards(latestTelemetryPayload);
+    const lifecycle = latestTelemetryPayload?.lifecycle || (isConnected ? 'live' : 'offline');
+    applyConnectionState(lifecycle === 'live', lifecycle);
+    if (!latestTelemetryPayload) setRelayStatus(null);
+});
 
 document.addEventListener('visibilitychange', () => {
     if (document.hidden) stopPolling();
@@ -1461,7 +1250,6 @@ document.addEventListener('visibilitychange', () => {
 
 // ── Refresh Button ─────────────────────────────────────────
 document.getElementById('btnRefreshTelemetry')?.addEventListener('click', () => {
-    appendLog('manual refresh...');
     loadLatestTelemetry();
     showToast('Telemetri diperbarui.');
 });
@@ -1473,28 +1261,20 @@ document.getElementById('btnSyncData')?.addEventListener('click', async () => {
     if (icon) icon.className = 'bi bi-arrow-repeat nx-spin';
 
     showToast('Memeriksa transmisi hardware ESP32...', 'info');
-    appendLog('pemeriksaan status ESP32 Kelompok Nutrix...');
     try {
         const data = await apiFetch(`/taman/${TAMAN.id}/sync`, 'POST');
         if (icon) icon.className = 'bi bi-broadcast';
 
         if (data.success) {
-            if (data.telemetry) {
-                updateCards(data.telemetry);
-                markFresh('esp32_device');
-            }
-            applyConnectionState(data.is_live);
-            appendLog(data.message, data.is_live ? 'success' : 'warn');
+            await loadLatestTelemetry(true);
             pushFarmNotification(data.message, data.is_live ? 'bi-broadcast' : 'bi-wifi-off');
             showToast(data.message, data.is_live ? 'success' : 'warning');
         } else {
             showToast(data.message || 'ESP32 belum terdeteksi.', 'warning');
-            appendLog(data.message || 'Hardware belum mengirimkan sinyal', 'warn');
         }
     } catch (e) { 
         if (icon) icon.className = 'bi bi-broadcast';
         showToast(e.message || 'Gagal terhubung ke server.', 'error'); 
-        appendLog(`error: ${e.message}`, 'error');
     }
 });
 
@@ -1506,7 +1286,6 @@ document.getElementById('btnResetSensor')?.addEventListener('click', async () =>
         if (data.success || data.connected === false) {
             applyConnectionState(false);
             setCard('displaySensorId', 'Belum dipasangkan');
-            appendLog('sensor disconnected — awaiting re-pair', 'warn');
             pushFarmNotification('Sensor diputus. Silakan pasangkan ulang.', 'bi-plug');
             showToast('Sensor berhasil diputus.', 'error');
         }
@@ -1615,7 +1394,6 @@ document.getElementById('btnGenerateToken')?.addEventListener('click', async () 
             const tokenInput = document.getElementById('activeTokenDisplay');
             if (tokenInput) tokenInput.value = res.token;
             setCard('displayDeviceToken', res.token);
-            appendLog(`Pairing token aktif: ${res.token}`, 'success');
             showToast('Token pairing baru berhasil dibuat!');
             pushFarmNotification(`Token pairing baru dibuat: ${res.token}`, 'bi-key-fill');
         } else {
@@ -1648,20 +1426,17 @@ document.getElementById('confirmConnectSensor')?.addEventListener('click', async
     const boardType = document.querySelector('#sensorConfigForm select[name="controller_type"]')?.value || null;
     closeConnectSensor();
     showToast('Menyimpan Node ID...');
-    appendLog(`Simpan Node ID: ${sensorId}`);
     try {
         const data = await apiFetch(`/taman/${TAMAN.id}/sensor/connect`, 'POST', { sensor_id: sensorId, board_type: boardType });
         if (data.success || data.configured) {
             setCard('displaySensorId', sensorId);
             applyConnectionState(data.is_live === true);
-            appendLog(data.is_live ? `ESP32 aktif: ${sensorId}` : `ID tersimpan; menunggu telemetry ESP32: ${sensorId}`, data.is_live ? 'success' : 'warn');
             pushFarmNotification(data.is_live ? `ESP32 ${sensorId} sedang online.` : `ID ${sensorId} disimpan; menunggu telemetry pertama.`, 'bi-link-45deg');
             showToast(data.is_live ? 'ESP32 sedang online.' : 'ID tersimpan. Menunggu ESP32 mengirim data.', data.is_live ? 'success' : 'info');
             setTimeout(() => window.location.reload(), 800);
         } else showToast('Gagal memasangkan sensor.', 'error');
     } catch (e) {
         showToast(e.message || 'Pairing gagal.', 'error');
-        appendLog(`Pairing error: ${e.message}`, 'error');
     }
 });
 
@@ -2458,6 +2233,62 @@ document.addEventListener('keydown', e => {
     .nx-title { font-size: 1.6rem; }
     .nx-hero-card { padding: 1.5rem; }
     .nx-pipeline { justify-content: flex-start; }
+}
+
+.nutrix-iot-wrap .nx-glass-card,
+.nutrix-iot-wrap .nx-hero-card,
+.nutrix-iot-wrap .nx-metric-card,
+.nutrix-iot-wrap .nx-guide-box,
+.nutrix-iot-wrap .nx-sensor-spec-box,
+.nutrix-iot-wrap .nx-relay-box,
+.nutrix-iot-wrap .nx-health-metrics-row,
+.nutrix-iot-wrap .nx-pipeline,
+.nutrix-iot-wrap .nx-pipe-step {
+    background-color: color-mix(in srgb, var(--bg-secondary) 88%, var(--bg-primary));
+    border-color: var(--border-glass);
+}
+
+.nutrix-iot-wrap .nx-hero-card,
+.nutrix-iot-wrap .nx-glass-card[style*="linear-gradient"],
+.nutrix-iot-wrap .nx-health-metrics-row {
+    background: color-mix(in srgb, var(--bg-secondary) 88%, var(--bg-primary)) !important;
+    border-color: var(--border-glass) !important;
+}
+
+.nutrix-iot-wrap .text-white,
+.nutrix-iot-wrap .nx-metric-val,
+.nutrix-iot-wrap .nx-card-title,
+.nutrix-iot-wrap .nx-title,
+.nutrix-iot-wrap .spec-content strong {
+    color: var(--text-pure) !important;
+}
+
+.nutrix-iot-wrap .nx-metric-label,
+.nutrix-iot-wrap .nx-g-step p,
+.nutrix-iot-wrap .spec-content span {
+    color: var(--text-muted);
+}
+
+.nutrix-iot-wrap .nx-hint-badge[data-severity="critical"],
+.nutrix-iot-wrap .nx-hint-badge[data-severity="fault"] {
+    color: #ef4444;
+}
+
+.nutrix-iot-wrap .nx-hint-badge[data-severity="watch"],
+.nutrix-iot-wrap .nx-hint-badge[data-severity="warn"] {
+    color: #d97706;
+}
+
+#sensorConfigModal .web3-modal-box,
+#connectSensorModal .web3-modal-box {
+    background: var(--bg-secondary);
+    border-color: var(--border-glass);
+    color: var(--text-pure);
+}
+
+#sensorConfigModal .text-white,
+#connectSensorModal .text-white {
+    color: var(--text-pure) !important;
 }
 </style>
 @endsection

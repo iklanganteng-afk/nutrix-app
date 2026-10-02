@@ -170,7 +170,7 @@ class UserFarmWorkspaceTest extends TestCase
             ->assertSee('ESP32');
     }
 
-    public function test_owner_can_see_qr_and_manual_sensor_pairing_options_on_detail_page(): void
+    public function test_owner_detail_page_keeps_supported_pairing_and_omits_dead_qr_controls(): void
     {
         $owner = User::factory()->create(['role' => 'user']);
         $taman = Taman::create([
@@ -183,8 +183,9 @@ class UserFarmWorkspaceTest extends TestCase
         $this->actingAs($owner)
             ->get(route('taman.show', $taman))
             ->assertOk()
-            ->assertSee('Scan QR')
-            ->assertSee('Masukkan Sensor ID');
+            ->assertSee('id="connectSensorModal"', false)
+            ->assertDontSee('btnScanQR', false)
+            ->assertDontSee('btnManualID', false);
     }
 
     public function test_owner_can_view_device_status_and_connection_detail_on_detail_page(): void
@@ -213,7 +214,7 @@ class UserFarmWorkspaceTest extends TestCase
             ->assertSee('Kelompok-Nutrix');
     }
 
-    public function test_owner_can_see_reconnect_and_reset_connection_controls_on_detail_page(): void
+    public function test_owner_detail_page_omits_unimplemented_reconnect_controls(): void
     {
         $owner = User::factory()->create(['role' => 'user']);
         $taman = Taman::create([
@@ -227,8 +228,39 @@ class UserFarmWorkspaceTest extends TestCase
         $this->actingAs($owner)
             ->get(route('taman.show', $taman))
             ->assertOk()
-            ->assertSee('Reconnect')
-            ->assertSee('Reset koneksi');
+            ->assertDontSee('btnReconnect', false)
+            ->assertDontSee('btnResetConn', false);
+    }
+
+    public function test_dashboard_detail_does_not_render_non_hardware_telemetry(): void
+    {
+        $owner = User::factory()->create(['role' => 'user']);
+        $taman = Taman::create([
+            'user_id' => $owner->id,
+            'name' => 'Manual Estimate Farm',
+            'type' => 'corn',
+            'sensor_types' => ['moisture', 'ph', 'temperature', 'ec'],
+        ]);
+        SensorTelemetry::create([
+            'taman_id' => $taman->id,
+            'moisture' => 73.0,
+            'ph' => 6.8,
+            'temperature' => 25.0,
+            'ec' => 1.4,
+            'health_score' => 94,
+            'source' => 'manual_action',
+            'sensor_source' => 'manual_action',
+            'recorded_at' => now(),
+        ]);
+
+        $this->actingAs($owner)
+            ->get(route('taman.show', $taman))
+            ->assertOk()
+            ->assertSee('id="val-hum">--</span>', false)
+            ->assertSee('id="val-consensus-moisture">--</h2>', false)
+            ->assertSee('id="aiHealthScore">--</span>', false)
+            ->assertDontSee('id="val-hum">73.0</span>', false)
+            ->assertDontSee('id="val-consensus-moisture">73.0</h2>', false);
     }
 
     public function test_user_can_record_a_water_action_only_for_owned_farm(): void
