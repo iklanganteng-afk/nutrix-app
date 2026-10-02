@@ -175,7 +175,10 @@ class DeviceTelemetryIngestTest extends TestCase
             ->assertOk()
             ->assertJsonPath('lifecycle', 'never_received')
             ->assertJsonPath('connected', false)
-            ->assertJsonPath('is_live', false);
+            ->assertJsonPath('is_live', false)
+            ->assertJsonPath('recorded_at', null)
+            ->assertJsonPath('source', null)
+            ->assertJsonPath('metrics.moisture.value', null);
     }
 
     public function test_dashboard_does_not_invent_hardware_diagnostic_values(): void

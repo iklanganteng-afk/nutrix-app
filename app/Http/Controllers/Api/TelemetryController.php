@@ -7,7 +7,6 @@ use App\Models\FarmActivity;
 use App\Models\SensorTelemetry;
 use App\Models\Taman;
 use App\Services\Agronomy\TelemetryDecisionEngine;
-use App\Services\Telemetry\SimulatedTelemetrySource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -15,7 +14,6 @@ use Illuminate\Support\Str;
 class TelemetryController extends Controller
 {
     public function __construct(
-        private readonly SimulatedTelemetrySource $telemetrySource,
         private readonly TelemetryDecisionEngine $decisionEngine,
     ) {
     }
@@ -40,8 +38,8 @@ class TelemetryController extends Controller
             ]);
         }
 
-        $latest = $taman->latestTelemetry;
-        $history = $taman->telemetries()->limit(20)->get(['ph','moisture','temperature','ec','health_score','recorded_at','source']);
+        $latest = $taman->latestHardwareTelemetry;
+        $history = $taman->hardwareTelemetries()->limit(20)->get(['ph','moisture','temperature','ec','health_score','recorded_at','source']);
 
         return response()->json([
             'taman_id' => $taman->id,
@@ -57,7 +55,7 @@ class TelemetryController extends Controller
     public function latest(Taman $taman)
     {
         $this->authorizeOwner($taman);
-        $latest = $taman->latestTelemetry;
+        $latest = $taman->latestHardwareTelemetry;
         $data = $latest?->only(['ph', 'moisture', 'temperature', 'ec']) ?? [];
         $analysis = $this->decisionEngine->evaluate($data, $taman->type, $taman->soil_type);
         $available = array_keys(array_filter($data, fn ($value) => $value !== null));
@@ -71,7 +69,7 @@ class TelemetryController extends Controller
             'schema' => 1,
             'taman_id' => $taman->id,
             'recorded_at' => $latest?->recorded_at?->toISOString(),
-            'source' => $latest?->sensor_source ?? $latest?->source ?? 'esp32_device',
+            'source' => $latest?->sensor_source ?? $latest?->source,
             'lifecycle' => $lifecycle,
             'connected' => $isLive,
             'is_live' => $isLive,
@@ -102,7 +100,7 @@ class TelemetryController extends Controller
         $this->authorizeOwner($taman);
 
         $isLive = $taman->last_seen_at && now()->diffInSeconds($taman->last_seen_at) <= 60;
-        $latest = $taman->latestTelemetry;
+        $latest = $taman->latestHardwareTelemetry;
 
         if (! $taman->sensor_connected) {
             return response()->json([
@@ -335,7 +333,7 @@ class TelemetryController extends Controller
     {
         $this->authorizeOwner($taman);
 
-        $rows = $taman->telemetries()->limit(1000)->get();
+        $rows = $taman->hardwareTelemetries()->limit(1000)->get();
 
         $csv = "recorded_at,ph,moisture,temperature,ec,health_score,health_status\n";
         foreach ($rows as $row) {
@@ -368,43 +366,6 @@ class TelemetryController extends Controller
         }
 
         abort_unless($taman->user_id === Auth::id(), 403, 'Akses ditolak.');
-    }
-
-    /**
-     * Simulasi nilai sensor berbasis tipe taman + drift kecil dari data sebelumnya.
-     * Fase production: ganti dengan pembacaan nyata dari perangkat keras RS-485.
-     */
-    private function simulateSensor(string $type, ?SensorTelemetry $prev): array
-    {
-        $baseline = match ($type) {
-            'corn'        => ['ph' => 6.5, 'moisture' => 62, 'temperature' => 27.5, 'ec' => 1.4],
-            'greenhouse'  => ['ph' => 6.0, 'moisture' => 75, 'temperature' => 25.0, 'ec' => 1.8],
-            'rice'        => ['ph' => 5.8, 'moisture' => 88, 'temperature' => 29.0, 'ec' => 0.9],
-            default       => ['ph' => 6.5, 'moisture' => 65, 'temperature' => 27.0, 'ec' => 1.2],
-        };
-
-        // Kalau ada rekam sebelumnya, drift kecil dari nilai itu (± 5%)
-        if ($prev) {
-            $drift = fn($val) => round($val + (lcg_value() - 0.5) * $val * 0.05, 2);
-            $ph          = max(4.0, min(9.0,   $drift($prev->ph ?? $baseline['ph'])));
-            $moisture    = max(0,   min(100,   $drift($prev->moisture ?? $baseline['moisture'])));
-            $temperature = max(10,  min(50,    $drift($prev->temperature ?? $baseline['temperature'])));
-            $ec          = max(0,   min(4.0,   $drift($prev->ec ?? $baseline['ec'])));
-        } else {
-            // Pertama kali, pakai baseline + noise kecil
-            $noise       = fn($val) => round($val + (lcg_value() - 0.5) * $val * 0.03, 2);
-            $ph          = $noise($baseline['ph']);
-            $moisture    = $noise($baseline['moisture']);
-            $temperature = $noise($baseline['temperature']);
-            $ec          = $noise($baseline['ec']);
-        }
-
-        return $this->hydrateTelemetryState($baseline, [
-            'ph' => $ph,
-            'moisture' => $moisture,
-            'temperature' => $temperature,
-            'ec' => $ec,
-        ]);
     }
 
     private function applyManualAdjustment(Taman $taman, string $action, array $meta = []): SensorTelemetry

@@ -1394,8 +1394,6 @@ function markFresh(source, lastSeen) {
     if (srcEl) {
         if (source === 'esp32_device') {
             srcEl.innerHTML = '<span class="text-mint fw-bold"><i class="bi bi-broadcast me-1"></i>ESP32 Wireless (RIIL)</span>';
-        } else if (source === 'simulator') {
-            srcEl.innerHTML = '<span class="text-warning"><i class="bi bi-cpu me-1"></i>Simulator Testing</span>';
         } else {
             srcEl.textContent = source || 'API Stream';
         }

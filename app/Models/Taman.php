@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Taman extends Model
 {
@@ -62,6 +63,21 @@ class Taman extends Model
     public function latestTelemetry()
     {
         return $this->hasOne(SensorTelemetry::class)->latestOfMany('recorded_at');
+    }
+
+    public function hardwareTelemetries(): HasMany
+    {
+        return $this->hasMany(SensorTelemetry::class)
+            ->where('source', 'esp32_device')
+            ->latest('recorded_at');
+    }
+
+    public function latestHardwareTelemetry(): HasOne
+    {
+        return $this->hasOne(SensorTelemetry::class)->ofMany(
+            ['recorded_at' => 'max', 'id' => 'max'],
+            fn ($query) => $query->where('source', 'esp32_device'),
+        );
     }
 
     public function activities(): HasMany

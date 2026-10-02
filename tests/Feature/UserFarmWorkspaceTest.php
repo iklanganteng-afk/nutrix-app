@@ -77,7 +77,7 @@ class UserFarmWorkspaceTest extends TestCase
             ->assertDontSee('name="sensor_types[]" value="ec"', false);
     }
 
-    public function test_creating_a_sensor_aware_farm_persists_one_initial_reading_with_null_inactive_metrics(): void
+    public function test_creating_a_sensor_aware_farm_waits_for_real_device_telemetry(): void
     {
         $user = User::factory()->create(['role' => 'user']);
 
@@ -88,14 +88,8 @@ class UserFarmWorkspaceTest extends TestCase
         ]);
 
         $taman = Taman::firstOrFail();
-        $telemetry = $taman->latestTelemetry;
-
-        $this->assertNotNull($telemetry);
-        $this->assertNotNull($telemetry->moisture);
-        $this->assertNotNull($telemetry->ph);
-        $this->assertNull($telemetry->temperature);
-        $this->assertNull($telemetry->ec);
-        $this->assertSame(1, $taman->telemetries()->count());
+        $this->assertNull($taman->latestHardwareTelemetry);
+        $this->assertSame(0, $taman->telemetries()->count());
         $this->assertSame(1, $taman->sensor_config['schema']);
     }
 
@@ -426,7 +420,8 @@ class UserFarmWorkspaceTest extends TestCase
             'taman_id' => $taman->id,
             'moisture' => 27.0,
             'ph' => 6.4,
-            'source' => 'simulator',
+            'source' => 'esp32_device',
+            'sensor_source' => 'esp32_device',
             'recorded_at' => now(),
         ]);
 

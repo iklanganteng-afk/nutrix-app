@@ -4,35 +4,26 @@ namespace App\Http\Controllers;
 
 use App\Models\Taman;
 use App\Models\FarmActivity;
-use App\Models\SensorTelemetry;
-use App\Services\Agronomy\TelemetryDecisionEngine;
-use App\Services\Telemetry\SimulatedTelemetrySource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 
 class TamanController extends Controller
 {
-    public function __construct(
-        private readonly SimulatedTelemetrySource $telemetrySource,
-        private readonly TelemetryDecisionEngine $decisionEngine,
-    ) {
-    }
-
     // GET /dashboard -> guest lihat halaman publik + modal Sign In,
     // user login tapi 0 taman lihat state "tambah taman pertama",
     // user login dengan taman lihat daftar tamannya
     public function index()
     {
         $tamans = Auth::user()->tamans()
-            ->with('latestTelemetry')
+            ->with('latestHardwareTelemetry')
             ->latest()
             ->get();
 
         $healthCounts = [
-            'optimal' => $tamans->filter(fn ($taman) => $taman->latestTelemetry?->health_status === 'optimal')->count(),
-            'warning' => $tamans->filter(fn ($taman) => $taman->latestTelemetry?->health_status === 'warning')->count(),
-            'critical' => $tamans->filter(fn ($taman) => $taman->latestTelemetry?->health_status === 'critical')->count(),
+            'optimal' => $tamans->filter(fn ($taman) => $taman->latestHardwareTelemetry?->health_status === 'optimal')->count(),
+            'warning' => $tamans->filter(fn ($taman) => $taman->latestHardwareTelemetry?->health_status === 'warning')->count(),
+            'critical' => $tamans->filter(fn ($taman) => $taman->latestHardwareTelemetry?->health_status === 'critical')->count(),
         ];
 
         $recentActivities = FarmActivity::where('user_id', Auth::id())
@@ -88,8 +79,6 @@ class TamanController extends Controller
             'device_name' => 'Kelompok Nutrix',
         ]);
 
-        $this->createInitialTelemetry($taman);
-
         FarmActivity::create([
             'taman_id' => $taman->id,
             'user_id'  => Auth::id(),
@@ -107,8 +96,8 @@ class TamanController extends Controller
     {
         abort_unless($taman->user_id === Auth::id(), 403);
 
-        $latest = $taman->latestTelemetry;
-        $telemetries = $taman->telemetries()->latest('recorded_at')->limit(20)->get();
+        $latest = $taman->latestHardwareTelemetry;
+        $telemetries = $taman->hardwareTelemetries()->limit(20)->get();
 
         return view('taman.show', compact('taman', 'latest', 'telemetries'));
     }
@@ -156,25 +145,6 @@ class TamanController extends Controller
         }
 
         return ['schema' => 1, 'sensors' => $sensors];
-    }
-
-    private function createInitialTelemetry(Taman $taman): SensorTelemetry
-    {
-        $data = $this->telemetrySource->read($taman);
-        $analysis = $this->decisionEngine->evaluate($data, $taman->type, $taman->soil_type);
-
-        return SensorTelemetry::create([
-            'taman_id' => $taman->id,
-            'ph' => $data['ph'] ?? null,
-            'moisture' => $data['moisture'] ?? null,
-            'temperature' => $data['temperature'] ?? null,
-            'ec' => $data['ec'] ?? null,
-            'moisture_unit' => array_key_exists('moisture', $data) ? 'vwc_pct' : null,
-            'health_score' => $analysis['health']['score'],
-            'health_status' => $analysis['health']['score'] === null ? 'unknown' : ($analysis['health']['score'] >= 80 ? 'optimal' : ($analysis['health']['score'] >= 55 ? 'warning' : 'critical')),
-            'source' => 'simulator',
-            'recorded_at' => now(),
-        ]);
     }
 
     // DELETE /taman/{taman}

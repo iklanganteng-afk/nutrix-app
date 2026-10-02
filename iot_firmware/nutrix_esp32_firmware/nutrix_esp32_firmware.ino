@@ -13,6 +13,7 @@
  */
 
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <WiFiManager.h>      // Library WiFiManager oleh tzapu
 #include <ArduinoJson.h>       // Library ArduinoJson oleh Benoit Blanchon
@@ -40,6 +41,7 @@ const char* DEVICE_NAME     = "Kelompok Nutrix";
 
 // Server Endpoint Railway
 const char* serverUrl = "https://nutrix-app-production.up.railway.app/api/iot/telemetry";
+WiFiClientSecure secureClient;
 
 // Token Pairing dari Dashboard Web NUTRIX
 char custom_device_token[65] = "";
@@ -108,6 +110,8 @@ void setup() {
         delay(2000);
         ESP.restart();
     }
+
+    secureClient.setInsecure();
 
     strncpy(custom_device_token, custom_token.getValue(), sizeof(custom_device_token) - 1);
     custom_device_token[sizeof(custom_device_token) - 1] = '\0';
@@ -240,7 +244,7 @@ void bacaSensorDanKirimKeWeb() {
 
     // 5. Transmisi ke Cloud API Railway
     HTTPClient http;
-    http.begin(serverUrl);
+    http.begin(secureClient, serverUrl);
     http.addHeader("Content-Type", "application/json");
     http.addHeader("Accept", "application/json");
     http.setTimeout(4500);

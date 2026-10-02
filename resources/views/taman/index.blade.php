@@ -55,12 +55,12 @@
                                     <span data-i18n="taman-no-location">Lokasi belum diisi</span>
                                 @endif
                             </p>
-                            @if($taman->latestTelemetry)
+                            @if($taman->latestHardwareTelemetry)
                                 <div class="mb-3 d-flex justify-content-between text-muted" style="font-size: 0.8rem;">
-                                    <span><span data-i18n="taman-health-label">Health:</span> <strong class="text-white">{{ round($taman->latestTelemetry->health_score) }}</strong></span>
-                                    <span>{{ $taman->latestTelemetry->recorded_at->diffForHumans() }}</span>
+                                    <span><span data-i18n="taman-health-label">Health:</span> <strong class="text-white">{{ round($taman->latestHardwareTelemetry->health_score) }}</strong></span>
+                                    <span>{{ $taman->latestHardwareTelemetry->recorded_at->diffForHumans() }}</span>
                                 </div>
-                                <span class="workspace-health workspace-health-{{ $taman->latestTelemetry->health_status }} mb-3"><i class="bi bi-circle-fill"></i>{{ ucfirst($taman->latestTelemetry->health_status) }}</span>
+                                <span class="workspace-health workspace-health-{{ $taman->latestHardwareTelemetry->health_status }} mb-3"><i class="bi bi-circle-fill"></i>{{ ucfirst($taman->latestHardwareTelemetry->health_status) }}</span>
                             @else
                                 <span class="workspace-health workspace-health-unknown mb-3"><i class="bi bi-circle-fill"></i><span data-i18n="taman-no-telemetry">Belum ada telemetry</span></span>
                             @endif
