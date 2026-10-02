@@ -46,9 +46,11 @@ class UserFarmWorkspaceTest extends TestCase
             ],
             'controller_type' => 'esp32',
             'device_connection' => [
-                'computer_port' => 'USB-A',
-                'device_port' => 'USB-C',
-                'note' => 'Hubungkan laptop ke ESP32 melalui kabel USB-C. Semua sensor dipasang pada board yang sama.',
+                'computer_port' => 'Wireless (WiFi)',
+                'device_port' => 'WiFi 2.4GHz HTTP Cloud',
+                'wifi_ssid' => 'GG',
+                'hostname' => 'Kelompok-Nutrix',
+                'note' => 'ESP32 terpasang di panel kebun dan mengirim telemetri secara wireless ke cloud.',
             ],
         ]);
 
@@ -57,7 +59,22 @@ class UserFarmWorkspaceTest extends TestCase
         $this->assertSame($user->id, $taman->user_id);
         $this->assertSame(['moisture', 'temperature', 'ph', 'ec'], $taman->sensor_types);
         $this->assertSame('esp32', $taman->controller_type);
-        $this->assertSame('USB-A', $taman->device_connection['computer_port']);
+        $this->assertSame('Wireless (WiFi)', $taman->device_connection['computer_port']);
+    }
+
+    public function test_add_farm_wizard_describes_wireless_esp32_setup_only(): void
+    {
+        $user = User::factory()->create(['role' => 'user']);
+
+        $this->actingAs($user)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Wi-Fi captive portal')
+            ->assertSee('USB hanya untuk upload firmware dan Serial Monitor')
+            ->assertDontSee('Kabel Serial (USB)')
+            ->assertDontSee('name="sensor_types[]" value="ph"', false)
+            ->assertDontSee('name="sensor_types[]" value="temperature"', false)
+            ->assertDontSee('name="sensor_types[]" value="ec"', false);
     }
 
     public function test_creating_a_sensor_aware_farm_persists_one_initial_reading_with_null_inactive_metrics(): void
@@ -117,8 +134,10 @@ class UserFarmWorkspaceTest extends TestCase
             ],
             'controller_type' => 'esp32',
             'device_connection' => [
-                'computer_port' => 'USB-A',
-                'device_port' => 'USB-C',
+                'computer_port' => 'Wireless (WiFi)',
+                'device_port' => 'WiFi 2.4GHz HTTP Cloud',
+                'wifi_ssid' => 'GG',
+                'hostname' => 'Kelompok-Nutrix',
             ],
         ]);
 
@@ -128,7 +147,7 @@ class UserFarmWorkspaceTest extends TestCase
             ->assertSee('Kelembapan')
             ->assertSee('SEN0193')
             ->assertSee('ESP32')
-            ->assertSee('USB-A');
+            ->assertSee('Wireless (WiFi)');
     }
 
     public function test_owner_can_view_hardware_wiring_guide_on_detail_page(): void
@@ -142,18 +161,18 @@ class UserFarmWorkspaceTest extends TestCase
             'sensor_types' => ['moisture', 'temperature'],
             'controller_type' => 'esp32',
             'device_connection' => [
-                'computer_port' => 'USB-A',
-                'device_port' => 'USB-C',
-                'note' => 'Kabel laptop ke ESP32 melalui USB-C.',
+                'wifi_ssid' => 'GG',
+                'hostname' => 'Kelompok-Nutrix',
+                'note' => 'ESP32 menempel di panel kebun dan terhubung ke hotspot GG.',
             ],
         ]);
 
         $this->actingAs($owner)
             ->get(route('taman.show', $taman))
             ->assertOk()
-            ->assertSee('Panduan kabel')
-            ->assertSee('USB-A')
-            ->assertSee('USB-C')
+            ->assertSee('Panduan pairing nirkabel')
+            ->assertSee('GG')
+            ->assertSee('Kelompok-Nutrix')
             ->assertSee('ESP32');
     }
 
@@ -185,9 +204,9 @@ class UserFarmWorkspaceTest extends TestCase
             'sensor_connected' => true,
             'controller_type' => 'esp32',
             'device_connection' => [
-                'computer_port' => 'USB-A',
-                'device_port' => 'USB-C',
-                'note' => 'Kabel terpasang dengan stabil.',
+                'wifi_ssid' => 'GG',
+                'hostname' => 'Kelompok-Nutrix',
+                'note' => 'Koneksi WiFi stabil, sinyal kuat.',
             ],
         ]);
 
@@ -196,8 +215,8 @@ class UserFarmWorkspaceTest extends TestCase
             ->assertOk()
             ->assertSee('Status perangkat')
             ->assertSee('SENSOR-STATUS-001')
-            ->assertSee('USB-A')
-            ->assertSee('USB-C');
+            ->assertSee('GG')
+            ->assertSee('Kelompok-Nutrix');
     }
 
     public function test_owner_can_see_reconnect_and_reset_connection_controls_on_detail_page(): void
@@ -394,6 +413,7 @@ class UserFarmWorkspaceTest extends TestCase
             'type' => 'corn',
             'soil_type' => 'latosol',
             'sensor_connected' => true,
+            'last_seen_at' => now(),
             'sensor_config' => [
                 'schema' => 1,
                 'sensors' => [
@@ -432,12 +452,12 @@ class UserFarmWorkspaceTest extends TestCase
         $this->actingAs($owner)
             ->postJson("/api/taman/{$taman->id}/sensor/connect", ['sensor_id' => 'SENSOR-FIELD-001'])
             ->assertOk()
-            ->assertJson(['connected' => true, 'sensor_id' => 'SENSOR-FIELD-001']);
+            ->assertJson(['configured' => true, 'connected' => false, 'sensor_id' => 'SENSOR-FIELD-001']);
 
         $this->assertDatabaseHas('tamans', [
             'id' => $taman->id,
             'sensor_id' => 'SENSOR-FIELD-001',
-            'sensor_connected' => 1,
+            'sensor_connected' => 0,
         ]);
     }
 
@@ -471,18 +491,18 @@ class UserFarmWorkspaceTest extends TestCase
         ]);
     }
 
-    public function test_owner_can_view_usb_hardware_metrics_on_detail_page(): void
+    public function test_owner_can_view_wireless_hardware_metrics_on_detail_page(): void
     {
         $owner = User::factory()->create(['role' => 'user']);
         $taman = Taman::create([
             'user_id' => $owner->id,
-            'name' => 'USB Metrics Farm',
+            'name' => 'Wireless Metrics Farm',
             'type' => 'greenhouse',
             'sensor_connected' => true,
             'controller_type' => 'esp32',
             'device_connection' => [
-                'computer_port' => 'USB-A',
-                'device_port' => 'USB-C',
+                'wifi_ssid' => 'GG',
+                'hostname' => 'Kelompok-Nutrix',
             ],
         ]);
 
@@ -490,10 +510,10 @@ class UserFarmWorkspaceTest extends TestCase
             ->get(route('taman.show', $taman))
             ->assertOk()
             ->assertSee('Voltage')
-            ->assertSee('Baud rate')
+            ->assertSee('RSSI')
             ->assertSee('Signal')
             ->assertSee('3.3V')
-            ->assertSee('115200');
+            ->assertSee('WiFi 2.4GHz / HTTP POST');
     }
 
     public function test_owner_can_view_pairing_sequence_on_detail_page(): void
@@ -506,8 +526,8 @@ class UserFarmWorkspaceTest extends TestCase
             'sensor_connected' => true,
             'controller_type' => 'esp32',
             'device_connection' => [
-                'computer_port' => 'USB-A',
-                'device_port' => 'USB-C',
+                'wifi_ssid' => 'GG',
+                'hostname' => 'Kelompok-Nutrix',
             ],
         ]);
 
@@ -516,7 +536,7 @@ class UserFarmWorkspaceTest extends TestCase
             ->assertOk()
             ->assertSee('Pairing flow')
             ->assertSee('Board detected')
-            ->assertSee('Port verified')
+            ->assertSee('Network verified')
             ->assertSee('Sensor ID validated');
     }
 
@@ -530,8 +550,8 @@ class UserFarmWorkspaceTest extends TestCase
             'sensor_connected' => true,
             'controller_type' => 'esp32',
             'device_connection' => [
-                'computer_port' => 'USB-A',
-                'device_port' => 'USB-C',
+                'wifi_ssid' => 'GG',
+                'hostname' => 'Kelompok-Nutrix',
             ],
         ]);
 
@@ -552,8 +572,8 @@ class UserFarmWorkspaceTest extends TestCase
             'sensor_connected' => true,
             'controller_type' => 'esp32',
             'device_connection' => [
-                'computer_port' => 'USB-A',
-                'device_port' => 'USB-C',
+                'wifi_ssid' => 'GG',
+                'hostname' => 'Kelompok-Nutrix',
             ],
         ]);
 
@@ -562,7 +582,7 @@ class UserFarmWorkspaceTest extends TestCase
             ->assertOk()
             ->assertSee('Board health')
             ->assertSee('Signal quality')
-            ->assertSee('Port integrity');
+            ->assertSee('Link integrity');
     }
 
     public function test_owner_can_view_auto_reconnect_alert_on_detail_page(): void
@@ -575,8 +595,8 @@ class UserFarmWorkspaceTest extends TestCase
             'sensor_connected' => true,
             'controller_type' => 'esp32',
             'device_connection' => [
-                'computer_port' => 'USB-A',
-                'device_port' => 'USB-C',
+                'wifi_ssid' => 'GG',
+                'hostname' => 'Kelompok-Nutrix',
             ],
         ]);
 
@@ -588,7 +608,7 @@ class UserFarmWorkspaceTest extends TestCase
             ->assertSee('Reconnect policy');
     }
 
-    public function test_owner_can_view_usb_event_stream_on_detail_page(): void
+    public function test_owner_can_view_wireless_event_stream_on_detail_page(): void
     {
         $owner = User::factory()->create(['role' => 'user']);
         $taman = Taman::create([
@@ -598,15 +618,15 @@ class UserFarmWorkspaceTest extends TestCase
             'sensor_connected' => true,
             'controller_type' => 'esp32',
             'device_connection' => [
-                'computer_port' => 'USB-A',
-                'device_port' => 'USB-C',
+                'wifi_ssid' => 'GG',
+                'hostname' => 'Kelompok-Nutrix',
             ],
         ]);
 
         $this->actingAs($owner)
             ->get(route('taman.show', $taman))
             ->assertOk()
-            ->assertSee('USB event stream')
+            ->assertSee('Wireless event stream')
             ->assertSee('Connected');
     }
 

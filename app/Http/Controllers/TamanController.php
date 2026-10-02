@@ -73,7 +73,7 @@ class TamanController extends Controller
         $validated['sensor_models'] = $validated['sensor_models'] ?? [];
         $validated['controller_type'] = $validated['controller_type'] ?? null;
         $validated['device_connection'] = $validated['device_connection'] ?? [];
-        $validated['sensor_connected'] = ! empty($validated['sensor_types']);
+        $validated['sensor_connected'] = false;
         $validated['soil_type'] = $validated['soil_type'] ?? 'unspecified';
         $validated['indicator_mode'] = $validated['indicator_mode'] ?? 'active_only';
         $validated['sensor_config'] = $this->sensorConfigFromLegacy($validated['sensor_types']);
@@ -87,6 +87,8 @@ class TamanController extends Controller
             'device_token_expires_at' => $expiresAt,
             'device_name' => 'Kelompok Nutrix',
         ]);
+
+        $this->createInitialTelemetry($taman);
 
         FarmActivity::create([
             'taman_id' => $taman->id,
@@ -137,7 +139,6 @@ class TamanController extends Controller
         $validated['sensor_models'] = $validated['sensor_models'] ?? $taman->sensor_models ?? [];
         $validated['controller_type'] = $validated['controller_type'] ?? $taman->controller_type;
         $validated['device_connection'] = $validated['device_connection'] ?? $taman->device_connection ?? [];
-        $validated['sensor_connected'] = ! empty($validated['sensor_types']);
         $validated['soil_type'] = $validated['soil_type'] ?? $taman->soil_type ?? 'unspecified';
         $validated['indicator_mode'] = $validated['indicator_mode'] ?? $taman->indicator_mode ?? 'active_only';
         $validated['sensor_config'] = $this->sensorConfigFromLegacy($validated['sensor_types']);

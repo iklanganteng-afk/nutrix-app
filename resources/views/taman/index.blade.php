@@ -168,18 +168,6 @@
                             <input type="checkbox" name="sensor_types[]" value="moisture" checked>
                             <span><i class="bi bi-moisture"></i> <span data-i18n="sensor-moisture-label">Kelembapan</span></span>
                         </label>
-                        <label class="sensor-check-card">
-                            <input type="checkbox" name="sensor_types[]" value="temperature" checked>
-                            <span><i class="bi bi-thermometer-half"></i> <span data-i18n="sensor-temperature-label">Suhu</span></span>
-                        </label>
-                        <label class="sensor-check-card">
-                            <input type="checkbox" name="sensor_types[]" value="ph" checked>
-                            <span><i class="bi bi-droplet-half"></i> <span data-i18n="sensor-ph-label">pH</span></span>
-                        </label>
-                        <label class="sensor-check-card">
-                            <input type="checkbox" name="sensor_types[]" value="ec" checked>
-                            <span><i class="bi bi-lightning-charge-fill"></i> <span data-i18n="sensor-ec-label">EC</span></span>
-                        </label>
                     </div>
                 </div>
                 <div class="d-flex justify-content-between mt-3">
@@ -234,35 +222,6 @@
                             </div>
                         </div>
 
-                        {{-- Kategori Suhu Lingkungan --}}
-                        <div class="sensor-model-row p-3 mb-3 border border-secondary rounded-3" data-sensor-type="temperature" style="background: rgba(255,255,255,0.02);">
-                            <div class="sensor-model-label fw-bold text-white mb-2"><i class="bi bi-thermometer-half text-warning me-1"></i> <span data-i18n="sensor-temperature-label">Suhu</span></div>
-                            <select class="auth-input" name="sensor_models[temperature]">
-                                <option value="DHT22">DHT22 - Temperature & Humidity (Digital)</option>
-                                <option value="DS18B20">DS18B20 - Waterproof Temperature</option>
-                                <option value="LM35">LM35 - Analog Temperature</option>
-                            </select>
-                        </div>
-
-                        {{-- Kategori pH Tanah --}}
-                        <div class="sensor-model-row p-3 mb-3 border border-secondary rounded-3" data-sensor-type="ph" style="background: rgba(255,255,255,0.02);">
-                            <div class="sensor-model-label fw-bold text-white mb-2"><i class="bi bi-droplet-half text-info me-1"></i> <span data-i18n="sensor-ph-label">pH Tanah</span></div>
-                            <select class="auth-input" name="sensor_models[ph]">
-                                <option value="PH-4502C">PH-4502C - Analog pH Sensor Probe</option>
-                                <option value="Atlas-pH">Atlas Scientific Lab pH</option>
-                                <option value="PH-1">PH-1 - Industrial pH Module</option>
-                            </select>
-                        </div>
-
-                        {{-- Kategori EC / Nutrisi --}}
-                        <div class="sensor-model-row p-3 mb-3 border border-secondary rounded-3" data-sensor-type="ec" style="background: rgba(255,255,255,0.02);">
-                            <div class="sensor-model-label fw-bold text-white mb-2"><i class="bi bi-lightning-charge-fill text-success me-1"></i> <span data-i18n="sensor-ec-label">EC / Konduktivitas</span></div>
-                            <select class="auth-input" name="sensor_models[ec]">
-                                <option value="DFRobot-EC">DFRobot Analog EC Meter</option>
-                                <option value="Atlas-EC">Atlas Scientific K1.0 EC</option>
-                                <option value="TDS-V1">TDS Meter Sensor V1.0</option>
-                            </select>
-                        </div>
                     </div>
                 </div>
                 <div class="d-flex justify-content-between mt-3">
@@ -293,7 +252,7 @@
                         <div class="col-6">
                             <label class="sensor-check-card" style="opacity: 0.7;">
                                 <input type="radio" name="device_connection[method]" value="serial_cable">
-                                <span><i class="bi bi-usb-symbol"></i> <strong>Kabel Serial (USB)</strong></span>
+                                <span><i class="bi bi-usb-symbol"></i> <strong>USB hanya untuk upload firmware dan Serial Monitor</strong></span>
                             </label>
                         </div>
                     </div>
@@ -305,7 +264,7 @@
                         <span class="text-mint fw-bold small"><i class="bi bi-shield-check me-1"></i> Mode Nirkabel Real-Time (Cloud IoT)</span>
                         <span class="badge bg-success bg-opacity-25 text-mint border border-success" style="font-size: 0.7rem;">Aktif 24/7</span>
                     </div>
-                    <p class="text-muted small mb-2">ESP32 akan mengirimkan telemetri secara wireless melalui Hotspot/WiFi tanpa perlu dicolok terus ke laptop.</p>
+                    <p class="text-muted small mb-2">Wi-Fi captive portal: ESP32 akan membuka portal konfigurasi untuk menghubungkan ke hotspot rumah lalu mengirim telemetri tanpa kabel.</p>
                     <div class="row g-2">
                         <div class="col-6">
                             <label class="text-muted small mb-1">Target Hotspot / SSID:</label>
@@ -428,7 +387,7 @@
             const controllerEl = document.querySelector('select[name="controller_type"]');
             const controllerText = controllerEl ? controllerEl.options[controllerEl.selectedIndex].text.split('(')[0].trim() : 'ESP32';
             const method = document.querySelector('input[name="device_connection[method]"]:checked')?.value || 'wifi_cloud';
-            const methodLabel = method === 'wifi_cloud' ? 'Wireless (WiFi / Hotspot)' : 'Kabel Serial USB';
+            const methodLabel = method === 'wifi_cloud' ? 'Wireless (WiFi / Hotspot)' : 'USB hanya untuk upload firmware dan Serial Monitor';
             const ssid = document.querySelector('input[name="device_connection[wifi_ssid]"]')?.value || 'GG';
 
             summary.innerHTML = `

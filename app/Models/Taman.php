@@ -34,6 +34,7 @@ class Taman extends Model
         'wifi_ssid',
         'ip_address',
         'sensor_config',
+        'last_auto_watered_at',
     ];
 
     protected $casts = [
@@ -41,6 +42,7 @@ class Taman extends Model
         'sensor_connected_at' => 'datetime',
         'device_token_expires_at' => 'datetime',
         'last_seen_at' => 'datetime',
+        'last_auto_watered_at' => 'datetime',
         'sensor_types' => 'array',
         'sensor_models' => 'array',
         'device_connection' => 'array',

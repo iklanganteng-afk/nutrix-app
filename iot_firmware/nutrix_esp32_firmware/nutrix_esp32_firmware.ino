@@ -16,6 +16,7 @@
 #include <HTTPClient.h>
 #include <WiFiManager.h>      // Library WiFiManager oleh tzapu
 #include <ArduinoJson.h>       // Library ArduinoJson oleh Benoit Blanchon
+#include <Preferences.h>
 
 // ── 1. DEFINISI PIN SENSOR & AKTUATOR (Shield G-V-S Ready) ─────────────────
 #define PIN_CAPACITIVE   34     // Sensor Capacitive V2.0 (ADC1_CH6) -> Baris D34 [S]
@@ -34,8 +35,6 @@ const int RES_ADC_DRY   = 3500; // Kondisi kering di udara (0% VWC)
 const int RES_ADC_WET   = 1200; // Kondisi jenuh di air (100% VWC)
 
 // ── 3. KONFIGURASI NETWORK & SERVER ────────────────────────────────────────
-const char* WIFI_SSID       = "GG";
-const char* WIFI_PASSWORD   = "krauss74";
 const char* DEVICE_HOSTNAME = "Kelompok-Nutrix";
 const char* DEVICE_NAME     = "Kelompok Nutrix";
 
@@ -43,8 +42,13 @@ const char* DEVICE_NAME     = "Kelompok Nutrix";
 const char* serverUrl = "https://nutrix-app-production.up.railway.app/api/iot/telemetry";
 
 // Token Pairing dari Dashboard Web NUTRIX
-char custom_device_token[40] = "NTX-OYR3IOAYWXX2"; 
-char custom_taman_id[8]      = "15";
+char custom_device_token[65] = "";
+char custom_sensor_id[32]    = "NUTRIX-DUAL-01";
+Preferences preferences;
+String pendingCommandId;
+String pendingCommandStatus;
+String lastExecutedCommandId;
+String relayState = "off";
 
 unsigned long previousMillis = 0;
 const long telemetryInterval = 5000; // Kirim tiap 5 detik
@@ -79,45 +83,42 @@ void setup() {
     digitalWrite(PIN_BUZZER, LOW);
     digitalWrite(PIN_LED_STATUS, LOW);
 
-    // Inisialisasi WiFi Mode Station
-    WiFi.mode(WIFI_STA);
+    preferences.begin("nutrix", false);
+    preferences.getString("token", "").toCharArray(custom_device_token, sizeof(custom_device_token));
+    preferences.getString("sensor", "NUTRIX-DUAL-01").toCharArray(custom_sensor_id, sizeof(custom_sensor_id));
 
-    Serial.print("[WIFI] Menghubungkan ke hotspot: ");
-    Serial.println(WIFI_SSID);
+    // WiFiManager menyimpan kredensial jaringan di NVS ESP32.
+    WiFi.mode(WIFI_STA);
+    WiFi.setHostname(DEVICE_HOSTNAME);
     digitalWrite(PIN_LED_STATUS, HIGH);
 
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    WiFiManager wm;
+    wm.setConfigPortalTimeout(180);
+    WiFiManagerParameter custom_token("device_token", "Token Pairing dari Dashboard", custom_device_token, sizeof(custom_device_token));
+    WiFiManagerParameter custom_sensor("sensor_id", "ID Sensor ESP32", custom_sensor_id, sizeof(custom_sensor_id));
+    wm.addParameter(&custom_token);
+    wm.addParameter(&custom_sensor);
 
-    int attempts = 0;
-    while (WiFi.status() != WL_CONNECTED && attempts < 50) {
-        delay(500);
-        Serial.print(".");
-        attempts++;
+    const bool wifiConnected = strlen(custom_device_token) > 0
+        ? wm.autoConnect("NUTRIX-ESP32-PAIR")
+        : wm.startConfigPortal("NUTRIX-ESP32-PAIR");
+    if (!wifiConnected) {
+        Serial.println("[ERROR] Wi-Fi belum dikonfigurasi. Nyalakan ulang untuk membuka portal pairing.");
+        digitalWrite(PIN_RELAY, HIGH);
+        delay(2000);
+        ESP.restart();
     }
 
-    if (WiFi.status() == WL_CONNECTED) {
-        digitalWrite(PIN_LED_STATUS, HIGH);
-        Serial.println("\n\n=======================================================");
-        Serial.println("  >>> SUKSES TERHUBUNG KE WIFI HOTSPOT! <<<");
-        Serial.println("=======================================================");
-        Serial.print("IP Address ESP32 : "); Serial.println(WiFi.localIP());
-        Serial.print("Sinyal RSSI      : "); Serial.print(WiFi.RSSI()); Serial.println(" dBm");
-        Serial.println("=======================================================\n");
-        beepSuccess();
-    } else {
-        Serial.println("\n[WIFI] Belum terhubung. Membuka AP darurat: NUTRIX-ESP32-PAIR");
-        WiFiManager wm;
-        WiFiManagerParameter custom_token("device_token", "Device Pairing Token (Dari Web NUTRIX)", custom_device_token, 40);
-        wm.addParameter(&custom_token);
+    strncpy(custom_device_token, custom_token.getValue(), sizeof(custom_device_token) - 1);
+    custom_device_token[sizeof(custom_device_token) - 1] = '\0';
+    strncpy(custom_sensor_id, custom_sensor.getValue(), sizeof(custom_sensor_id) - 1);
+    custom_sensor_id[sizeof(custom_sensor_id) - 1] = '\0';
+    preferences.putString("token", custom_device_token);
+    preferences.putString("sensor", custom_sensor_id);
 
-        if (!wm.autoConnect("NUTRIX-ESP32-PAIR")) {
-            Serial.println("[ERROR] Gagal konek WiFi. Merestart...");
-            delay(2000);
-            ESP.restart();
-        }
-        strncpy(custom_device_token, custom_token.getValue(), sizeof(custom_device_token));
-        beepSuccess();
-    }
+    Serial.println("[WIFI] Terhubung ke jaringan. Token pairing tersimpan secara lokal.");
+    Serial.print("[WIFI] IP ESP32: "); Serial.println(WiFi.localIP());
+    beepSuccess();
 }
 
 void loop() {
@@ -131,7 +132,7 @@ void loop() {
         } else {
             Serial.println("[WIFI] Koneksi terputus! Mencoba rekoneksi...");
             digitalWrite(PIN_LED_STATUS, LOW);
-            WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+            WiFi.reconnect();
         }
     }
 }
@@ -203,10 +204,12 @@ void bacaSensorDanKirimKeWeb() {
     Serial.printf("[KONSENSUS FINAL] Rata-rata: %.1f%% | Deviasi: %.1f%%\n", avgMoisture, deviation);
 
     // 4. Siapkan Payload JSON Komprehensif
-    StaticJsonDocument<512> jsonDoc;
+    StaticJsonDocument<768> jsonDoc;
     jsonDoc["device_token"]     = custom_device_token;
     jsonDoc["device_name"]      = DEVICE_NAME;
-    jsonDoc["taman_id"]         = atoi(custom_taman_id);
+    jsonDoc["sensor_id"]        = custom_sensor_id;
+    jsonDoc["hostname"]         = DEVICE_HOSTNAME;
+    jsonDoc["wifi_ssid"]        = WiFi.SSID();
     jsonDoc["moisture"]         = round(avgMoisture * 10) / 10.0; // Nilai utama
     jsonDoc["wifi_rssi"]        = WiFi.RSSI();
     jsonDoc["ip_address"]       = WiFi.localIP().toString();
@@ -226,6 +229,12 @@ void bacaSensorDanKirimKeWeb() {
     sRes["voltage"]    = round(voltResistive * 100) / 100.0;
     sRes["moisture"]   = round(vwcResistive * 10) / 10.0;
 
+    if (pendingCommandId.length() > 0) {
+        jsonDoc["last_command_id"] = pendingCommandId;
+        jsonDoc["last_command_status"] = pendingCommandStatus;
+        jsonDoc["relay_state"] = relayState;
+    }
+
     String requestBody;
     serializeJson(jsonDoc, requestBody);
 
@@ -242,15 +251,21 @@ void bacaSensorDanKirimKeWeb() {
         String response = http.getString();
         Serial.printf("[CLOUD] Respon [%d]: %s\n", httpResponseCode, response.c_str());
 
-        // Parsing respon perintah aktuator (jika cloud menginstruksikan penyiraman)
+        // The next successful POST confirms that the server received a pending acknowledgement.
         StaticJsonDocument<256> respDoc;
-        if (!deserializeJson(respDoc, response)) {
+        if (httpResponseCode == 200 && !deserializeJson(respDoc, response)) {
+            pendingCommandId = "";
+            pendingCommandStatus = "";
+
             const char* valveCmd = respDoc["commands"]["water_valve"];
+            const char* commandId = respDoc["commands"]["command_id"];
             int durationSec = respDoc["commands"]["duration_sec"] | 0;
 
-            if (valveCmd && String(valveCmd) == "ON" && durationSec > 0) {
+            if (valveCmd && commandId && String(valveCmd) == "ON" && durationSec > 0 && String(commandId) != lastExecutedCommandId) {
+                durationSec = constrain(durationSec, 1, 10);
                 Serial.printf(">>> [AKTUATOR] MENJALANKAN IRIGASI: %d DETIK <<<\n", durationSec);
                 digitalWrite(PIN_RELAY, LOW); // ON Relay
+                relayState = "on";
                 digitalWrite(PIN_BUZZER, HIGH);
                 delay(300);
                 digitalWrite(PIN_BUZZER, LOW);
@@ -258,7 +273,14 @@ void bacaSensorDanKirimKeWeb() {
                 delay(durationSec * 1000);
 
                 digitalWrite(PIN_RELAY, HIGH); // OFF Relay
+                relayState = "off";
+                lastExecutedCommandId = commandId;
+                pendingCommandId = commandId;
+                pendingCommandStatus = "executed";
                 Serial.println(">>> [AKTUATOR] IRIGASI SELESAI <<<");
+            } else {
+                digitalWrite(PIN_RELAY, HIGH);
+                relayState = "off";
             }
         }
     } else {

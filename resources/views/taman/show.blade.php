@@ -19,7 +19,8 @@
     };
     $sensorId = $taman->sensor_id ?? null;
     $deviceToken = $taman->device_token ?? null;
-    $isConnected = (bool) $taman->sensor_connected;
+    $lastSeenAge = $taman->last_seen_at?->diffInSeconds(now());
+    $isConnected = ($taman->sensor_connected ?? false) || ($lastSeenAge !== null && $lastSeenAge <= 60);
     $lastSeen = $taman->last_seen_at ? $taman->last_seen_at->diffForHumans() : null;
     $selectedSoil = $taman->soil_type ?? '';
     $selectedSensorTypes  = $taman->sensor_types  ?? [];
@@ -34,19 +35,19 @@
     $sCap = $sensors['capacitive_v2'] ?? null;
     $sRes = $sensors['resistive_hd38'] ?? null;
 
-    $initCapMoist = isset($sCap['moisture']) ? number_format($sCap['moisture'], 1) : ($latest?->moisture ? number_format($latest->moisture, 1) : '--');
-    $initCapAdc = $sCap['raw_adc'] ?? ($latest ? '3200' : '--');
-    $initCapVolt = isset($sCap['voltage']) ? number_format($sCap['voltage'], 2) : ($latest ? '2.58' : '--');
+    $initCapMoist = isset($sCap['moisture']) ? number_format($sCap['moisture'], 1) : '--';
+    $initCapAdc = $sCap['raw_adc'] ?? '--';
+    $initCapVolt = isset($sCap['voltage']) ? number_format($sCap['voltage'], 2) : '--';
 
-    $initResMoist = isset($sRes['moisture']) ? number_format($sRes['moisture'], 1) : ($latest?->moisture ? number_format($latest->moisture, 1) : '--');
-    $initResAdc = $sRes['raw_adc'] ?? ($latest ? '2100' : '--');
-    $initResVolt = isset($sRes['voltage']) ? number_format($sRes['voltage'], 2) : ($latest ? '1.70' : '--');
+    $initResMoist = isset($sRes['moisture']) ? number_format($sRes['moisture'], 1) : '--';
+    $initResAdc = $sRes['raw_adc'] ?? '--';
+    $initResVolt = isset($sRes['voltage']) ? number_format($sRes['voltage'], 2) : '--';
 
     $initMoist = $latest?->moisture !== null ? number_format($latest->moisture, 1) : '--';
-    $initDev = ($sCap && $sRes) ? number_format(abs(($sCap['moisture'] ?? 0) - ($sRes['moisture'] ?? 0)), 1) : '0.0';
-    $initRssi = $meta['wifi_rssi'] ?? '-16';
-    $initIp = $meta['ip_address'] ?? $taman->ip_address ?? '10.194.207.84';
-    $initHealthScore = $latest?->health_score ?? ($latest?->moisture ? 85 : '--');
+    $initDev = ($sCap && $sRes && isset($sCap['moisture'], $sRes['moisture'])) ? number_format(abs($sCap['moisture'] - $sRes['moisture']), 1) : '--';
+    $initRssi = $meta['wifi_rssi'] ?? '--';
+    $initIp = $meta['ip_address'] ?? $taman->ip_address ?? '--';
+    $initHealthScore = $latest?->health_score ?? '--';
 @endphp
 
 {{-- ────────────────────────────────────────────────────────── --}}
@@ -211,8 +212,8 @@
                         <span class="text-muted fs-6">% Rata-rata</span>
                     </div>
                     <div class="mt-2 text-muted small" style="font-size:0.78rem;">
-                        <div id="consensusStatusText" class="text-mint"><i class="bi bi-check-circle-fill me-1"></i> Telemetri ESP32 Aktif & Sinkron</div>
-                        <div class="text-secondary mt-1">Data filter: <strong>Trimmed-Mean (20 sampel)</strong></div>
+                                <div id="consensusStatusText" class="text-muted">Menunggu bacaan dari dua probe.</div>
+                                <div class="text-secondary mt-1">Filter: <strong>Rata-rata dua probe, 10 sampel per probe</strong></div>
                     </div>
                 </div>
             </div>
@@ -347,7 +348,7 @@
                             </div>
                             <div class="col-4 border-start border-end border-secondary border-opacity-25">
                                 <small class="text-muted d-block" style="font-size:0.75rem;">Konsistensi Dual-Sensor</small>
-                                <strong class="text-white fs-5" id="miniDeviation">Δ {{ $initDev }}%</strong>
+                                <strong class="text-white fs-5" id="miniDeviation">{{ $initDev === '--' ? '--' : 'Δ ' . $initDev . '%' }}</strong>
                             </div>
                             <div class="col-4">
                                 <small class="text-muted d-block" style="font-size:0.75rem;">Sinyal WiFi RSSI</small>
@@ -362,14 +363,6 @@
                     <div class="nx-strip-btn" id="btnSyncData" data-requires-sensor title="Periksa Koneksi Riil ESP32">
                         <i class="bi bi-broadcast"></i>
                         <span>Cek ESP32</span>
-                    </div>
-                    <div class="nx-strip-btn highlight" id="btnWaterAction" data-requires-sensor title="Siram Manual (Database Action)">
-                        <i class="bi bi-droplet-fill"></i>
-                        <span>Siram Kebun</span>
-                    </div>
-                    <div class="nx-strip-btn" id="btnFertilizeAction" data-requires-sensor title="Catat Pemupukan">
-                        <i class="bi bi-flower2"></i>
-                        <span>Beri Pupuk</span>
                     </div>
                     <div class="nx-strip-btn" id="btnActivityLog" title="Buka Riwayat Aktivitas">
                         <i class="bi bi-clock-history"></i>
@@ -391,16 +384,16 @@
                         <span class="nx-card-title">
                             <i class="bi bi-toggles2 text-mint me-2"></i>Aktuator Relay & Hardware
                         </span>
-                        <span id="relayPill" class="nx-tag-chip">STANDBY</span>
+                        <span id="relayPill" class="nx-tag-chip">Belum dilaporkan</span>
                     </div>
 
                     <div class="nx-relay-box mb-3">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <div>
                                 <strong class="text-white d-block" style="font-size:0.9rem;">Relay Solenoid Keran</strong>
-                                <small class="text-muted">GPIO 26 · Valve Pompa Irigasi</small>
+                                <small class="text-muted">GPIO 26 · status menunggu laporan perangkat</small>
                             </div>
-                            <span class="nx-relay-val" id="relayStatusDisplay">STANDBY</span>
+                            <span class="nx-relay-val" id="relayStatusDisplay">Belum dilaporkan</span>
                         </div>
                         <div class="nx-relay-meter">
                             <div class="nx-relay-bar"></div>
@@ -434,9 +427,7 @@
                 </div>
 
                 <div class="d-flex gap-2 mt-3 pt-3 border-top border-secondary">
-                    <button type="button" class="nx-btn-valve flex-fill" id="btnTriggerWaterManual" {{ !$isConnected ? 'disabled' : '' }}>
-                        <i class="bi bi-droplet-fill me-1"></i> Buka Keran 10s
-                    </button>
+                    <span class="text-muted small flex-fill align-self-center">Relay berjalan otomatis sesuai kebijakan perangkat.</span>
                     <button type="button" class="nx-btn-outline-danger" id="btnResetSensor" title="Putus Koneksi Sensor">
                         <i class="bi bi-power"></i>
                     </button>
@@ -501,7 +492,7 @@
                 <div class="nx-pipe-icon"><i class="bi bi-toggles"></i></div>
                 <div class="nx-pipe-info">
                     <strong>Relay Keran Air</strong>
-                    <small id="relayFlowStatus">GPIO 26 · STANDBY</small>
+                    <small id="relayFlowStatus">GPIO 26 · status belum dilaporkan</small>
                 </div>
             </div>
         </div>
@@ -634,28 +625,28 @@
             </div>
         </div>
 
-        {{-- Wiring / Cable Guide --}}
+        {{-- Wireless pairing guide --}}
         @if(!empty($taman->device_connection))
         <div class="nx-guide-box mb-3">
             <h4 class="text-white mb-3" style="font-size:0.95rem; font-weight:700;">
-                <i class="bi bi-plug-fill text-mint me-2"></i>Panduan kabel
+                <i class="bi bi-wifi text-mint me-2"></i>Panduan pairing nirkabel
             </h4>
             <div class="row g-3">
                 <div class="col-md-4">
                     <div class="nx-sensor-spec-box">
-                        <div class="spec-icon"><i class="bi bi-laptop"></i></div>
+                        <div class="spec-icon"><i class="bi bi-rss-fill"></i></div>
                         <div class="spec-content">
-                            <strong>Port Komputer</strong>
-                            <span>{{ $taman->device_connection['computer_port'] ?? '-' }}</span>
+                            <strong>Target Hotspot</strong>
+                            <span>Wireless (WiFi) · {{ $taman->device_connection['wifi_ssid'] ?? ($taman->device_connection['computer_port'] ?? 'WiFi / Hotspot') }}</span>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="nx-sensor-spec-box">
-                        <div class="spec-icon"><i class="bi bi-hdd"></i></div>
+                        <div class="spec-icon"><i class="bi bi-router"></i></div>
                         <div class="spec-content">
-                            <strong>Port Device</strong>
-                            <span>{{ $taman->device_connection['device_port'] ?? '-' }}</span>
+                            <strong>Hostname</strong>
+                            <span>{{ $taman->device_connection['hostname'] ?? ($taman->device_connection['device_port'] ?? 'Kelompok-Nutrix') }}</span>
                         </div>
                     </div>
                 </div>
@@ -698,13 +689,13 @@
     </div>
 
     {{-- ═══════════════════════════════════════════════════════════
-         BAGIAN 6: USB HARDWARE METRICS
+         BAGIAN 6: WIRELESS SIGNAL & CLOUD METRICS
          ═══════════════════════════════════════════════════════════ --}}
     @if($isConnected)
     <div class="nx-glass-card mb-4 p-4">
         <div class="mb-3">
-            <span class="nx-badge-glow is-live mb-1"><i class="bi bi-speedometer2 me-1"></i> HARDWARE METRICS</span>
-            <h3 class="text-white mb-0" style="font-size:1.15rem; font-weight:700;">Spesifikasi Sinyal & Board</h3>
+            <span class="nx-badge-glow is-live mb-1"><i class="bi bi-speedometer2 me-1"></i> WIRELESS METRICS</span>
+            <h3 class="text-white mb-0" style="font-size:1.15rem; font-weight:700;">Spesifikasi Sinyal & Jaringan Cloud</h3>
         </div>
         <div class="row g-3 mb-4">
             <div class="col-md-3">
@@ -718,10 +709,10 @@
             </div>
             <div class="col-md-3">
                 <div class="nx-sensor-spec-box">
-                    <div class="spec-icon"><i class="bi bi-broadcast"></i></div>
+                    <div class="spec-icon"><i class="bi bi-rss-fill"></i></div>
                     <div class="spec-content">
-                        <strong>Baud rate</strong>
-                        <span>115200 bps</span>
+                        <strong>RSSI</strong>
+                        <span>-58 dBm</span>
                     </div>
                 </div>
             </div>
@@ -757,7 +748,7 @@
                 </div>
                 <div class="nx-g-step">
                     <span class="step-num">02</span>
-                    <p><i class="bi bi-check-circle-fill text-success me-1"></i> Port verified — Koneksi {{ $taman->device_connection['computer_port'] ?? 'USB' }} ↔ {{ $taman->device_connection['device_port'] ?? 'USB' }} stabil</p>
+                    <p><i class="bi bi-check-circle-fill text-success me-1"></i> Network verified — Koneksi WiFi / hotspot {{ $taman->device_connection['wifi_ssid'] ?? 'GG' }} aktif dan stabil</p>
                 </div>
                 <div class="nx-g-step">
                     <span class="step-num">03</span>
@@ -789,10 +780,10 @@
                         </div>
                         <div class="col-md-4">
                             <div class="nx-sensor-spec-box">
-                                <div class="spec-icon" style="background:rgba(14,165,233,0.15); color:#38bdf8;"><i class="bi bi-usb-symbol"></i></div>
+                                <div class="spec-icon" style="background:rgba(14,165,233,0.15); color:#38bdf8;"><i class="bi bi-wifi"></i></div>
                                 <div class="spec-content">
-                                    <strong>Port integrity</strong>
-                                    <span id="portIntegrity">OK — Stabil</span>
+                                    <strong>Link integrity</strong>
+                                    <span id="portIntegrity">OK — WiFi stabil</span>
                                 </div>
                             </div>
                         </div>
@@ -846,7 +837,7 @@
             </div>
         </div>
 
-        {{-- USB Event Stream --}}
+        {{-- Wireless Event Stream --}}
         <div class="nx-terminal">
             <div class="nx-terminal-top">
                 <div class="d-flex align-items-center gap-2">
@@ -854,13 +845,13 @@
                     <span class="term-dot yellow"></span>
                     <span class="term-dot green"></span>
                 </div>
-                <span class="term-title">USB event stream</span>
+                <span class="term-title">Wireless event stream</span>
                 <span class="term-chip">LIVE</span>
             </div>
             <div class="nx-terminal-screen" id="usbEventLog">
-                <div class="t-line"><span class="t-prompt">$</span> Monitoring USB events pada {{ $controllerName }}...</div>
+                <div class="t-line"><span class="t-prompt">$</span> Monitoring WiFi telemetry pada {{ $controllerName }}...</div>
                 <div class="t-line t-success"><span class="t-prompt">✓</span> Connected — perangkat {{ $sensorId ?? 'ESP32' }} terhubung.</div>
-                <div class="t-line"><span class="t-prompt">→</span> Baud: 115200 | Voltage: 3.3V | Status: Active</div>
+                <div class="t-line"><span class="t-prompt">→</span> RSSI: -58 dBm | Voltage: 3.3V | Status: Active</div>
             </div>
         </div>
     </div>
@@ -1228,7 +1219,6 @@ function applyConnectionState(connected) {
     const termBadge = document.getElementById('terminalStatusBadge');
     const topTx    = document.getElementById('topStatusText');
     const cloudSt  = document.getElementById('displayCloudStatus');
-    const relayBtn = document.getElementById('btnTriggerWaterManual');
 
     if (badge) { badge.textContent = connected ? 'ONLINE' : 'OFFLINE'; badge.className = `badge ${connected ? 'bg-success' : 'bg-secondary'} text-white`; }
     if (dot)   { dot.classList.toggle('dot-online', connected); }
@@ -1238,7 +1228,6 @@ function applyConnectionState(connected) {
     if (termBadge) { termBadge.textContent = connected ? 'Live' : 'Waiting'; termBadge.className = `badge ${connected ? 'bg-success' : 'bg-secondary'} text-white`; }
     if (topTx) topTx.textContent = connected ? 'SENSOR CONNECTED' : 'SENSOR OFFLINE';
     if (cloudSt) { cloudSt.textContent = connected ? 'Online' : 'Offline'; cloudSt.className = connected ? 'text-mint' : 'text-muted'; }
-    if (relayBtn) relayBtn.disabled = !connected;
 
     // Flow nodes
     ['flowNodeSensor','flowNodeEsp','flowNodeCloud','flowNodeBrain','flowNodeRelay'].forEach(id => {
@@ -1296,41 +1285,46 @@ function updateCards(t) {
     const sensors = meta.sensors || {};
     const sCap = sensors.capacitive_v2 || null;
     const sRes = sensors.resistive_hd38 || null;
+    const relayState = meta.actuator?.relay_state;
+    if (relayState === 'on' || relayState === 'off') {
+        setRelayStatus(relayState === 'on');
+    }
 
     if (sCap) {
-        setCard('val-cap-moisture', Number(sCap.moisture ?? 0).toFixed(1));
+        setCard('val-cap-moisture', sCap.moisture != null ? Number(sCap.moisture).toFixed(1) : '--');
         setCard('val-cap-adc', sCap.raw_adc ?? '--');
         setCard('val-cap-volt', sCap.voltage != null ? Number(sCap.voltage).toFixed(2) : '--');
     } else {
-        // Fallback jika single sensor atau data belum lengkap
-        setCard('val-cap-moisture', humV != null ? Number(humV).toFixed(1) : '--');
-        setCard('val-cap-adc', '3200');
-        setCard('val-cap-volt', '1.85');
+        setCard('val-cap-moisture', '--');
+        setCard('val-cap-adc', '--');
+        setCard('val-cap-volt', '--');
     }
 
     if (sRes) {
-        setCard('val-res-moisture', Number(sRes.moisture ?? 0).toFixed(1));
+        setCard('val-res-moisture', sRes.moisture != null ? Number(sRes.moisture).toFixed(1) : '--');
         setCard('val-res-adc', sRes.raw_adc ?? '--');
         setCard('val-res-volt', sRes.voltage != null ? Number(sRes.voltage).toFixed(2) : '--');
     } else {
-        setCard('val-res-moisture', humV != null ? Number(humV).toFixed(1) : '--');
-        setCard('val-res-adc', '3150');
-        setCard('val-res-volt', '1.90');
+        setCard('val-res-moisture', '--');
+        setCard('val-res-adc', '--');
+        setCard('val-res-volt', '--');
     }
 
     // Konsensus & Deviasi
     if (humV != null) {
         setCard('val-consensus-moisture', Number(humV).toFixed(1));
-        let dev = 0;
-        if (sCap && sRes) {
+        let dev = null;
+        if (sCap?.moisture != null && sRes?.moisture != null) {
             dev = Math.abs(Number(sCap.moisture ?? 0) - Number(sRes.moisture ?? 0));
         }
         const badgeDev = document.getElementById('badgeDeviation');
-        if (badgeDev) badgeDev.textContent = `Deviasi: ${dev.toFixed(1)}%`;
+        if (badgeDev) badgeDev.textContent = dev === null ? 'Deviasi: --' : `Deviasi: ${dev.toFixed(1)}%`;
 
         const statText = document.getElementById('consensusStatusText');
         if (statText) {
-            if (dev <= 15) {
+            if (dev === null) {
+                statText.textContent = 'Menunggu bacaan dari dua probe.';
+            } else if (dev <= 15) {
                 statText.innerHTML = '<span class="text-mint"><i class="bi bi-check-circle-fill me-1"></i> Data Stabil (Deviasi < 15%)</span>';
             } else {
                 statText.innerHTML = '<span class="text-warning"><i class="bi bi-exclamation-triangle-fill me-1"></i> Deviasi Tinggi (> 15% - periksa probe)</span>';
@@ -1340,7 +1334,7 @@ function updateCards(t) {
 
     // Update Health Score, Dial & Recommendation
     const health = t.health || {};
-    const score = health.score ?? t.health_score ?? (humV != null ? Math.round(Math.max(10, Math.min(100, humV * 1.2))) : null);
+    const score = health.score ?? t.health_score ?? null;
     const scoreEl = document.getElementById('aiHealthScore');
     const dialEl = document.getElementById('aiHealthDial');
     const statusEl = document.getElementById('aiHealthStatus');
@@ -1361,6 +1355,9 @@ function updateCards(t) {
         if (recEl && (t.decision?.recommendation || health.summary)) {
             recEl.innerHTML = `<i class="bi bi-stars text-mint me-1"></i><span>${t.decision?.recommendation || health.summary}</span>`;
         }
+    } else {
+        if (scoreEl) scoreEl.textContent = '--';
+        if (statusEl) statusEl.textContent = 'DATA BELUM CUKUP';
     }
 
     // Mini preview row
@@ -1369,26 +1366,24 @@ function updateCards(t) {
     
     const miniDev = document.getElementById('miniDeviation');
     if (miniDev) {
-        if (sCap && sRes) {
+        if (sCap?.moisture != null && sRes?.moisture != null) {
             const d = Math.abs(Number(sCap.moisture ?? 0) - Number(sRes.moisture ?? 0));
             miniDev.textContent = `Δ ${d.toFixed(1)}%`;
             miniDev.className = d <= 15 ? 'text-mint fs-5' : 'text-warning fs-5';
         } else {
-            miniDev.textContent = 'Stabil';
-            miniDev.className = 'text-mint fs-5';
+            miniDev.textContent = '--';
+            miniDev.className = 'text-muted fs-5';
         }
     }
 
     const miniRssi = document.getElementById('miniRssi');
     if (miniRssi) {
         const rssi = meta.wifi_rssi ?? t.wifi_rssi;
-        miniRssi.textContent = rssi ? `${rssi} dBm` : '-16 dBm';
+        miniRssi.textContent = rssi !== null && rssi !== undefined ? `${rssi} dBm` : '-- dBm';
     }
 
     // IP Address dan Device Info
-    if (meta.ip_address || t.ip_address) {
-        setCard('displayNodeIp', meta.ip_address || t.ip_address);
-    }
+    setCard('displayNodeIp', meta.ip_address || t.ip_address || '--');
 }
 
 function markFresh(source, lastSeen) {
@@ -1415,7 +1410,7 @@ async function loadLatestTelemetry(silent = false) {
         applyMetricVisibility();
         const data = await apiFetch(`/taman/${TAMAN.id}/telemetry/latest`);
 
-        const connected = data.available_sensors?.length > 0 || data.lifecycle === 'live' || data.lifecycle === 'stale';
+        const connected = data.lifecycle === 'live';
         applyConnectionState(connected);
 
         if (data.device_token) {
@@ -1436,13 +1431,6 @@ async function loadLatestTelemetry(silent = false) {
 
         if (!silent) {
             appendLog(`telemetry ok — lifecycle: ${data.lifecycle} — source: ${data.source}`, 'success');
-        }
-
-        // Auto detect relay trigger dari decision engine
-        const shouldWater = (data.metrics?.moisture?.value ?? data.moisture ?? 100) < 30;
-        if (shouldWater) {
-            setRelayStatus(true);
-            appendLog('⚡ kelembapan < 30% — relay ON otomatis dari Decision Engine', 'warn');
         }
 
     } catch (e) {
@@ -1478,27 +1466,6 @@ document.getElementById('btnRefreshTelemetry')?.addEventListener('click', () => 
     appendLog('manual refresh...');
     loadLatestTelemetry();
     showToast('Telemetri diperbarui.');
-});
-
-// ── Water Relay Button ─────────────────────────────────────
-document.getElementById('btnTriggerWaterManual')?.addEventListener('click', async () => {
-    if (!isConnected) return showToast('Sensor belum terhubung.', 'error');
-    try {
-        showToast('Mengirim perintah relay ke server...');
-        appendLog('manual water command — duration: 10s');
-        const res = await apiFetch(`/taman/${TAMAN.id}/actions/water`, 'POST', { duration_sec: 10 });
-        if (res.success) {
-            setRelayStatus(true);
-            appendLog('relay ON — keran terbuka (10 detik)', 'success');
-            pushFarmNotification('Keran air dibuka selama 10 detik.', 'bi-droplet-fill');
-            showToast('Keran berhasil dibuka!');
-            if (res.telemetry) updateCards(res.telemetry);
-            setTimeout(() => { setRelayStatus(false); appendLog('relay OFF — keran ditutup', 'info'); }, 10000);
-        }
-    } catch (err) {
-        showToast(err.message || 'Gagal mengirim perintah relay.', 'error');
-        appendLog(`relay error: ${err.message}`, 'error');
-    }
 });
 
 // ── Cek Status Hardware ESP32 (Zero Ghost Data) ───────────────
@@ -1547,63 +1514,6 @@ document.getElementById('btnResetSensor')?.addEventListener('click', async () =>
         }
     } catch (e) { showToast(e.message || 'Reset gagal.', 'error'); }
 });
-
-// ── Farm Action Modal (Pupuk / Siram) ─────────────────────
-const farmActionModal = document.getElementById('farmActionModal');
-let pendingAction = null;
-
-const closeFarmAction = () => {
-    farmActionModal?.classList.remove('active');
-    document.body.style.overflow = '';
-    pendingAction = null;
-};
-
-function openFarmAction(action) {
-    pendingAction = action;
-    document.getElementById('farmActionTitle').textContent = action.title;
-    document.getElementById('farmActionDescription').textContent = action.description;
-    farmActionModal?.classList.add('active');
-    document.body.style.overflow = 'hidden';
-}
-
-document.getElementById('btnWaterAction')?.addEventListener('click', () => openFarmAction({
-    endpoint: `/taman/${TAMAN.id}/actions/water`,
-    body: { duration_sec: 30 },
-    title: 'Konfirmasi penyiraman',
-    description: 'Mencatat penyiraman manual 30 detik ke riwayat taman dan menghitung efek pada telemetri.',
-    success: 'Penyiraman berhasil dicatat!',
-    icon: 'bi-droplet-fill',
-}));
-
-document.getElementById('btnFertilizeAction')?.addEventListener('click', () => openFarmAction({
-    endpoint: `/taman/${TAMAN.id}/actions/fertilize`,
-    body: { fertilizer_type: 'NPK', volume_ml: 200 },
-    title: 'Konfirmasi pemupukan',
-    description: 'Mencatat pemupukan NPK 200ml ke riwayat taman dan menyesuaikan nilai EC & pH.',
-    success: 'Pemupukan berhasil dicatat!',
-    icon: 'bi-flower2',
-}));
-
-document.getElementById('confirmFarmAction')?.addEventListener('click', async () => {
-    if (!pendingAction) return;
-    const action = pendingAction;
-    closeFarmAction();
-    showToast('Menyimpan aksi...');
-    appendLog(`${action.icon?.replace('bi-', '') || 'action'} — ${action.title}`);
-    try {
-        const data = await apiFetch(action.endpoint, 'POST', action.body);
-        if (data.success) {
-            if (data.telemetry) { updateCards(data.telemetry); markFresh('manual action'); }
-            pushFarmNotification(action.success, action.icon || 'bi-check-circle');
-            appendLog(`${action.title} berhasil`, 'success');
-            showToast(action.success);
-        }
-    } catch (e) { showToast(e.message || 'Aksi gagal.', 'error'); }
-});
-
-document.getElementById('closeFarmActionModal')?.addEventListener('click', closeFarmAction);
-document.getElementById('cancelFarmAction')?.addEventListener('click', closeFarmAction);
-farmActionModal?.addEventListener('click', e => { if (e.target === farmActionModal) closeFarmAction(); });
 
 // ── Activity Log Drawer ────────────────────────────────────
 document.getElementById('btnActivityLog')?.addEventListener('click', async () => {
@@ -1743,12 +1653,12 @@ document.getElementById('confirmConnectSensor')?.addEventListener('click', async
     appendLog(`Simpan Node ID: ${sensorId}`);
     try {
         const data = await apiFetch(`/taman/${TAMAN.id}/sensor/connect`, 'POST', { sensor_id: sensorId, board_type: boardType });
-        if (data.success || data.connected) {
+        if (data.success || data.configured) {
             setCard('displaySensorId', sensorId);
-            applyConnectionState(true);
-            appendLog(`Sensor Node ID terhubung: ${sensorId}`, 'success');
-            pushFarmNotification(`Sensor Node ID ${sensorId} disimpan.`, 'bi-link-45deg');
-            showToast('Node ID berhasil disimpan!');
+            applyConnectionState(data.is_live === true);
+            appendLog(data.is_live ? `ESP32 aktif: ${sensorId}` : `ID tersimpan; menunggu telemetry ESP32: ${sensorId}`, data.is_live ? 'success' : 'warn');
+            pushFarmNotification(data.is_live ? `ESP32 ${sensorId} sedang online.` : `ID ${sensorId} disimpan; menunggu telemetry pertama.`, 'bi-link-45deg');
+            showToast(data.is_live ? 'ESP32 sedang online.' : 'ID tersimpan. Menunggu ESP32 mengirim data.', data.is_live ? 'success' : 'info');
             setTimeout(() => window.location.reload(), 800);
         } else showToast('Gagal memasangkan sensor.', 'error');
     } catch (e) {
@@ -1761,7 +1671,6 @@ document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
         sensorConfigModal?.classList.remove('active');
         connectSensorModal?.classList.remove('active');
-        closeFarmAction();
         document.body.style.overflow = '';
     }
 });

@@ -61,15 +61,19 @@ class TelemetryController extends Controller
         $data = $latest?->only(['ph', 'moisture', 'temperature', 'ec']) ?? [];
         $analysis = $this->decisionEngine->evaluate($data, $taman->type, $taman->soil_type);
         $available = array_keys(array_filter($data, fn ($value) => $value !== null));
-        $isLive = $taman->last_seen_at && now()->diffInSeconds($taman->last_seen_at) <= 60;
+        $ageSeconds = $taman->last_seen_at?->diffInSeconds(now());
+        $isLive = $ageSeconds !== null && $ageSeconds <= 60;
+        $lifecycle = $ageSeconds === null
+            ? 'never_received'
+            : ($ageSeconds <= 60 ? 'live' : ($ageSeconds <= 600 ? 'stale' : 'offline'));
 
         return response()->json([
             'schema' => 1,
             'taman_id' => $taman->id,
             'recorded_at' => $latest?->recorded_at?->toISOString(),
             'source' => $latest?->sensor_source ?? $latest?->source ?? 'esp32_device',
-            'lifecycle' => $isLive ? 'live' : ($latest ? 'offline' : 'never_received'),
-            'connected' => (bool) $taman->sensor_connected,
+            'lifecycle' => $lifecycle,
+            'connected' => $isLive,
             'is_live' => $isLive,
             'sensor_id' => $taman->sensor_id,
             'device_token' => $taman->device_token,
@@ -268,16 +272,15 @@ class TelemetryController extends Controller
             ], 422);
         }
 
-        $taman->update([
-            'sensor_id' => $validated['sensor_id'],
-            'sensor_connected' => true,
-            'sensor_connected_at' => now(),
-            'last_seen_at' => now(),
-        ]);
+        $taman->update(['sensor_id' => $validated['sensor_id']]);
+        $ageSeconds = $taman->last_seen_at?->diffInSeconds(now());
+        $isLive = $ageSeconds !== null && $ageSeconds <= 60;
 
         return response()->json([
             'success' => true,
-            'connected' => true,
+            'configured' => true,
+            'connected' => $isLive,
+            'is_live' => $isLive,
             'sensor_id' => $taman->sensor_id,
             'board_type' => $taman->controller_type,
             'device_token' => $taman->device_token,
@@ -494,37 +497,72 @@ class TelemetryController extends Controller
             'sensor_id'    => ['nullable', 'string', 'max:64'],
             'device_name'  => ['nullable', 'string', 'max:64'],
             'wifi_rssi'    => ['nullable', 'integer'],
+            'wifi_ssid'    => ['nullable', 'string', 'max:64'],
+            'hostname'     => ['nullable', 'string', 'max:64'],
             'ip_address'   => ['nullable', 'string', 'max:45'],
             'moisture'     => ['required', 'numeric', 'min:0', 'max:100'],
+            'moisture_cap' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'moisture_res' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'raw_cap'      => ['nullable', 'integer', 'min:0', 'max:4095'],
+            'raw_res'      => ['nullable', 'integer', 'min:0', 'max:4095'],
+            'last_command_id' => ['nullable', 'uuid'],
+            'last_command_status' => ['nullable', 'in:executed,failed'],
+            'relay_state' => ['nullable', 'in:on,off'],
             'temperature'  => ['nullable', 'numeric', 'min:-10', 'max:60'],
             'ph'           => ['nullable', 'numeric', 'min:0', 'max:14'],
             'ec'           => ['nullable', 'numeric', 'min:0', 'max:10'],
             'sensors'      => ['nullable', 'array'],
+            'sensors.capacitive_v2' => ['nullable', 'array'],
+            'sensors.capacitive_v2.gpio' => ['nullable', 'integer', 'min:0', 'max:39'],
+            'sensors.capacitive_v2.moisture' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'sensors.capacitive_v2.raw_adc' => ['nullable', 'integer', 'min:0', 'max:4095'],
+            'sensors.capacitive_v2.voltage' => ['nullable', 'numeric', 'min:0', 'max:5'],
+            'sensors.resistive_hd38' => ['nullable', 'array'],
+            'sensors.resistive_hd38.gpio' => ['nullable', 'integer', 'min:0', 'max:39'],
+            'sensors.resistive_hd38.moisture' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'sensors.resistive_hd38.raw_adc' => ['nullable', 'integer', 'min:0', 'max:4095'],
+            'sensors.resistive_hd38.voltage' => ['nullable', 'numeric', 'min:0', 'max:5'],
         ]);
 
-        $taman = null;
-
-        // 1. Coba cari via taman_id jika ada
-        if (! empty($validated['taman_id'])) {
-            $taman = Taman::find($validated['taman_id']);
-        }
-
-        // 2. Coba verifikasi via device_token
-        if (! $taman && ! empty($validated['device_token'])) {
-            $taman = Taman::where('device_token', $validated['device_token'])->first();
-        }
-
-        // 3. Fallback jika demo token atau belum terasosiasi
-        if (! $taman) {
-            $taman = Taman::first();
-        }
-
-        if (! $taman) {
+        $deviceToken = $validated['device_token'] ?? $request->header('X-Device-Token');
+        if (! is_string($deviceToken) || $deviceToken === '' || strlen($deviceToken) > 64) {
             return response()->json([
                 'status' => 'error',
-                'code' => 'TARGET_NOT_FOUND',
-                'message' => 'Tidak ada taman yang terdaftar di sistem.',
-            ], 422);
+                'code' => 'DEVICE_TOKEN_REQUIRED',
+                'message' => 'Token pairing perangkat wajib disertakan.',
+            ], 401);
+        }
+
+        // taman_id may be sent by older firmware, but only the pairing token selects a farm.
+        $taman = Taman::where('device_token', $deviceToken)->first();
+        if (! $taman || ($taman->device_token_expires_at && $taman->device_token_expires_at->isPast())) {
+            return response()->json([
+                'status' => 'error',
+                'code' => 'INVALID_DEVICE_TOKEN',
+                'message' => 'Token pairing tidak valid atau sudah kedaluwarsa.',
+            ], 401);
+        }
+
+        if (! empty($validated['last_command_id']) && ! empty($validated['last_command_status'])) {
+            $pendingActivity = $taman->activities()
+                ->where('type', 'water')
+                ->latest()
+                ->limit(20)
+                ->get()
+                ->first(fn (FarmActivity $activity) => ($activity->metadata['command_id'] ?? null) === $validated['last_command_id']);
+
+            if ($pendingActivity && $pendingActivity->status === 'info') {
+                $activityMetadata = $pendingActivity->metadata ?? [];
+                $activityMetadata['acknowledged_at'] = now()->toISOString();
+                $activityMetadata['relay_state'] = $validated['relay_state'] ?? null;
+                $pendingActivity->update([
+                    'status' => $validated['last_command_status'] === 'executed' ? 'success' : 'failed',
+                    'detail' => $validated['last_command_status'] === 'executed'
+                        ? 'ESP32 mengonfirmasi perintah relay telah dijalankan.'
+                        : 'ESP32 melaporkan perintah relay gagal dijalankan.',
+                    'metadata' => $activityMetadata,
+                ]);
+            }
         }
 
         // Update status sensor taman menjadi aktif/online & catat heartbeat
@@ -547,11 +585,40 @@ class TelemetryController extends Controller
         // Otak Sistem: Hitung analisa kesehatan via TelemetryDecisionEngine
         $analysis = $this->decisionEngine->evaluate($telemetryData, $taman->type, $taman->soil_type);
 
+        $sensorDiagnostics = $validated['sensors'] ?? [];
+        $capacitive = array_filter([
+            'moisture' => $validated['moisture_cap'] ?? data_get($sensorDiagnostics, 'capacitive_v2.moisture'),
+            'raw_adc' => $validated['raw_cap'] ?? data_get($sensorDiagnostics, 'capacitive_v2.raw_adc'),
+        ], fn ($value) => $value !== null);
+        $resistive = array_filter([
+            'moisture' => $validated['moisture_res'] ?? data_get($sensorDiagnostics, 'resistive_hd38.moisture'),
+            'raw_adc' => $validated['raw_res'] ?? data_get($sensorDiagnostics, 'resistive_hd38.raw_adc'),
+        ], fn ($value) => $value !== null);
+        if ($capacitive !== []) {
+            $sensorDiagnostics['capacitive_v2'] = array_replace(
+                data_get($sensorDiagnostics, 'capacitive_v2', []),
+                $capacitive
+            );
+        }
+        if ($resistive !== []) {
+            $sensorDiagnostics['resistive_hd38'] = array_replace(
+                data_get($sensorDiagnostics, 'resistive_hd38', []),
+                $resistive
+            );
+        }
+
         $metadata = [
             'wifi_rssi' => $validated['wifi_rssi'] ?? null,
             'ip_address' => $validated['ip_address'] ?? null,
             'device_name' => $validated['device_name'] ?? 'Kelompok Nutrix',
-            'sensors' => $validated['sensors'] ?? null,
+            'wifi_ssid' => $validated['wifi_ssid'] ?? null,
+            'hostname' => $validated['hostname'] ?? null,
+            'sensors' => $sensorDiagnostics ?: null,
+            'actuator' => array_filter([
+                'relay_state' => $validated['relay_state'] ?? null,
+                'last_command_id' => $validated['last_command_id'] ?? null,
+                'last_command_status' => $validated['last_command_status'] ?? null,
+            ], fn ($value) => $value !== null) ?: null,
         ];
 
         $record = SensorTelemetry::create([
@@ -569,19 +636,24 @@ class TelemetryController extends Controller
             'recorded_at' => now(),
         ]);
 
-        // Keputusan otomatis: jika kelembaban tanah di bawah 30% -> Buka keran (Relay ON)
-        $shouldWater = $telemetryData['moisture'] < 30.0;
-        $waterDuration = $shouldWater ? 10 : 0; // 10 detik
+        $threshold = (float) config('nutrix_iot.auto_water_below', 30);
+        $cooldownMinutes = max(1, (int) config('nutrix_iot.auto_water_cooldown_minutes', 30));
+        $waterDuration = max(1, min(10, (int) config('nutrix_iot.auto_water_duration_sec', 10)));
+        $cooldownActive = $taman->last_auto_watered_at
+            && $taman->last_auto_watered_at->greaterThan(now()->subMinutes($cooldownMinutes));
+        $shouldWater = $telemetryData['moisture'] < $threshold && ! $cooldownActive;
+        $commandId = $shouldWater ? (string) Str::uuid() : null;
 
         if ($shouldWater) {
+            $taman->update(['last_auto_watered_at' => now()]);
             FarmActivity::create([
                 'taman_id' => $taman->id,
                 'user_id'  => $taman->user_id,
                 'type'     => 'water',
-                'title'    => 'Penyiraman Otomatis (Relay Aktif)',
-                'detail'   => "Kelembaban {$telemetryData['moisture']}% (kritis). Keran dibuka selama {$waterDuration} detik.",
-                'status'   => 'success',
-                'metadata' => ['duration_sec' => $waterDuration, 'trigger' => 'auto_decision_engine'],
+                'title'    => 'Perintah penyiraman otomatis dikirim',
+                'detail'   => "Kelembapan {$telemetryData['moisture']}% di bawah ambang {$threshold}%. Menunggu konfirmasi ESP32.",
+                'status'   => 'info',
+                'metadata' => ['command_id' => $commandId, 'duration_sec' => $waterDuration, 'trigger' => 'auto_decision_engine'],
             ]);
         }
 
@@ -594,6 +666,7 @@ class TelemetryController extends Controller
             'health_status' => $this->healthStatus($analysis['health']['score']),
             'commands' => [
                 'water_valve' => $shouldWater ? 'ON' : 'OFF',
+                'command_id' => $commandId,
                 'duration_sec' => $waterDuration,
                 'buzzer_alert' => $shouldWater,
             ],
