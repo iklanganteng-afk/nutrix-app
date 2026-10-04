@@ -36,9 +36,9 @@ return [
     ],
 
     'google' => [
-        'client_id' => env('GOOGLE_CLIENT_ID'),
-        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
-        'refresh_token' => env('GOOGLE_REFRESH_TOKEN'),
+        'client_id' => env('GOOGLE_CLIENT_ID', env('GMAIL_CLIENT_ID')),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET', env('GMAIL_CLIENT_SECRET')),
+        'refresh_token' => env('GOOGLE_REFRESH_TOKEN', env('GMAIL_REFRESH_TOKEN')),
     ],
 
 ];
