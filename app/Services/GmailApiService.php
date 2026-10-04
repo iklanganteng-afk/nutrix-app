@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -32,11 +33,22 @@ class GmailApiService
 
     /**
      * Dapatkan access token baru menggunakan refresh token via HTTPS (Port 443).
+     * Di-cache selama 50 menit (Google access token berumur 60 menit) sehingga
+     * tidak memakan waktu HTTP round-trip pada setiap kali kirim OTP.
      */
-    public function getAccessToken(): ?string
+    public function getAccessToken(bool $forceRefresh = false): ?string
     {
+        $cacheKey = 'gmail_api_access_token_' . md5($this->clientId);
+
+        if (!$forceRefresh) {
+            $cachedToken = Cache::get($cacheKey);
+            if (!empty($cachedToken) && is_string($cachedToken)) {
+                return $cachedToken;
+            }
+        }
+
         try {
-            $response = Http::asForm()->timeout(10)->post('https://oauth2.googleapis.com/token', [
+            $response = Http::asForm()->timeout(8)->post('https://oauth2.googleapis.com/token', [
                 'client_id' => $this->clientId,
                 'client_secret' => $this->clientSecret,
                 'refresh_token' => $this->refreshToken,
@@ -44,7 +56,11 @@ class GmailApiService
             ]);
 
             if ($response->successful()) {
-                return $response->json('access_token');
+                $token = $response->json('access_token');
+                $expiresIn = (int) ($response->json('expires_in') ?? 3600);
+                $ttl = max(300, $expiresIn - 300);
+                Cache::put($cacheKey, $token, $ttl);
+                return $token;
             }
 
             Log::error('Gmail API Token Refresh Failed: ' . $response->body());
@@ -66,6 +82,14 @@ class GmailApiService
             return false;
         }
 
+        return $this->dispatchRawMessage($accessToken, $toEmail, $subject, $htmlBody, true);
+    }
+
+    /**
+     * Internal helper untuk dispatch MIME message ke Gmail REST endpoint dengan dukungan retry jika token expired.
+     */
+    protected function dispatchRawMessage(string $accessToken, string $toEmail, string $subject, string $htmlBody, bool $canRetry = true): bool
+    {
         try {
             // Susun format RFC 2822 MIME Message
             $boundary = uniqid('np', true);
@@ -92,7 +116,7 @@ class GmailApiService
             $encodedMessage = rtrim(strtr(base64_encode($rawMessage), '+/', '-_'), '=');
 
             $sendResponse = Http::withToken($accessToken)
-                ->timeout(10)
+                ->timeout(8)
                 ->post('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', [
                     'raw' => $encodedMessage,
                 ]);
@@ -100,6 +124,15 @@ class GmailApiService
             if ($sendResponse->successful()) {
                 Log::info("Email OTP berhasil dikirim via Gmail API (HTTPS) ke: {$toEmail}");
                 return true;
+            }
+
+            // Jika token tidak valid / kedaluwarsa (401), paksa refresh token dan coba sekali lagi
+            if ($sendResponse->status() === 401 && $canRetry) {
+                Log::warning("Gmail API merespons 401, mencoba refresh token dan mengirim ulang...");
+                $freshToken = $this->getAccessToken(forceRefresh: true);
+                if ($freshToken) {
+                    return $this->dispatchRawMessage($freshToken, $toEmail, $subject, $htmlBody, false);
+                }
             }
 
             Log::error('Gmail API Send Failed: ' . $sendResponse->body());

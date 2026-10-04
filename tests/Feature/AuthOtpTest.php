@@ -158,7 +158,7 @@ class AuthOtpTest extends TestCase
         $otpRecord = EmailOtp::firstOrFail();
         Mail::assertSent(\App\Mail\OtpVerificationMail::class, function ($mail) use ($otpRecord) {
             $this->assertNotSame($mail->otp, $otpRecord->otp);
-            $this->assertTrue(Hash::check($mail->otp, $otpRecord->otp));
+            $this->assertTrue($otpRecord->matchesOtp($mail->otp));
 
             return true;
         });

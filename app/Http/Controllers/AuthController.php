@@ -47,7 +47,7 @@ class AuthController extends Controller
         // Simpan ke database dengan expired tepat 2 menit (120 detik)
         $otpRecord = EmailOtp::create([
             'email' => $validated['email'],
-            'otp' => Hash::make($otpCode),
+            'otp' => EmailOtp::hashOtp($otpCode),
             'action' => 'register',
             'payload' => [
                 'name' => $validated['name'],
@@ -195,7 +195,7 @@ class AuthController extends Controller
         // Simpan ke database dengan expired tepat 2 menit
         $otpRecord = EmailOtp::create([
             'email' => $user->email,
-            'otp' => Hash::make($otpCode),
+            'otp' => EmailOtp::hashOtp($otpCode),
             'action' => 'login',
             'expires_at' => now()->addMinutes(2),
             'failed_attempts' => 0,
@@ -333,7 +333,7 @@ class AuthController extends Controller
         $otpCode = sprintf('%06d', random_int(100000, 999999));
 
         $existing->update([
-            'otp' => Hash::make($otpCode),
+            'otp' => EmailOtp::hashOtp($otpCode),
             'expires_at' => now()->addMinutes(2),
             'failed_attempts' => 0,
         ]);

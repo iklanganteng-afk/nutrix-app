@@ -23,6 +23,14 @@ class EmailOtp extends Model
     ];
 
     /**
+     * Hash OTP dengan HMAC-SHA256 untuk performa instan (<0.1ms) dan keamanan tinggi.
+     */
+    public static function hashOtp(string $otp): string
+    {
+        return hash_hmac('sha256', $otp, (string) config('app.key', 'nutrix_secret_otp_fallback'));
+    }
+
+    /**
      * Memeriksa apakah OTP masih berlaku (belum melewati batas 2 menit).
      */
     public function isValid(): bool
@@ -31,7 +39,7 @@ class EmailOtp extends Model
     }
 
     /**
-     * Verifikasi OTP baik yang sudah di-hash maupun legacy plaintext.
+     * Verifikasi OTP baik yang di-hash dengan HMAC-SHA256, bcrypt, maupun legacy plaintext.
      */
     public function matchesOtp(string $otp): bool
     {
@@ -39,10 +47,18 @@ class EmailOtp extends Model
             return false;
         }
 
+        // 1. Dukungan bcrypt / Argon2 (legacy)
         if (Hash::isHashed($this->otp)) {
             return Hash::check($otp, $this->otp);
         }
 
+        // 2. Dukungan HMAC-SHA256 (64 karakter heksadesimal, super cepat)
+        if (strlen($this->otp) === 64 && ctype_xdigit($this->otp)) {
+            $expected = self::hashOtp($otp);
+            return hash_equals($this->otp, $expected);
+        }
+
+        // 3. Fallback plaintext (misal data test legacy)
         return hash_equals((string) $this->otp, (string) $otp);
     }
 }

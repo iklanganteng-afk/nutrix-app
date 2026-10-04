@@ -3534,15 +3534,17 @@
 
             if (res.ok && data.status === 'success') {
 
+                wCurrentFlow = 'signin';
+
                 document.getElementById('w-otpEmail').textContent = email;
 
-                document.getElementById('w-otpTitle').textContent = 'Verifikasi Sign In';
-
-                                document.getElementById('w-otpTitle').textContent = `${window.nutrixText('auth-email-verified')} ${window.nutrixText('ui-sign-in')}`;
+                document.getElementById('w-otpTitle').textContent = `${window.nutrixText('auth-email-verified')} ${window.nutrixText('ui-sign-in')}`;
 
                 wShowForm('otp');
 
                 wStartTimer();
+
+                setTimeout(() => document.getElementById('w-otpCode')?.focus(), 150);
 
             } else {
 
@@ -3596,15 +3598,17 @@
 
             if (res.ok && data.status === 'success') {
 
+                wCurrentFlow = 'signup';
+
                 document.getElementById('w-otpEmail').textContent = email;
 
                 document.getElementById('w-otpTitle').textContent = `${window.nutrixText('auth-email-verified')} ${window.nutrixText('ui-sign-up')}`;
 
-                wCurrentFlow = 'signup';
-
                 wShowForm('otp');
 
                 wStartTimer();
+
+                setTimeout(() => document.getElementById('w-otpCode')?.focus(), 150);
 
             } else {
 
@@ -3617,6 +3621,80 @@
         finally { wSetLoading('w-btnSignUp', false); }
 
     });
+
+
+
+    // Enter key submit untuk Sign In & Sign Up
+
+    ['w-signinEmail', 'w-signinPassword'].forEach(id => {
+
+        document.getElementById(id)?.addEventListener('keydown', (e) => {
+
+            if (e.key === 'Enter') {
+
+                e.preventDefault();
+
+                document.getElementById('w-btnSignIn')?.click();
+
+            }
+
+        });
+
+    });
+
+
+
+    ['w-signupName', 'w-signupEmail', 'w-signupPassword', 'w-signupPasswordConfirm'].forEach(id => {
+
+        document.getElementById(id)?.addEventListener('keydown', (e) => {
+
+            if (e.key === 'Enter') {
+
+                e.preventDefault();
+
+                document.getElementById('w-btnSignUp')?.click();
+
+            }
+
+        });
+
+    });
+
+
+
+    // Otomatis verifikasi saat 6 digit OTP terisi
+
+    const wOtpInput = document.getElementById('w-otpCode');
+
+    if (wOtpInput) {
+
+        wOtpInput.addEventListener('input', (e) => {
+
+            e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6);
+
+            if (e.target.value.length === 6) {
+
+                const btn = document.getElementById('w-btnVerifyOtp');
+
+                if (btn && !btn.disabled) btn.click();
+
+            }
+
+        });
+
+        wOtpInput.addEventListener('keydown', (e) => {
+
+            if (e.key === 'Enter') {
+
+                e.preventDefault();
+
+                document.getElementById('w-btnVerifyOtp')?.click();
+
+            }
+
+        });
+
+    }
 
 
 

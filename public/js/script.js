@@ -986,6 +986,41 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
+    // Enter key submit untuk Sign In & Sign Up
+    ['signinEmail', 'signinPassword'].forEach(id => {
+        document.getElementById(id)?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                btnSignIn?.click();
+            }
+        });
+    });
+
+    ['signupName', 'signupEmail', 'signupPassword', 'signupPasswordConfirm'].forEach(id => {
+        document.getElementById(id)?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                btnSignUp?.click();
+            }
+        });
+    });
+
+    // Otomatis verifikasi saat 6 digit OTP terisi
+    if (inputOtpCode) {
+        inputOtpCode.addEventListener('input', (e) => {
+            e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6);
+            if (e.target.value.length === 6 && btnVerifyOtp && !btnVerifyOtp.disabled) {
+                btnVerifyOtp.click();
+            }
+        });
+        inputOtpCode.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                btnVerifyOtp?.click();
+            }
+        });
+    }
+
     // ================= STEP 2: VERIFIKASI KODE OTP 2 MENIT =================
     if (btnVerifyOtp) {
         btnVerifyOtp.addEventListener('click', async () => {

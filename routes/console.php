@@ -3,6 +3,11 @@
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Schedule;
+
+Schedule::call(function () {
+    \App\Models\EmailOtp::where('expires_at', '<', now()->subHours(1))->delete();
+})->hourly()->name('cleanup-expired-email-otps');
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
