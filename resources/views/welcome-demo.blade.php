@@ -1900,10 +1900,15 @@
         try {
             const res = await fetch('/auth/login/request-otp', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+                headers: { 
+                    'Content-Type': 'application/json', 
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content 
+                },
                 body: JSON.stringify({ email, password })
             });
-            const data = await res.json();
+            let data = {};
+            try { data = await res.json(); } catch { data = {}; }
             if (res.ok && data.status === 'success') {
                 wCurrentFlow = 'signin';
                 document.getElementById('w-otpEmail').textContent = email;
@@ -1912,9 +1917,10 @@
                 wStartTimer();
                 setTimeout(() => document.getElementById('w-otpCode')?.focus(), 150);
             } else {
-                wShowError(data.message || 'Gagal mengirim OTP.');
+                const errorMsg = data.errors ? Object.values(data.errors).flat().join('<br>') : (data.message || 'Akun tidak ditemukan atau password salah. Pastikan Anda telah Sign Up.');
+                wShowError(errorMsg);
             }
-        } catch { wShowError('Terjadi kesalahan jaringan.'); }
+        } catch { wShowError('Terjadi gangguan koneksi. Silakan coba lagi.'); }
         finally { wSetLoading('w-btnSignIn', false); }
     });
 
@@ -1932,10 +1938,15 @@
         try {
             const res = await fetch('/auth/register/request-otp', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+                headers: { 
+                    'Content-Type': 'application/json', 
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content 
+                },
                 body: JSON.stringify({ name, email, password, password_confirmation: passwordConfirmation })
             });
-            const data = await res.json();
+            let data = {};
+            try { data = await res.json(); } catch { data = {}; }
             if (res.ok && data.status === 'success') {
                 wCurrentFlow = 'signup';
                 document.getElementById('w-otpEmail').textContent = email;
@@ -1944,9 +1955,10 @@
                 wStartTimer();
                 setTimeout(() => document.getElementById('w-otpCode')?.focus(), 150);
             } else {
-                wShowError(data.message || 'Gagal mendaftar.');
+                const errorMsg = data.errors ? Object.values(data.errors).flat().join('<br>') : (data.message || 'Gagal mendaftar. Silakan periksa kembali data Anda.');
+                wShowError(errorMsg);
             }
-        } catch { wShowError('Terjadi kesalahan jaringan.'); }
+        } catch { wShowError('Terjadi gangguan koneksi. Silakan coba lagi.'); }
         finally { wSetLoading('w-btnSignUp', false); }
     });
 
@@ -1998,17 +2010,23 @@
         try {
             const res = await fetch(endpoint, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+                headers: { 
+                    'Content-Type': 'application/json', 
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content 
+                },
                 body: JSON.stringify({ email, otp: code })
             });
-            const data = await res.json();
+            let data = {};
+            try { data = await res.json(); } catch { data = {}; }
             if (res.ok && data.status === 'success') {
                 wStopTimer();
                 window.location.href = data.redirect || '/landingpage';
             } else {
-                wShowError(data.message || 'Kode OTP salah atau sudah kedaluwarsa.');
+                const errorMsg = data.errors ? Object.values(data.errors).flat().join('<br>') : (data.message || 'Kode OTP salah atau sudah kedaluwarsa.');
+                wShowError(errorMsg);
             }
-        } catch { wShowError('Terjadi kesalahan jaringan.'); }
+        } catch { wShowError('Terjadi gangguan koneksi. Silakan coba lagi.'); }
         finally { wSetLoading('w-btnVerifyOtp', false); }
     });
 
