@@ -99,7 +99,12 @@ class TamanController extends Controller
         $latest = $taman->latestHardwareTelemetry;
         $telemetries = $taman->hardwareTelemetries()->limit(20)->get();
 
-        return view('taman.show', compact('taman', 'latest', 'telemetries'));
+        $firmwarePath = base_path('iot_firmware/nutrix_esp32_firmware/nutrix_esp32_firmware.ino');
+        $firmwareCode = \Illuminate\Support\Facades\File::exists($firmwarePath)
+            ? \Illuminate\Support\Facades\File::get($firmwarePath)
+            : '';
+
+        return view('taman.show', compact('taman', 'latest', 'telemetries', 'firmwareCode'));
     }
 
     // PATCH /taman/{taman} -> edit taman

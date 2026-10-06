@@ -125,15 +125,50 @@
                 <div>
                     <span class="badge bg-mint text-dark fw-bold mb-1"><i class="bi bi-key-fill me-1"></i> TOKEN PAIRING ESP32 WIRELESS</span>
                     <h5 class="text-white mb-0 fw-bold">{{ $isConnected ? 'Node ESP32 Terhubung dengan Token Ini' : 'Token Siap Digunakan untuk ESP32' }}</h5>
-                    <small class="text-muted">{{ $isConnected ? 'ESP32 sedang mengirim telemetri streaming menggunakan token ini.' : 'Salin token ini dan berikan ke asisten atau tempel di firmware ESP32.' }}</small>
+                    <small class="text-muted">{{ $isConnected ? 'ESP32 sedang mengirim telemetri streaming menggunakan token ini.' : 'Salin token ini untuk portal WiFi ESP32, atau langsung unduh/salin kode firmware di bawah.' }}</small>
                 </div>
-                <div class="d-flex align-items-center gap-2">
+                <div class="d-flex align-items-center flex-wrap gap-2">
                     <span class="px-3 py-2 rounded bg-black border border-mint text-mint fw-bold font-monospace fs-5">
                         {{ $activeToken }}
                     </span>
                     <button type="button" class="btn btn-outline-mint" onclick="navigator.clipboard.writeText('{{ $activeToken }}'); alert('Token berhasil disalin: {{ $activeToken }}');">
                         <i class="bi bi-clipboard me-1"></i> Salin Token
                     </button>
+                    <button type="button" class="btn btn-sm btn-mint text-dark fw-bold" onclick="toggleFirmwarePreview()">
+                        <i class="bi bi-code-slash me-1"></i> <span id="btnFirmwareToggleText">Lihat Kode Firmware</span>
+                    </button>
+                </div>
+            </div>
+
+            {{-- Collapsible Firmware Code & Download Panel --}}
+            <div id="firmwareCodePanel" class="mt-3 pt-3 border-top border-success border-opacity-25" style="display: none;">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                    <div>
+                        <strong class="text-white d-block" style="font-size:0.92rem;">
+                            <i class="bi bi-file-earmark-code text-mint me-1"></i> Source Code Firmware ESP32 (Ready-to-Flash)
+                        </strong>
+                        <small class="text-muted">Kode Arduino (.ino) sudah diselaraskan dengan Solenoid Valve NC (GPIO 2) & Dual Sensor (D34/D35).</small>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-mint" onclick="copyFirmwareCode()">
+                            <i class="bi bi-clipboard-check me-1"></i> Salin Semua Kode
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-light" onclick="downloadFirmwareFile('ino')">
+                            <i class="bi bi-download me-1"></i> Unduh .INO
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-info" onclick="downloadFirmwareFile('md')">
+                            <i class="bi bi-markdown me-1"></i> Unduh .MD
+                        </button>
+                    </div>
+                </div>
+
+                <div class="position-relative mt-2">
+                    <pre id="firmwareCodeBlock" class="p-3 rounded text-light font-monospace small mb-0" 
+                         style="background: #0b1210; border: 1px solid rgba(16,185,129,0.3); max-height: 340px; overflow-y: auto; font-size: 0.8rem; line-height: 1.45; white-space: pre;">{{ $firmwareCode ?? '' }}</pre>
+                </div>
+                <div class="mt-2 d-flex justify-content-between align-items-center text-muted small" style="font-size: 0.76rem;">
+                    <span><i class="bi bi-check-circle-fill text-mint me-1"></i> Auto-Pairing Ready: Anda bisa langsung flash via Arduino IDE tanpa perlu ubah kode.</span>
+                    <span class="text-secondary">Path: <code>iot_firmware/nutrix_esp32_firmware/nutrix_esp32_firmware.ino</code></span>
                 </div>
             </div>
         </div>
@@ -805,13 +840,27 @@
         {{-- Step 2: Step-by-step instructions --}}
         <div class="alert-iot mb-3" style="font-size: 0.82rem; line-height: 1.45;">
             <strong class="text-white d-block mb-1"><i class="bi bi-terminal-split text-mint me-1"></i> Alur Pairing Fisik ESP32:</strong>
-            <ol class="mb-0 ps-3 text-secondary">
+            <ol class="mb-2 ps-3 text-secondary">
                 <li class="mb-1">Colokkan ESP32 ke adaptor daya 5V / USB.</li>
                 <li class="mb-1">Buka WiFi HP, sambungkan ke WiFi Access Point: <code class="text-mint">NUTRIX-ESP32-PAIR</code></li>
                 <li class="mb-1">Browser otomatis membuka form konfigurasi WiFi (Captive Portal).</li>
                 <li class="mb-1">Pilih WiFi rumah/hotspot Anda, lalu <strong>tempel (paste) Token di atas</strong> pada kolom <em>Device Pairing Token</em>.</li>
                 <li>Simpan. ESP32 otomatis streaming telemetri riil & status di dashboard ini langsung LIVE!</li>
             </ol>
+            <div class="pt-2 border-top border-secondary border-opacity-25 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <span class="text-white small fw-semibold"><i class="bi bi-cpu me-1 text-mint"></i> Butuh kode sketch ESP32?</span>
+                <div class="d-flex gap-1">
+                    <button type="button" class="btn btn-sm btn-outline-mint py-1 px-2" style="font-size:0.75rem;" onclick="copyFirmwareCode()">
+                        <i class="bi bi-clipboard me-1"></i> Salin Kode
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-light py-1 px-2" style="font-size:0.75rem;" onclick="downloadFirmwareFile('ino')">
+                        <i class="bi bi-download me-1"></i> Unduh .INO
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-info py-1 px-2" style="font-size:0.75rem;" onclick="downloadFirmwareFile('md')">
+                        <i class="bi bi-markdown me-1"></i> .MD
+                    </button>
+                </div>
+            </div>
         </div>
 
         {{-- Fallback / Manual Node ID --}}
@@ -848,6 +897,66 @@ const CSRF = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
 let isConnected = {{ $isConnected ? 'true' : 'false' }};
 let telemetryInterval = null;
 window.NUTRIX_TAMAN = TAMAN;
+
+// ── Firmware Code Helpers ─────────────────────────────────
+const RAW_FIRMWARE_CODE = @json($firmwareCode ?? '');
+
+function toggleFirmwarePreview() {
+    const panel = document.getElementById('firmwareCodePanel');
+    const toggleBtn = document.getElementById('btnFirmwareToggleText');
+    if (!panel) return;
+    const isHidden = panel.style.display === 'none' || panel.style.display === '';
+    panel.style.display = isHidden ? 'block' : 'none';
+    if (toggleBtn) {
+        toggleBtn.textContent = isHidden ? 'Tutup Kode Firmware' : 'Lihat Kode Firmware';
+    }
+}
+
+function copyFirmwareCode() {
+    const code = RAW_FIRMWARE_CODE || document.getElementById('firmwareCodeBlock')?.textContent || '';
+    if (!code) {
+        alert('Kode firmware belum tersedia.');
+        return;
+    }
+    navigator.clipboard.writeText(code).then(() => {
+        alert('✅ Kode firmware ESP32 berhasil disalin ke clipboard! Siap di-paste ke Arduino IDE.');
+    }).catch(() => {
+        const textarea = document.createElement('textarea');
+        textarea.value = code;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        alert('✅ Kode firmware ESP32 berhasil disalin ke clipboard!');
+    });
+}
+
+function downloadFirmwareFile(format = 'ino') {
+    const code = RAW_FIRMWARE_CODE || document.getElementById('firmwareCodeBlock')?.textContent || '';
+    if (!code) {
+        alert('Kode firmware belum tersedia.');
+        return;
+    }
+
+    let filename = 'nutrix_esp32_firmware.ino';
+    let mimeType = 'text/plain';
+    let fileContent = code;
+
+    if (format === 'md') {
+        filename = 'NUTRIX_ESP32_FIRMWARE.md';
+        fileContent = `# Sistem IoT Nutrix — Firmware ESP32\n\nTanggal Unduh: ${new Date().toISOString()}\nTarget Board: DOIT ESP32 DEVKIT V1\nTarget Pinout: \n- Capacitive Soil Sensor V2.0: GPIO 34 (Shield D34)\n- Resistive Soil Sensor HD-38: GPIO 35 (Shield D35)\n- Solenoid Valve NC AC 220V (Relay Songle): GPIO 2 (Shield D2)\n- Buzzer: GPIO 27 (Shield D27)\n\n\`\`\`cpp\n${code}\n\`\`\`\n`;
+    }
+
+    const blob = new Blob([fileContent], { type: `${mimeType};charset=utf-8` });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
 
 // ── Utility ──────────────────────────────────────────────
 function apiFetch(path, method = 'GET', body = null) {
