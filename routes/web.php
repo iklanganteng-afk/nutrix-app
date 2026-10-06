@@ -91,3 +91,83 @@ Route::post('/taman/{taman}/actions/water', [\App\Http\Controllers\Api\Telemetry
 Route::post('/taman/{taman}/actions/fertilize', [\App\Http\Controllers\Api\TelemetryController::class, 'fertilize'])->name('taman.actions.fertilize');
 Route::get('/taman/{taman}/activities', [\App\Http\Controllers\Api\TelemetryController::class, 'activities'])->name('taman.activities');
 Route::get('/taman/{taman}/export.csv', [\App\Http\Controllers\Api\TelemetryController::class, 'exportCsv'])->name('taman.export.csv');
+
+// ============================================================
+// 🔧 DEBUG SEMENTARA — Hapus setelah OTP email fix! (Step 4)
+// ============================================================
+Route::get('/debug/gmail-test', function (\Illuminate\Http\Request $request) {
+    // Proteksi sederhana agar tidak bisa diakses sembarangan
+    if ($request->query('key') !== 'nutrix-debug-2026') {
+        abort(404);
+    }
+
+    $results = ['timestamp' => now()->toIso8601String()];
+
+    // 1. Cek apakah GmailApiService terkonfigurasi
+    $gmailApi = app(\App\Services\GmailApiService::class);
+    $results['is_configured'] = $gmailApi->isConfigured();
+
+    if (!$results['is_configured']) {
+        $results['error'] = 'GmailApiService tidak terkonfigurasi. GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / GOOGLE_REFRESH_TOKEN kosong.';
+        $results['env_check'] = [
+            'GOOGLE_CLIENT_ID' => !empty(env('GOOGLE_CLIENT_ID')) ? 'SET (' . strlen(env('GOOGLE_CLIENT_ID')) . ' chars)' : 'EMPTY',
+            'GOOGLE_CLIENT_SECRET' => !empty(env('GOOGLE_CLIENT_SECRET')) ? 'SET (' . strlen(env('GOOGLE_CLIENT_SECRET')) . ' chars)' : 'EMPTY',
+            'GOOGLE_REFRESH_TOKEN' => !empty(env('GOOGLE_REFRESH_TOKEN')) ? 'SET (' . strlen(env('GOOGLE_REFRESH_TOKEN')) . ' chars)' : 'EMPTY',
+            'MAIL_MAILER' => env('MAIL_MAILER', '(not set)'),
+        ];
+        return response()->json($results, 500);
+    }
+
+    // 2. Coba dapatkan access token (ini yang biasanya gagal)
+    try {
+        // Langsung hit Google tanpa cache untuk test fresh
+        $response = \Illuminate\Support\Facades\Http::asForm()->timeout(15)->post('https://oauth2.googleapis.com/token', [
+            'client_id' => config('services.google.client_id'),
+            'client_secret' => config('services.google.client_secret'),
+            'refresh_token' => config('services.google.refresh_token'),
+            'grant_type' => 'refresh_token',
+        ]);
+
+        $results['token_refresh'] = [
+            'http_status' => $response->status(),
+            'successful' => $response->successful(),
+        ];
+
+        if ($response->successful()) {
+            $results['token_refresh']['access_token_preview'] = substr($response->json('access_token', ''), 0, 20) . '...';
+            $results['token_refresh']['expires_in'] = $response->json('expires_in');
+            $results['status'] = 'TOKEN_OK';
+
+            // 3. Opsional: test kirim email sungguhan (hanya jika ?send=1)
+            if ($request->query('send') === '1') {
+                $testEmail = $request->query('to', config('mail.from.address'));
+                try {
+                    $sendOk = $gmailApi->sendRawEmail(
+                        $testEmail,
+                        '🧪 [NUTRIX DEBUG] Test Email dari Railway',
+                        '<h2>✅ Gmail API Berhasil!</h2><p>Email ini dikirim dari Railway via Gmail REST API (HTTPS port 443).</p><p>Timestamp: ' . now()->toIso8601String() . '</p>'
+                    );
+                    $results['send_test'] = $sendOk ? 'EMAIL_SENT_OK' : 'EMAIL_SEND_FAILED';
+                } catch (\Throwable $e) {
+                    $results['send_test'] = 'EXCEPTION: ' . $e->getMessage();
+                }
+            }
+        } else {
+            $results['token_refresh']['error_body'] = $response->json() ?? $response->body();
+            $results['status'] = 'TOKEN_FAILED';
+        }
+    } catch (\Throwable $e) {
+        $results['token_refresh'] = [
+            'exception' => $e->getMessage(),
+        ];
+        $results['status'] = 'EXCEPTION';
+    }
+
+    // 4. Info tambahan
+    $results['mail_config'] = [
+        'MAIL_MAILER' => config('mail.default'),
+        'MAIL_FROM_ADDRESS' => config('mail.from.address'),
+    ];
+
+    return response()->json($results, $results['status'] === 'TOKEN_OK' ? 200 : 500);
+});
