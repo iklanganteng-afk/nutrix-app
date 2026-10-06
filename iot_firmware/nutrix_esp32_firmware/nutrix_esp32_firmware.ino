@@ -5,6 +5,7 @@
  * Multi-Sensor Scientific Architecture (Scopus-Grade Precision):
  * - Sensor 1: Capacitive Soil Moisture Sensor V2.0 on GPIO 34 (ADC1_CH6)
  * - Sensor 2: Resistive Soil Moisture Sensor HD-38 on GPIO 35 (ADC1_CH7)
+ * - Actuator: Solenoid Valve Plastik Normally Closed (NC) AC 220V Bertekanan via Relay GPIO 26
  * - Signal Processing: Trimmed-Mean Filter (20 samples, drop top 4 & bottom 4)
  * - Calibrated 2-Point Linear Transfer Function (ADC to VWC %)
  * - Network Identity: Hostname "Kelompok Nutrix" (mDNS & DHCP)
@@ -22,7 +23,7 @@
 // ── 1. DEFINISI PIN SENSOR & AKTUATOR (Shield G-V-S Ready) ─────────────────
 #define PIN_CAPACITIVE   34     // Sensor Capacitive V2.0 (ADC1_CH6) -> Baris D34 [S]
 #define PIN_RESISTIVE    35     // Sensor Resistive HD-38 (ADC1_CH7) -> Baris D35 [S]
-#define PIN_RELAY        26     // Relay Pompa / Solenoid Valve (Opsional)
+#define PIN_RELAY        26     // Relay Pengendali Solenoid Valve Plastik NC AC 220V (Active LOW)
 #define PIN_BUZZER       27     // Buzzer Indikator
 #define PIN_LED_STATUS   2      // Onboard LED ESP32
 

@@ -389,10 +389,10 @@
                     <div class="nx-relay-box mb-3">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <div>
-                                <strong class="text-white d-block" style="font-size:0.9rem;">Relay Solenoid Keran</strong>
-                                <small class="text-muted">GPIO 26 · status menunggu laporan perangkat</small>
+                                <strong class="text-white d-block" style="font-size:0.9rem;">Solenoid Valve Plastik (NC 220V AC)</strong>
+                                <small class="text-muted">Relay GPIO 26 · Tipe Normally Closed bertekanan</small>
                             </div>
-                            <span class="nx-relay-val" id="relayStatusDisplay">Belum dilaporkan</span>
+                            <span class="nx-relay-val" id="relayStatusDisplay">Standby (Tertutup)</span>
                         </div>
                         <div class="nx-relay-meter">
                             <div class="nx-relay-bar"></div>
@@ -403,6 +403,10 @@
                         <div class="nx-spec-item">
                             <span><i class="bi bi-cpu me-2 text-muted"></i>Board Controller</span>
                             <strong>{{ $controllerName }}</strong>
+                        </div>
+                        <div class="nx-spec-item">
+                            <span><i class="bi bi-water me-2 text-info"></i>Tipe Aktuator Irigasi</span>
+                            <strong class="text-info">Solenoid NC AC 220V (Bertekanan)</strong>
                         </div>
                         <div class="nx-spec-item">
                             <span><i class="bi bi-key-fill me-2 text-muted"></i>Pairing Token</span>
@@ -426,7 +430,7 @@
                 </div>
 
                 <div class="d-flex gap-2 mt-3 pt-3 border-top border-secondary">
-                    <span class="text-muted small flex-fill align-self-center">Relay berjalan otomatis sesuai kebijakan perangkat.</span>
+                    <span class="text-muted small flex-fill align-self-center">Solenoid membuka otomatis saat kelembapan di bawah ambang batas kritis.</span>
                     <button type="button" class="nx-btn-outline-danger" id="btnResetSensor" title="Putus Koneksi Sensor">
                         <i class="bi bi-power"></i>
                     </button>
@@ -488,10 +492,10 @@
             <div class="nx-pipe-arrow"><i class="bi bi-arrow-right"></i></div>
 
             <div class="nx-pipe-step relay-step {{ $isConnected ? 'is-active' : '' }}" id="flowNodeRelay">
-                <div class="nx-pipe-icon"><i class="bi bi-toggles"></i></div>
+                <div class="nx-pipe-icon"><i class="bi bi-water"></i></div>
                 <div class="nx-pipe-info">
-                    <strong>Relay Keran Air</strong>
-                    <small id="relayFlowStatus">GPIO 26 · status belum dilaporkan</small>
+                    <strong>Solenoid Valve NC</strong>
+                    <small id="relayFlowStatus">GPIO 26 · 220V AC Bertekanan</small>
                 </div>
             </div>
         </div>
@@ -558,7 +562,7 @@
                 </div>
                 <div class="nx-g-step">
                     <span class="step-num">04</span>
-                    <p>Decision Engine cloud otomatis mengevaluasi kadar air & mengaktifkan relay GPIO 26 bila tanah kering.</p>
+                    <p>Decision Engine cloud mengevaluasi kadar air & mentrigger relay GPIO 26 untuk membuka <strong>Solenoid Valve Plastik NC AC 220V</strong> saat kelembapan kritis.</p>
                 </div>
             </div>
         </div>

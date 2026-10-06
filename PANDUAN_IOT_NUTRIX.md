@@ -57,12 +57,15 @@ Firmware: `iot_firmware/nutrix_esp32_firmware.ino`
 
 | Komponen | Pin ESP32 | Tipe Pin | Fungsi |
 |---|---|---|---|
-| **Sensor Kelembapan Tanah** | **GPIO 34** | ADC1 (Input Analog) | Membaca kadar air tanah (0 - 100%) |
-| **Modul Relay Keran / Pompa** | **GPIO 26** | Digital Output (Active-HIGH) | Mengaktifkan solenoid valve keran air |
-| **Buzzer Aktif 5V** | **GPIO 27** | Digital Output | Alarm saat tanah kering kritis |
+| **Sensor Kelembapan Tanah (Dual)** | **GPIO 34 & 35** | ADC1 (Capacitive V2.0 & Resistive HD-38) | Konsensus ilmiah kadar air tanah (0 - 100%) |
+| **Modul Relay Pengendali Solenoid** | **GPIO 26** | Digital Output (Active-LOW) | Mengendalikan Solenoid Valve Plastik NC AC 220V (Bertekanan) |
+| **Buzzer Aktif 5V** | **GPIO 27** | Digital Output | Alarm saat tanah kering kritis / penyiraman aktif |
 | **LED Indikator Onboard** | **GPIO 2** | Digital Output (Blue LED) | Status jaringan WiFi & transmisi data |
 
-> **Catatan Port Daya**: ESP32 cukup dicolokkan ke adaptor charger HP 5V / USB biasa. Tidak memerlukan koneksi kabel ke laptop setelah firmware di-upload.
+> **Perhatian Khusus Solenoid Valve AC 220V**:
+> 1. **Tipe Normally Closed (NC)**: Dalam keadaan relay mati (standby), katup tertutup rapat. Begitu relay aktif, katup membuka dan mengalirkan air.
+> 2. **Tipe Bertekanan (Pilot Operated)**: Memerlukan tekanan air minimal (misal dari pompa dorong atau toren air gravitasi tinggi / pipa PDAM) agar membran katup dapat membuka dan menutup dengan sempurna.
+> 3. **Keamanan Listrik AC 220V**: Jalur kabel fasa (Live) AC 220V diputus melalui terminal **COM & NO (Normally Open)** pada modul relay. Pastikan kabel tegangan tinggi AC terisolasi rapi dan tidak menyentuh pin ESP32!
 
 ---
 
