@@ -390,7 +390,7 @@
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <div>
                                 <strong class="text-white d-block" style="font-size:0.9rem;">Solenoid Valve Plastik (NC 220V AC)</strong>
-                                <small class="text-muted">Relay GPIO 26 · Tipe Normally Closed bertekanan</small>
+                                <small class="text-muted">Relay GPIO 2 · Tipe Normally Closed bertekanan</small>
                             </div>
                             <span class="nx-relay-val" id="relayStatusDisplay">Standby (Tertutup)</span>
                         </div>
@@ -495,7 +495,7 @@
                 <div class="nx-pipe-icon"><i class="bi bi-water"></i></div>
                 <div class="nx-pipe-info">
                     <strong>Solenoid Valve NC</strong>
-                    <small id="relayFlowStatus">GPIO 26 · 220V AC Bertekanan</small>
+                    <small id="relayFlowStatus">GPIO 2 · 220V AC Bertekanan</small>
                 </div>
             </div>
         </div>
@@ -562,7 +562,7 @@
                 </div>
                 <div class="nx-g-step">
                     <span class="step-num">04</span>
-                    <p>Decision Engine cloud mengevaluasi kadar air & mentrigger relay GPIO 26 untuk membuka <strong>Solenoid Valve Plastik NC AC 220V</strong> saat kelembapan kritis.</p>
+                    <p>Decision Engine cloud mengevaluasi kadar air & mentrigger relay GPIO 2 untuk membuka <strong>Solenoid Valve Plastik NC AC 220V</strong> saat kelembapan kritis.</p>
                 </div>
             </div>
         </div>
@@ -1025,7 +1025,7 @@ function setRelayStatus(on) {
     const stateKey = on === true ? 'dashboard-relay-on' : on === false ? 'dashboard-relay-off' : 'dashboard-not-reported';
     const stateText = dashboardText(stateKey);
     if (display) { display.textContent = stateText; display.className = on === true ? 'text-mint animate-pulse' : 'text-white'; }
-    if (flow)    flow.textContent = `GPIO 26 · ${stateText}`;
+    if (flow)    flow.textContent = `GPIO 2 · ${stateText}`;
     if (pill)    { pill.textContent = stateText; pill.className = `badge ${on === true ? 'bg-success' : 'bg-secondary'} text-white`; }
 }
 

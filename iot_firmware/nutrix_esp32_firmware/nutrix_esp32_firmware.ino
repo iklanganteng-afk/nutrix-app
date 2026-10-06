@@ -5,7 +5,7 @@
  * Multi-Sensor Scientific Architecture (Scopus-Grade Precision):
  * - Sensor 1: Capacitive Soil Moisture Sensor V2.0 on GPIO 34 (ADC1_CH6)
  * - Sensor 2: Resistive Soil Moisture Sensor HD-38 on GPIO 35 (ADC1_CH7)
- * - Actuator: Solenoid Valve Plastik Normally Closed (NC) AC 220V Bertekanan via Relay GPIO 26
+ * - Actuator: Solenoid Valve Plastik Normally Closed (NC) AC 220V Bertekanan via Relay GPIO 2 (Shield D2 [S])
  * - Signal Processing: Trimmed-Mean Filter (20 samples, drop top 4 & bottom 4)
  * - Calibrated 2-Point Linear Transfer Function (ADC to VWC %)
  * - Network Identity: Hostname "Kelompok Nutrix" (mDNS & DHCP)
@@ -23,9 +23,8 @@
 // ── 1. DEFINISI PIN SENSOR & AKTUATOR (Shield G-V-S Ready) ─────────────────
 #define PIN_CAPACITIVE   34     // Sensor Capacitive V2.0 (ADC1_CH6) -> Baris D34 [S]
 #define PIN_RESISTIVE    35     // Sensor Resistive HD-38 (ADC1_CH7) -> Baris D35 [S]
-#define PIN_RELAY        26     // Relay Pengendali Solenoid Valve Plastik NC AC 220V (Active LOW)
-#define PIN_BUZZER       27     // Buzzer Indikator
-#define PIN_LED_STATUS   2      // Onboard LED ESP32
+#define PIN_RELAY        2      // Modul Relay Songle SRD-05VDC Solenoid NC AC 220V (Active-LOW) -> Baris D2 [S]
+#define PIN_BUZZER       27     // Buzzer Indikator -> Baris D27 [S]
 
 // ── 2. KALIBRASI ADC SENSOR ILMIAH (2-Point Calibration) ───────────────────
 // Sensor Capacitive V2.0 (Kering di Udara = Tinggi, Basah di Air = Rendah)
@@ -71,20 +70,19 @@ void setup() {
     Serial.printf("Device Name : %s\n", DEVICE_NAME);
     Serial.printf("Sensor 1    : Capacitive V2.0  (GPIO %d)\n", PIN_CAPACITIVE);
     Serial.printf("Sensor 2    : Resistive HD-38  (GPIO %d)\n", PIN_RESISTIVE);
+    Serial.printf("Actuator    : Relay Solenoid   (GPIO %d)\n", PIN_RELAY);
 
     // Setup Pin Output
     pinMode(PIN_RELAY, OUTPUT);
     pinMode(PIN_BUZZER, OUTPUT);
-    pinMode(PIN_LED_STATUS, OUTPUT);
 
     // Setup Pin Input ADC
     pinMode(PIN_CAPACITIVE, INPUT);
     pinMode(PIN_RESISTIVE, INPUT);
 
-    // Relay Standby OFF (Active LOW -> Set HIGH)
+    // Relay Standby OFF (Active LOW -> Set HIGH saat standby agar solenoid valve NC tetap tertutup)
     digitalWrite(PIN_RELAY, HIGH);
     digitalWrite(PIN_BUZZER, LOW);
-    digitalWrite(PIN_LED_STATUS, LOW);
 
     preferences.begin("nutrix", false);
     preferences.getString("token", "").toCharArray(custom_device_token, sizeof(custom_device_token));
@@ -93,7 +91,6 @@ void setup() {
     // WiFiManager menyimpan kredensial jaringan di NVS ESP32.
     WiFi.mode(WIFI_STA);
     WiFi.setHostname(DEVICE_HOSTNAME);
-    digitalWrite(PIN_LED_STATUS, HIGH);
 
     WiFiManager wm;
     wm.setConfigPortalTimeout(180);
@@ -136,7 +133,6 @@ void loop() {
             bacaSensorDanKirimKeWeb();
         } else {
             Serial.println("[WIFI] Koneksi terputus! Mencoba rekoneksi...");
-            digitalWrite(PIN_LED_STATUS, LOW);
             WiFi.reconnect();
         }
     }
@@ -187,8 +183,6 @@ float calculateVWC(int rawADC, int dryVal, int wetVal) {
 }
 
 void bacaSensorDanKirimKeWeb() {
-    digitalWrite(PIN_LED_STATUS, HIGH);
-
     // 1. Akuisisi Sinyal Sensor 1 (Capacitive V2.0 di D34)
     int rawCapacitive = getFilteredADC(PIN_CAPACITIVE);
     float vwcCapacitive = calculateVWC(rawCapacitive, CAP_ADC_DRY, CAP_ADC_WET);
@@ -293,7 +287,6 @@ void bacaSensorDanKirimKeWeb() {
     }
 
     http.end();
-    digitalWrite(PIN_LED_STATUS, LOW);
 }
 
 void beepSuccess() {

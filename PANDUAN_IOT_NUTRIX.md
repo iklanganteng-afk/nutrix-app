@@ -21,14 +21,13 @@ Dokumen ini adalah panduan operasional lengkap dari tahap flashing firmware ESP3
 ┌─────────────────────────────────────────────────────────────┐
 │                      LOKASI KEBUN / LAHAN                   │
 │                                                             │
-│  [Sensor Kelembapan GPIO 34] ──┐                            │
-│                                 ▼                           │
-│                      [ESP32 Microcontroller]                │
-│                                 │ (WiFi 2.4 GHz HTTPS)      │
-│  [Relay Keran Air GPIO 26] ◄────┘                           │
-└─────────────────────────────────┼───────────────────────────┘
-                                  │
-                                  ▼ POST /api/iot/telemetry
+│  [Sensor Capacitive D34 (S)] ──┐                            │
+│  [Sensor Resistive  D35 (S)] ──┼──► [ESP32 Shield G-V-S]    │
+│                                │             │              │
+│  [Relay Solenoid Valve D2 (S)] ◄─────────────┘              │
+└──────────────────────────────────────────────┬──────────────┘
+                                               │ (WiFi 2.4 GHz HTTPS)
+                                               ▼ POST /api/iot/telemetry
 ┌─────────────────────────────────────────────────────────────┐
 │                     RAILWAY CLOUD SERVER                    │
 │                                                             │
@@ -51,21 +50,35 @@ Dokumen ini adalah panduan operasional lengkap dari tahap flashing firmware ESP3
 
 ---
 
-## 2. SPESIFIKASI HARDWARE & PINOUT ESP32
+## 2. SPESIFIKASI HARDWARE & PINOUT ESP32 EXPANSION SHIELD (G-V-S)
 
 Firmware: `iot_firmware/nutrix_esp32_firmware.ino`
 
-| Komponen | Pin ESP32 | Tipe Pin | Fungsi |
-|---|---|---|---|
-| **Sensor Kelembapan Tanah (Dual)** | **GPIO 34 & 35** | ADC1 (Capacitive V2.0 & Resistive HD-38) | Konsensus ilmiah kadar air tanah (0 - 100%) |
-| **Modul Relay Pengendali Solenoid** | **GPIO 26** | Digital Output (Active-LOW) | Mengendalikan Solenoid Valve Plastik NC AC 220V (Bertekanan) |
-| **Buzzer Aktif 5V** | **GPIO 27** | Digital Output | Alarm saat tanah kering kritis / penyiraman aktif |
-| **LED Indikator Onboard** | **GPIO 2** | Digital Output (Blue LED) | Status jaringan WiFi & transmisi data |
+### Tabel Wiring Expansion Shield (G-V-S Ready):
 
-> **Perhatian Khusus Solenoid Valve AC 220V**:
-> 1. **Tipe Normally Closed (NC)**: Dalam keadaan relay mati (standby), katup tertutup rapat. Begitu relay aktif, katup membuka dan mengalirkan air.
-> 2. **Tipe Bertekanan (Pilot Operated)**: Memerlukan tekanan air minimal (misal dari pompa dorong atau toren air gravitasi tinggi / pipa PDAM) agar membran katup dapat membuka dan menutup dengan sempurna.
-> 3. **Keamanan Listrik AC 220V**: Jalur kabel fasa (Live) AC 220V diputus melalui terminal **COM & NO (Normally Open)** pada modul relay. Pastikan kabel tegangan tinggi AC terisolasi rapi dan tidak menyentuh pin ESP32!
+| Komponen | Pin Shield | Pin Modul | Tipe Pin | Fungsi |
+|---|---|---|---|---|
+| **Sensor Capacitive V2.0** | **Baris D34** | `AOUT`→**S**, `VCC`→**V**, `GND`→**G** | ADC1_CH6 (GPIO 34) | Sensor kelembapan kapasitif (bebas korosi) |
+| **Sensor Resistive HD-38** | **Baris D35** | `AO`→**S**, `VCC`→**V**, `GND`→**G** | ADC1_CH7 (GPIO 35) | Sensor kelembapan resistif komparasi |
+| **Modul Relay Songle SRD-05VDC** | **Baris D2 [S]**<br>Header Daya **5V** & **GND** | `IN`→**D2 [S]**<br>`VCC`→**5V (Daya Shield)**<br>`GND`→**GND Shield** | Digital Output (GPIO 2, Active-LOW) | Saklar pengaman Solenoid Valve NC AC 220V |
+| **Buzzer Aktif 5V** | **Baris D27** | `SIG`→**S**, `VCC`→**V**, `GND`→**G** | Digital Output (GPIO 27) | Alarm saat kelembapan tanah kering kritis |
+
+---
+
+### Analisis Mendalam Modul Relay 1 Channel Songle SRD-05VDC-SL-C:
+1. **Sisi Tegangan Kontrol (Sisi Input ESP32)**:
+   - **`VCC`**: Hubungkan ke pin **5V** pada header daya shield (Koil relay butuh 5V DC agar tarikan medan magnetik bertenaga). ⚠️ **JANGAN hubungkan VCC ke GND!**
+   - **`GND`**: Hubungkan ke pin **GND** mandiri pada shield (Ground referensi bersama).
+   - **`IN`**: Hubungkan ke pin **D2 [S]** (Signal GPIO 2 ESP32). Modul bertipe **Active-LOW** (Relay ON saat sinyal LOW/0V, Standby OFF saat sinyal HIGH/3.3V).
+2. **Sisi Terminal Beban Screw (Output ke Solenoid Valve NC AC 220V)**:
+   - **常开 (Cháng Kāi / NO = Normally Open)**: Hubungkan ke salah satu kabel Solenoid Valve.
+   - **公共端 (Gōnggòng Duān / COM = Common)**: Hubungkan ke kabel Fasa (Live/L) dari sumber listrik PLN AC 220V.
+   - **常闭 (Cháng Bì / NC = Normally Closed)**: Dibiarkan kosong.
+   - Kabel Netral (N) PLN AC 220V langsung terhubung ke kabel satunya lagi dari Solenoid Valve.
+3. **Mekanisme Kerja Solenoid Valve Plastik Normally Closed (NC) AC 220V**:
+   - **Kondisi Standby (Relay OFF / NO Terbuka)**: Solenoid tidak menerima tegangan 220V → Katup tertutup rapat secara mekanis (air tidak mengalir). Sangat aman jika terjadi mati lampu / putus sinyal.
+   - **Kondisi Aktif (Relay ON / NO Terhubung ke COM)**: Arus AC 220V mengalir ke kumparan solenoid → Katup membuka dengan bantuan tekanan air → Air irigasi mengalir.
+   - **Tipe Bertekanan**: Memerlukan tekanan air minimal dari pipa/pompa/toren tinggi agar diafragma katup dapat membuka sempurna.
 
 ---
 
@@ -132,16 +145,16 @@ Jika Anda ingin membersihkan data simulasi/testing, mengganti perangkat fisik ES
 ### Logika Keputusan Otomatis (Cloud AI & Firmware):
 1. **Kelembapan Tanah < 30% (Kering Kritis)**:
    - Server Railway merespon paket telemetri dengan instruksi `water_valve: "ON"` selama 10 detik.
-   - ESP32 mengaktifkan **Relay GPIO 26** untuk membuka keran solenoid irigasi.
-   - Buzzer GPIO 27 berbunyi 2 kali pendek sebagai notifikasi.
+   - ESP32 mengaktifkan **Relay GPIO 2 (Shield D2 [S])** untuk membuka Solenoid Valve NC.
+   - Buzzer GPIO 27 berbunyi sebagai notifikasi pembukaan katup.
    - Aktivitas otomatis tercatat di tab riwayat dashboard pengguna.
 
 2. **Kelembapan Tanah ≥ 30% (Optimal)**:
-   - Keran tetap dalam posisi STANDBY (tertutup).
+   - Solenoid Valve tetap dalam posisi STANDBY (tertutup rapat tanpa konsumsi listrik koil).
 
-3. **Indikator LED Status (GPIO 2)**:
-   - **Berkedip cepat**: ESP32 sedang dalam mode konfigurasi Access Point (`NUTRIX-ESP32-PAIR`).
-   - **Menyala redup / Berkedip 1x tiap 5 detik**: ESP32 berhasil mengirimkan paket telemetri HTTPS ke server Railway.
+3. **Indikator Aktuasi & Relay**:
+   - Modul Relay Songle dilengkapi LED indikator fisik di modulnya yang menyala saat relay terpicu aktif (LOW).
+   - Buzzer aktif (GPIO 27) memberikan konfirmasi suara saat ESP32 berhasil terhubung dan saat aktuasi katup dilakukan.
 
 ---
 
