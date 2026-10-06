@@ -28,7 +28,17 @@ class GmailApiService
      */
     public function isConfigured(): bool
     {
-        return !empty($this->clientId) && !empty($this->clientSecret) && !empty($this->refreshToken);
+        $configured = !empty($this->clientId) && !empty($this->clientSecret) && !empty($this->refreshToken);
+
+        if (!$configured) {
+            static $logged = false;
+            if (!$logged && !app()->runningUnitTests()) {
+                Log::warning('[GmailApiService] Tidak dikonfigurasi. Set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, dan GOOGLE_REFRESH_TOKEN di Railway Variables untuk mengaktifkan pengiriman OTP via Gmail API.');
+                $logged = true;
+            }
+        }
+
+        return $configured;
     }
 
     /**
@@ -48,7 +58,7 @@ class GmailApiService
         }
 
         try {
-            $response = Http::asForm()->timeout(8)->post('https://oauth2.googleapis.com/token', [
+            $response = Http::asForm()->timeout(12)->post('https://oauth2.googleapis.com/token', [
                 'client_id' => $this->clientId,
                 'client_secret' => $this->clientSecret,
                 'refresh_token' => $this->refreshToken,
@@ -116,7 +126,7 @@ class GmailApiService
             $encodedMessage = rtrim(strtr(base64_encode($rawMessage), '+/', '-_'), '=');
 
             $sendResponse = Http::withToken($accessToken)
-                ->timeout(8)
+                ->timeout(12)
                 ->post('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', [
                     'raw' => $encodedMessage,
                 ]);
