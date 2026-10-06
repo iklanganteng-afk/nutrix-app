@@ -148,8 +148,8 @@
     <div class="web3-toast" id="toastNotif">
         <div class="toast-icon"><i class="bi bi-arrow-repeat spin"></i></div>
         <div>
-            <strong class="d-block toast-title">Transaction Pending</strong>
-            <span class="toast-desc">Waiting for node execution...</span>
+            <strong class="d-block toast-title">Memproses...</strong>
+            <span class="toast-desc">Menghubungkan ke node IoT Nutrix...</span>
         </div>
     </div>
 
