@@ -270,7 +270,13 @@
                 </div>
             </div>
             <div class="d-flex align-items-center gap-2">
-                <button type="button" class="btn btn-sm btn-outline-info px-3 py-2 fw-semibold d-inline-flex align-items-center gap-2" id="btnSiramManual" onclick="triggerManualIrrigation(5)">
+                <label class="visually-hidden" for="durationSiramManual">Durasi siram manual</label>
+                <select class="form-select form-select-sm" id="durationSiramManual" aria-label="Durasi siram manual" style="width:auto; min-height:38px;">
+                    <option value="3">3 detik</option>
+                    <option value="5" selected>5 detik</option>
+                    <option value="10">10 detik</option>
+                </select>
+                <button type="button" class="btn btn-sm btn-outline-info px-3 py-2 fw-semibold d-inline-flex align-items-center gap-2" id="btnSiramManual" onclick="triggerManualIrrigation()">
                     <i class="bi bi-play-circle-fill text-info" id="iconSiramManual"></i>
                     <span id="textSiramManual">Siram Manual (5 Detik)</span>
                 </button>
@@ -910,35 +916,97 @@ function downloadFirmwareFile(format = 'ino') {
     URL.revokeObjectURL(url);
 }
 
-function triggerManualIrrigation(durationSec = 5) {
+function triggerManualIrrigation() {
     const btn = document.getElementById('btnSiramManual');
     const icon = document.getElementById('iconSiramManual');
     const text = document.getElementById('textSiramManual');
     const statusText = document.getElementById('statusValveText');
+    const durationSelect = document.getElementById('durationSiramManual');
+    const durationSec = Number(durationSelect?.value || 5);
+    const setStatus = (message, className = 'text-white') => {
+        if (!statusText) return;
+        statusText.textContent = message;
+        statusText.className = className;
+    };
 
     if (btn) btn.disabled = true;
     if (icon) icon.className = 'spinner-border spinner-border-sm text-info';
     if (text) text.textContent = 'Mengirim Perintah...';
+    setStatus('MENGIRIM PERINTAH...', 'text-info fw-bold');
 
     apiFetch(`/actions/water`, 'POST', { duration_sec: durationSec })
         .then(res => {
-            if (statusText) statusText.innerHTML = '<span class="text-mint fw-bold">MENYIRAM (' + durationSec + ' DETIK)...</span>';
-            if (text) text.textContent = 'Perintah Terkirim!';
-            alert('💧 ' + (res.message || 'Perintah penyiraman 5 detik berhasil dikirim ke ESP32!'));
-
-            setTimeout(() => {
-                if (statusText) statusText.innerHTML = 'STANDBY (AUTO-IRIGASI &lt; 30%)';
-                if (btn) btn.disabled = false;
-                if (icon) icon.className = 'bi bi-play-circle-fill text-info';
-                if (text) text.textContent = 'Siram Manual (' + durationSec + ' Detik)';
-            }, durationSec * 1000 + 3000);
+            if (text) text.textContent = 'Menunggu ESP32...';
+            setStatus('MENUNGGU KONFIRMASI ESP32...', 'text-info fw-bold');
+            showToast(res.message || 'Perintah siram dikirim; menunggu konfirmasi ESP32.', 'info');
+            pollManualWatering(res.activity.id, durationSec);
         })
         .catch(err => {
-            alert('⚠️ Gagal mengirim perintah: ' + (err.message || 'Koneksi error'));
+            showToast('Gagal mengirim perintah siram: ' + (err.message || 'Koneksi error'), 'error');
+            setStatus('PERINTAH GAGAL DIKIRIM', 'text-danger fw-bold');
             if (btn) btn.disabled = false;
             if (icon) icon.className = 'bi bi-play-circle-fill text-info';
             if (text) text.textContent = 'Siram Manual (' + durationSec + ' Detik)';
         });
+}
+
+document.getElementById('durationSiramManual')?.addEventListener('change', event => {
+        const text = document.getElementById('textSiramManual');
+        if (text) text.textContent = `Siram Manual (${Number(event.target.value)} Detik)`;
+});
+
+async function pollManualWatering(activityId, durationSec) {
+    const btn = document.getElementById('btnSiramManual');
+    const icon = document.getElementById('iconSiramManual');
+    const text = document.getElementById('textSiramManual');
+    const statusText = document.getElementById('statusValveText');
+    const deadline = Date.now() + 60000;
+    let lastError = null;
+
+    while (Date.now() < deadline) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        try {
+            const data = await apiFetch(`/taman/${TAMAN.id}/activities`);
+            const activity = (data.activities || []).find(item => item.id === activityId);
+            if (!activity) continue;
+
+            if (activity.status === 'success') {
+                if (statusText) {
+                    statusText.textContent = `SELESAI — ESP32 MENGONFIRMASI (${durationSec} DETIK)`;
+                    statusText.className = 'text-mint fw-bold';
+                }
+                showToast('ESP32 mengonfirmasi penyiraman berhasil.', 'success');
+                break;
+            }
+
+            if (activity.status === 'failed') {
+                if (statusText) {
+                    statusText.textContent = 'ESP32 MELAPORKAN PENYIRAMAN GAGAL';
+                    statusText.className = 'text-danger fw-bold';
+                }
+                showToast('ESP32 melaporkan relay gagal dijalankan.', 'error');
+                break;
+            }
+            lastError = null;
+        } catch (err) {
+            lastError = err;
+        }
+    }
+
+    if (Date.now() >= deadline) {
+        if (statusText) {
+            statusText.textContent = lastError ? 'STATUS PERINTAH BELUM DAPAT DIPERIKSA' : 'BELUM ADA KONFIRMASI DARI ESP32';
+            statusText.className = 'text-warning fw-bold';
+        }
+        showToast(lastError
+            ? 'Tidak dapat memeriksa status perintah: ' + (lastError.message || 'Koneksi error')
+            : 'Belum ada konfirmasi dari ESP32. Periksa koneksi perangkat.', 'warning');
+    }
+
+    if (btn) btn.disabled = false;
+    if (icon) icon.className = 'bi bi-play-circle-fill text-info';
+    if (text) text.textContent = 'Siram Manual (' + durationSec + ' Detik)';
 }
 
 // ── Utility ──────────────────────────────────────────────

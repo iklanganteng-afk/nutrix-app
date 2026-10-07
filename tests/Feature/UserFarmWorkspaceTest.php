@@ -281,13 +281,49 @@ class UserFarmWorkspaceTest extends TestCase
         ]);
 
         $response = $this->actingAs($owner)->postJson("/api/taman/{$taman->id}/actions/water", [
-            'duration_sec' => 30,
+            'duration_sec' => 10,
         ]);
 
-        $response->assertOk()->assertJsonPath('success', true);
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('activity.status', 'info')
+            ->assertJsonPath('activity.metadata.duration_sec', 10);
         $this->assertDatabaseHas('farm_activities', [
             'taman_id' => $taman->id,
             'user_id' => $owner->id,
+            'type' => 'water',
+            'status' => 'info',
+        ]);
+    }
+
+    public function test_manual_water_activity_waits_for_esp32_acknowledgement(): void
+    {
+        $owner = User::factory()->create(['role' => 'user']);
+        $taman = Taman::create([
+            'user_id' => $owner->id,
+            'name' => 'Acknowledged Water Farm',
+            'type' => 'greenhouse',
+            'sensor_connected' => true,
+            'device_token' => 'NTX-MANUAL-WATER-ACK',
+            'device_token_expires_at' => now()->addDay(),
+        ]);
+
+        $response = $this->actingAs($owner)
+            ->postJson("/api/taman/{$taman->id}/actions/water", ['duration_sec' => 5])
+            ->assertOk()
+            ->assertJsonPath('activity.status', 'info');
+        $commandId = $response->json('activity.metadata.command_id');
+
+        $this->postJson('/api/iot/telemetry', [
+            'device_token' => $taman->device_token,
+            'moisture' => 54,
+            'last_command_id' => $commandId,
+            'last_command_status' => 'executed',
+            'relay_state' => 'off',
+        ])->assertOk();
+
+        $this->assertDatabaseHas('farm_activities', [
+            'taman_id' => $taman->id,
             'type' => 'water',
             'status' => 'success',
         ]);
@@ -335,17 +371,17 @@ class UserFarmWorkspaceTest extends TestCase
         ]);
 
         $this->actingAs($owner)
-            ->postJson("/api/taman/{$taman->id}/actions/water", ['duration_sec' => 30])
+            ->postJson("/api/taman/{$taman->id}/actions/water", ['duration_sec' => 10])
             ->assertOk()
             ->assertJsonPath('success', true)
-            ->assertJsonPath('telemetry.moisture', 76)
-            ->assertJsonPath('telemetry.temperature', 26.4);
+            ->assertJsonPath('telemetry.moisture', 64)
+            ->assertJsonPath('telemetry.temperature', 27.07);
 
         $this->assertDatabaseHas('farm_activities', [
             'taman_id' => $taman->id,
             'user_id' => $owner->id,
             'type' => 'water',
-            'status' => 'success',
+            'status' => 'info',
         ]);
     }
 

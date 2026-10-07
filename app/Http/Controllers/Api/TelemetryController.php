@@ -167,10 +167,10 @@ class TelemetryController extends Controller
         $this->authorizeOwner($taman);
         abort_unless($taman->sensor_connected, 409, 'Sensor belum terhubung.');
         $validated = $request->validate([
-            'duration_sec' => ['nullable', 'integer', 'min:1', 'max:60'],
+            'duration_sec' => ['nullable', 'integer', 'min:1', 'max:10'],
         ]);
 
-        $duration = min(10, max(1, (int) ($validated['duration_sec'] ?? 5)));
+        $duration = (int) ($validated['duration_sec'] ?? 5);
         $commandId = (string) Str::uuid();
 
         // Simpan antrean perintah manual untuk ESP32 (berlaku 60 detik)
@@ -187,9 +187,9 @@ class TelemetryController extends Controller
             'taman_id' => $taman->id,
             'user_id'  => Auth::id(),
             'type'     => 'water',
-            'title'    => "Solenoid Valve dinyalakan — {$duration} detik",
-            'detail'   => "Perintah penyiraman manual dikirim oleh {$request->user()->name}.",
-            'status'   => 'success',
+            'title'    => "Perintah penyiraman manual dikirim — {$duration} detik",
+            'detail'   => "Menunggu konfirmasi relay ESP32. Perintah dikirim oleh {$request->user()->name}.",
+            'status'   => 'info',
             'metadata' => ['command_id' => $commandId, 'duration_sec' => $duration, 'trigger' => 'manual_dashboard'],
         ]);
 
@@ -662,4 +662,3 @@ class TelemetryController extends Controller
         ]);
     }
 }
-
