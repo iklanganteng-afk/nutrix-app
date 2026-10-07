@@ -167,10 +167,18 @@ class TelemetryController extends Controller
         $this->authorizeOwner($taman);
         abort_unless($taman->sensor_connected, 409, 'Sensor belum terhubung.');
         $validated = $request->validate([
-            'duration_sec' => ['nullable', 'integer', 'min:5', 'max:3600'],
+            'duration_sec' => ['nullable', 'integer', 'min:1', 'max:60'],
         ]);
 
-        $duration = $validated['duration_sec'] ?? 30;
+        $duration = min(10, max(1, (int) ($validated['duration_sec'] ?? 5)));
+        $commandId = (string) Str::uuid();
+
+        // Simpan antrean perintah manual untuk ESP32 (berlaku 60 detik)
+        \Illuminate\Support\Facades\Cache::put("esp32_cmd_water_{$taman->id}", [
+            'command_id'   => $commandId,
+            'duration_sec' => $duration,
+        ], 60);
+
         $telemetry = $this->applyManualAdjustment($taman, 'water', [
             'duration_sec' => $duration,
         ]);
@@ -179,13 +187,18 @@ class TelemetryController extends Controller
             'taman_id' => $taman->id,
             'user_id'  => Auth::id(),
             'type'     => 'water',
-            'title'    => "Pompa dinyalakan — {$duration} detik",
-            'detail'   => "Penyiraman manual oleh {$request->user()->name}.",
+            'title'    => "Solenoid Valve dinyalakan — {$duration} detik",
+            'detail'   => "Perintah penyiraman manual dikirim oleh {$request->user()->name}.",
             'status'   => 'success',
-            'metadata' => ['duration_sec' => $duration],
+            'metadata' => ['command_id' => $commandId, 'duration_sec' => $duration, 'trigger' => 'manual_dashboard'],
         ]);
 
-        return response()->json(['success' => true, 'activity' => $activity, 'telemetry' => $telemetry]);
+        return response()->json([
+            'success'   => true,
+            'message'   => "Perintah penyiraman {$duration} detik berhasil dikirim ke ESP32!",
+            'activity'  => $activity,
+            'telemetry' => $telemetry
+        ]);
     }
 
     /**
@@ -605,7 +618,18 @@ class TelemetryController extends Controller
         $shouldWater = $telemetryData['moisture'] < $threshold && ! $cooldownActive;
         $commandId = $shouldWater ? (string) Str::uuid() : null;
 
-        if ($shouldWater) {
+        // 1. Cek apakah ada antrean perintah manual dari dashboard web
+        $manualWaterCmd = \Illuminate\Support\Facades\Cache::pull("esp32_cmd_water_{$taman->id}");
+
+        if ($manualWaterCmd) {
+            $valveAction = 'ON';
+            $activeCommandId = $manualWaterCmd['command_id'];
+            $activeDuration = $manualWaterCmd['duration_sec'];
+            $taman->update(['last_auto_watered_at' => now()]);
+        } elseif ($shouldWater) {
+            $valveAction = 'ON';
+            $activeCommandId = $commandId;
+            $activeDuration = $waterDuration;
             $taman->update(['last_auto_watered_at' => now()]);
             FarmActivity::create([
                 'taman_id' => $taman->id,
@@ -616,6 +640,10 @@ class TelemetryController extends Controller
                 'status'   => 'info',
                 'metadata' => ['command_id' => $commandId, 'duration_sec' => $waterDuration, 'trigger' => 'auto_decision_engine'],
             ]);
+        } else {
+            $valveAction = 'OFF';
+            $activeCommandId = null;
+            $activeDuration = 0;
         }
 
         return response()->json([
@@ -626,10 +654,10 @@ class TelemetryController extends Controller
             'health_score' => $analysis['health']['score'],
             'health_status' => $this->healthStatus($analysis['health']['score']),
             'commands' => [
-                'water_valve' => $shouldWater ? 'ON' : 'OFF',
-                'command_id' => $commandId,
-                'duration_sec' => $waterDuration,
-                'buzzer_alert' => $shouldWater,
+                'water_valve' => $valveAction,
+                'command_id' => $activeCommandId,
+                'duration_sec' => $activeDuration,
+                'buzzer_alert' => $valveAction === 'ON',
             ],
         ]);
     }

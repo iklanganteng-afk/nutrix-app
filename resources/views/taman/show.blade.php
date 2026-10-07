@@ -246,10 +246,34 @@
                         <span class="text-muted fs-6" data-i18n="dashboard-aggregate-unit">% agregat</span>
                     </div>
                     <div class="mt-2 text-muted small" style="font-size:0.78rem;">
-                                <div id="consensusStatusText" class="text-muted" data-i18n="dashboard-consensus-waiting">Menunggu telemetri perangkat.</div>
-                                <div class="text-secondary mt-1" data-i18n="dashboard-consensus-method">Nilai agregat ESP32; deviasi membandingkan dua probe bila tersedia.</div>
+                        <div id="consensusStatusText" class="text-muted" data-i18n="dashboard-consensus-waiting">Menunggu telemetri perangkat.</div>
+                        <div class="text-secondary mt-1" data-i18n="dashboard-consensus-method">Nilai agregat ESP32; deviasi membandingkan dua probe bila tersedia.</div>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        {{-- Solenoid Valve Control Bar (Dual-Mode: Auto & Manual) --}}
+        <div class="mt-3 p-3 rounded-3 border border-secondary d-flex flex-wrap align-items-center justify-content-between gap-3" style="background: rgba(0, 255, 178, 0.05);">
+            <div class="d-flex align-items-center gap-3">
+                <div class="rounded-circle p-2 bg-dark border border-mint text-mint d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+                    <i class="bi bi-droplet-half fs-5"></i>
+                </div>
+                <div>
+                    <div class="text-white fw-bold" style="font-size: 0.95rem;">
+                        <span>AKTUATOR: SOLENOID VALVE</span>
+                        <span class="badge bg-dark text-mint border border-secondary ms-2" id="badgeRelayPin">GPIO 2 (D2)</span>
+                    </div>
+                    <div class="text-muted small" style="font-size: 0.78rem;">
+                        Status: <strong class="text-white" id="statusValveText">STANDBY (AUTO-IRIGASI &lt; 30%)</strong> | NC AC 220V
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" class="btn btn-sm btn-outline-info px-3 py-2 fw-semibold d-inline-flex align-items-center gap-2" id="btnSiramManual" onclick="triggerManualIrrigation(5)">
+                    <i class="bi bi-play-circle-fill text-info" id="iconSiramManual"></i>
+                    <span id="textSiramManual">Siram Manual (5 Detik)</span>
+                </button>
             </div>
         </div>
     </div>
@@ -884,6 +908,37 @@ function downloadFirmwareFile(format = 'ino') {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+}
+
+function triggerManualIrrigation(durationSec = 5) {
+    const btn = document.getElementById('btnSiramManual');
+    const icon = document.getElementById('iconSiramManual');
+    const text = document.getElementById('textSiramManual');
+    const statusText = document.getElementById('statusValveText');
+
+    if (btn) btn.disabled = true;
+    if (icon) icon.className = 'spinner-border spinner-border-sm text-info';
+    if (text) text.textContent = 'Mengirim Perintah...';
+
+    apiFetch(`/actions/water`, 'POST', { duration_sec: durationSec })
+        .then(res => {
+            if (statusText) statusText.innerHTML = '<span class="text-mint fw-bold">MENYIRAM (' + durationSec + ' DETIK)...</span>';
+            if (text) text.textContent = 'Perintah Terkirim!';
+            alert('💧 ' + (res.message || 'Perintah penyiraman 5 detik berhasil dikirim ke ESP32!'));
+
+            setTimeout(() => {
+                if (statusText) statusText.innerHTML = 'STANDBY (AUTO-IRIGASI &lt; 30%)';
+                if (btn) btn.disabled = false;
+                if (icon) icon.className = 'bi bi-play-circle-fill text-info';
+                if (text) text.textContent = 'Siram Manual (' + durationSec + ' Detik)';
+            }, durationSec * 1000 + 3000);
+        })
+        .catch(err => {
+            alert('⚠️ Gagal mengirim perintah: ' + (err.message || 'Koneksi error'));
+            if (btn) btn.disabled = false;
+            if (icon) icon.className = 'bi bi-play-circle-fill text-info';
+            if (text) text.textContent = 'Siram Manual (' + durationSec + ' Detik)';
+        });
 }
 
 // ── Utility ──────────────────────────────────────────────
