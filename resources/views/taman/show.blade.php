@@ -2,15 +2,6 @@
 
 @section('content')
 @php
-    $sensorTypeLabels = [
-        'moisture'    => 'Kelembapan',
-        'temperature' => 'Suhu',
-        'ph'          => 'pH',
-        'ec'          => 'EC',
-    ];
-    $sensorTypes  = $taman->sensor_types  ?? [];
-    $sensorModels = $taman->sensor_models ?? [];
-    $controller   = $taman->controller_type ? strtoupper($taman->controller_type) : 'Belum dipilih';
     $controllerName = match($taman->controller_type ?? '') {
         'esp32'   => 'ESP32',
         'arduino' => 'Arduino Uno / Nano',
@@ -22,12 +13,6 @@
     $lastSeenAge = $taman->last_seen_at?->diffInSeconds(now());
     $isConnected = $lastSeenAge !== null && $lastSeenAge <= 60;
     $lastSeen = $taman->last_seen_at ? $taman->last_seen_at->diffForHumans() : null;
-    $selectedSoil = $taman->soil_type ?? '';
-    $selectedSensorTypes  = $taman->sensor_types  ?? [];
-    $selectedSensorModels = $taman->sensor_models ?? [];
-    $selectedController   = $taman->controller_type ?? 'esp32';
-    $selectedIndicatorMode = $taman->indicator_mode ?? 'active_only';
-
     // Ekstraksi nilai telemetri awal (Zero Wait - Langsung Muncul saat Page Load)
     $latest = $latest ?? $taman->latestHardwareTelemetry;
     $meta = $latest?->metadata ?? [];
@@ -505,7 +490,7 @@
 
         {{-- 5 Flow Nodes --}}
         <div class="nx-pipeline">
-            <div class="nx-pipe-step {{ !empty($sensorTypes) ? 'is-active' : '' }}" id="flowNodeSensor">
+            <div class="nx-pipe-step is-active" id="flowNodeSensor">
                 <div class="nx-pipe-icon"><i class="bi bi-moisture"></i></div>
                 <div class="nx-pipe-info">
                     <strong>Sensor Tanah</strong>
@@ -557,39 +542,41 @@
          BAGIAN 4: SENSOR HARDWARE LIST & SETUP GUIDE
          ═══════════════════════════════════════════════════════════ --}}
     <div class="nx-glass-card p-4">
-        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div class="mb-4">
             <div>
                 <span class="nx-badge-glow is-live mb-1"><i class="bi bi-sliders me-1"></i> SPESIFIKASI SENSOR</span>
-                <h3 class="text-white mb-0" style="font-size:1.15rem; font-weight:700;" data-i18n="detail-hardware-metrics">Daftar Sensor & Panduan Node</h3>
+                <h3 class="text-white mb-0" style="font-size:1.15rem; font-weight:700;" data-i18n="hardware-specs-heading">Spesifikasi Hardware Terpasang</h3>
             </div>
-            <button type="button" class="nx-action-btn secondary" id="btnEditSensorConfig">
-                <i class="bi bi-pencil-square me-1"></i> <span data-i18n="detail-edit-config">Edit Konfigurasi</span>
-            </button>
         </div>
 
-        <div class="row g-3 mb-4">
-            @if(!empty($sensorTypes))
-                @foreach($sensorTypes as $sensorType)
-                    @php $typeKey = (string) $sensorType; @endphp
-                    <div class="col-12 col-sm-6 col-lg-3">
-                        <div class="nx-sensor-spec-box">
-                            <div class="spec-icon">
-                                <i class="bi bi-{{ $sensorType === 'moisture' ? 'moisture' : ($sensorType === 'temperature' ? 'thermometer-half' : ($sensorType === 'ph' ? 'droplet-half' : 'lightning-charge-fill')) }}"></i>
-                            </div>
-                            <div class="spec-content">
-                                <strong>{{ $sensorTypeLabels[$typeKey] ?? ucfirst($typeKey) }}</strong>
-                                <span>{{ $sensorModels[$typeKey] ?? 'Model default' }}</span>
-                            </div>
-                        </div>
-                    </div>
-                @endforeach
-            @else
-                <div class="col-12">
-                    <div class="p-3 text-center text-muted" style="background:rgba(255,255,255,0.02); border-radius:12px;">
-                        <span data-i18n="detail-no-sensors">Belum ada sensor spesifik yang dikonfigurasi. Klik tombol Edit Konfigurasi untuk menambahkan.</span>
+        <div class="row g-3 mb-4 nx-hardware-grid">
+            <div class="col-12 col-md-6 col-xl-4">
+                <div class="nx-sensor-spec-box h-100">
+                    <div class="spec-icon"><i class="bi bi-moisture"></i></div>
+                    <div class="spec-content">
+                        <strong data-i18n="hardware-capacitive-title">Soil Moisture 1 · Capacitive</strong>
+                        <span data-i18n="hardware-capacitive-detail">Capacitive V2.0 · GPIO 34 / D34</span>
                     </div>
                 </div>
-            @endif
+            </div>
+            <div class="col-12 col-md-6 col-xl-4">
+                <div class="nx-sensor-spec-box h-100">
+                    <div class="spec-icon"><i class="bi bi-moisture"></i></div>
+                    <div class="spec-content">
+                        <strong data-i18n="hardware-resistive-title">Soil Moisture 2 · Resistive</strong>
+                        <span data-i18n="hardware-resistive-detail">HD-38 · GPIO 35 / D35</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-xl-4">
+                <div class="nx-sensor-spec-box h-100">
+                    <div class="spec-icon"><i class="bi bi-water"></i></div>
+                    <div class="spec-content">
+                        <strong data-i18n="hardware-actuator-title">Solenoid Valve · Normally Closed</strong>
+                        <span data-i18n="hardware-actuator-detail">Songle relay · GPIO 2 / D2 · 220 V AC</span>
+                    </div>
+                </div>
+            </div>
         </div>
 
         {{-- Guide Steps --}}
@@ -604,7 +591,7 @@
                 </div>
                 <div class="nx-g-step">
                     <span class="step-num">02</span>
-                    <p>Jika WiFi baru, hubungkan smartphone ke hotspot <strong>NUTRIX-ESP32-SETUP</strong> untuk konfigurasi.</p>
+                    <p>Jika Wi-Fi perlu dikonfigurasi, hubungkan smartphone ke hotspot <strong>NUTRIX-ESP32-PAIR</strong>.</p>
                 </div>
                 <div class="nx-g-step">
                     <span class="step-num">03</span>
@@ -693,130 +680,6 @@
     </div>
 
 </section>
-
-{{-- ════════════════════════════════════════════
-     MODAL: Edit Konfigurasi Sensor (Wizard)
-     ════════════════════════════════════════════ --}}
-<div class="modal-overlay" id="sensorConfigModal" role="dialog" aria-modal="true" aria-labelledby="sensorConfigTitle">
-    <div class="web3-modal-box add-taman-wizard-box">
-        <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-secondary pb-3">
-            <h4 class="mb-0 fw-bold" id="sensorConfigTitle" style="font-family:'Cinzel',serif;" data-i18n="detail-edit-config">Edit konfigurasi sensor</h4>
-            <button type="button" class="btn-close-custom" id="closeSensorConfigModal" aria-label="Close"><i class="bi bi-x-lg"></i></button>
-        </div>
-        <form action="{{ route('taman.update', $taman) }}" method="POST" id="sensorConfigForm">
-            @csrf
-            @method('PATCH')
-
-            <div class="wizard-step active" data-sensor-step="1">
-                <div class="auth-input-group">
-                    <label data-i18n="detail-soil-optional">Jenis tanah (opsional)</label>
-                    <select class="auth-input" name="soil_type">
-                        <option value="" data-i18n="dashboard-soil-none" {{ $selectedSoil === '' || $selectedSoil === 'unspecified' ? 'selected' : '' }}>Tidak dipilih</option>
-                        <option value="pasir" data-i18n="dashboard-soil-sand" {{ $selectedSoil === 'pasir' ? 'selected' : '' }}>Pasir</option>
-                        <option value="liat_berpasir" data-i18n="dashboard-soil-sandy-loam" {{ $selectedSoil === 'liat_berpasir' ? 'selected' : '' }}>Liat berpasir</option>
-                        <option value="latosol" data-i18n="dashboard-soil-latosol" {{ $selectedSoil === 'latosol' ? 'selected' : '' }}>Latosol</option>
-                        <option value="liat" data-i18n="dashboard-soil-clay" {{ $selectedSoil === 'liat' ? 'selected' : '' }}>Liat</option>
-                        <option value="organosol" data-i18n="dashboard-soil-organic" {{ $selectedSoil === 'organosol' ? 'selected' : '' }}>Organosol / gambut</option>
-                    </select>
-                </div>
-                <div class="auth-input-group">
-                    <label data-i18n="detail-active-indicators">Indikator aktif</label>
-                    <div class="sensor-check-grid">
-                        <label class="sensor-check-card">
-                            <input type="checkbox" name="sensor_types[]" value="moisture" {{ in_array('moisture', $selectedSensorTypes, true) ? 'checked' : '' }}>
-                            <span><i class="bi bi-moisture"></i> <span data-i18n="sensor-moisture">Kelembapan</span></span>
-                        </label>
-                        <label class="sensor-check-card">
-                            <input type="checkbox" name="sensor_types[]" value="temperature" {{ in_array('temperature', $selectedSensorTypes, true) ? 'checked' : '' }}>
-                            <span><i class="bi bi-thermometer-half"></i> <span data-i18n="sensor-temperature">Suhu</span></span>
-                        </label>
-                        <label class="sensor-check-card">
-                            <input type="checkbox" name="sensor_types[]" value="ph" {{ in_array('ph', $selectedSensorTypes, true) ? 'checked' : '' }}>
-                            <span><i class="bi bi-droplet-half"></i> <span data-i18n="sensor-ph">pH</span></span>
-                        </label>
-                        <label class="sensor-check-card">
-                            <input type="checkbox" name="sensor_types[]" value="ec" {{ in_array('ec', $selectedSensorTypes, true) ? 'checked' : '' }}>
-                            <span><i class="bi bi-lightning-charge-fill"></i> <span data-i18n="sensor-conductivity">EC</span></span>
-                        </label>
-                    </div>
-                </div>
-                <div class="d-flex justify-content-end mt-3">
-                    <button type="button" class="btn btn-connect-node btn-sensor-step-next" data-i18n="dashboard-next">Selanjutnya</button>
-                </div>
-            </div>
-
-            <div class="wizard-step" data-sensor-step="2">
-                <div class="auth-input-group">
-                    <label data-i18n="dashboard-sensor-model">Pilih model sensor</label>
-                    <div id="sensorConfigModelRows">
-                        <div class="sensor-model-row" data-sensor-row="moisture">
-                            <div class="sensor-model-label"><i class="bi bi-moisture"></i> <span data-i18n="sensor-moisture">Kelembapan</span></div>
-                            <select class="auth-input" name="sensor_models[moisture]">
-                                <option value="SEN0193" {{ ($selectedSensorModels['moisture'] ?? '') === 'SEN0193' ? 'selected' : '' }}>SEN0193 - Soil Moisture Sensor</option>
-                                <option value="YL-69" {{ ($selectedSensorModels['moisture'] ?? '') === 'YL-69' ? 'selected' : '' }}>YL-69 - Resistive Soil Sensor</option>
-                                <option value="Capacitive-1" {{ ($selectedSensorModels['moisture'] ?? '') === 'Capacitive-1' ? 'selected' : '' }}>Capacitive Soil Sensor</option>
-                            </select>
-                        </div>
-                        <div class="sensor-model-row" data-sensor-row="temperature">
-                            <div class="sensor-model-label"><i class="bi bi-thermometer-half"></i> <span data-i18n="sensor-temperature">Suhu</span></div>
-                            <select class="auth-input" name="sensor_models[temperature]">
-                                <option value="DHT22" {{ ($selectedSensorModels['temperature'] ?? '') === 'DHT22' ? 'selected' : '' }}>DHT22 - Temperature & Humidity</option>
-                                <option value="DS18B20" {{ ($selectedSensorModels['temperature'] ?? '') === 'DS18B20' ? 'selected' : '' }}>DS18B20 - Waterproof Temperature</option>
-                                <option value="LM35" {{ ($selectedSensorModels['temperature'] ?? '') === 'LM35' ? 'selected' : '' }}>LM35 - Analog Temperature</option>
-                            </select>
-                        </div>
-                        <div class="sensor-model-row" data-sensor-row="ph">
-                            <div class="sensor-model-label"><i class="bi bi-droplet-half"></i> <span data-i18n="sensor-ph">pH</span></div>
-                            <select class="auth-input" name="sensor_models[ph]">
-                                <option value="PH-4502C" {{ ($selectedSensorModels['ph'] ?? '') === 'PH-4502C' ? 'selected' : '' }}>PH-4502C - pH Sensor</option>
-                                <option value="Atlas-pH" {{ ($selectedSensorModels['ph'] ?? '') === 'Atlas-pH' ? 'selected' : '' }}>Atlas Scientific pH</option>
-                                <option value="PH-1" {{ ($selectedSensorModels['ph'] ?? '') === 'PH-1' ? 'selected' : '' }}>PH-1 - Analog pH Module</option>
-                            </select>
-                        </div>
-                        <div class="sensor-model-row" data-sensor-row="ec">
-                            <div class="sensor-model-label"><i class="bi bi-lightning-charge-fill"></i> <span data-i18n="sensor-conductivity">EC</span></div>
-                            <select class="auth-input" name="sensor_models[ec]">
-                                <option value="DFRobot-EC" {{ ($selectedSensorModels['ec'] ?? '') === 'DFRobot-EC' ? 'selected' : '' }}>DFRobot EC</option>
-                                <option value="Atlas-EC" {{ ($selectedSensorModels['ec'] ?? '') === 'Atlas-EC' ? 'selected' : '' }}>Atlas Scientific EC</option>
-                                <option value="TDS-V1" {{ ($selectedSensorModels['ec'] ?? '') === 'TDS-V1' ? 'selected' : '' }}>TDS Sensor V1</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                <div class="d-flex justify-content-between mt-3">
-                    <button type="button" class="btn btn-outline-secondary btn-sensor-step-prev" data-i18n="dashboard-previous">Kembali</button>
-                    <button type="button" class="btn btn-connect-node btn-sensor-step-next" data-i18n="dashboard-next">Selanjutnya</button>
-                </div>
-            </div>
-
-            <div class="wizard-step" data-sensor-step="3">
-                <div class="auth-input-group">
-                    <label data-i18n="detail-board-type">Jenis board / otak perangkat</label>
-                    <select class="auth-input" name="controller_type">
-                        <option value="esp32" {{ $selectedController === 'esp32' ? 'selected' : '' }}>ESP32 (Direkomendasikan)</option>
-                        <option value="esp8266" {{ $selectedController === 'esp8266' ? 'selected' : '' }}>ESP8266</option>
-                        <option value="arduino" {{ $selectedController === 'arduino' ? 'selected' : '' }}>Arduino Uno / Nano</option>
-                    </select>
-                </div>
-                <div class="auth-input-group">
-                    <label data-i18n="dashboard-indicator-display">Tampilan indikator</label>
-                    <select class="auth-input" name="indicator_mode">
-                        <option value="active_only" data-i18n="detail-only-active" {{ $selectedIndicatorMode === 'active_only' ? 'selected' : '' }}>Hanya sensor aktif</option>
-                        <option value="all_with_unavailable" data-i18n="detail-all-unavailable" {{ $selectedIndicatorMode === 'all_with_unavailable' ? 'selected' : '' }}>Tampilkan semua, tandai yang tidak tersedia</option>
-                    </select>
-                </div>
-                <div class="auth-input-group">
-                    <label data-i18n="dashboard-config-summary">Ringkasan konfigurasi</label>
-                    <div class="wizard-summary" id="sensorConfigSummary"></div>
-                </div>
-                <div class="d-flex justify-content-between mt-3">
-                    <button type="button" class="btn btn-outline-secondary btn-sensor-step-prev" data-i18n="dashboard-previous">Kembali</button>
-                    <button type="submit" class="btn btn-connect-node" data-i18n="dashboard-save-config">Simpan Konfigurasi</button>
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
 
 {{-- ════════════════════════════════════════════
      MODAL: Hubungkan Sensor (Real Claim Token Pairing System)
@@ -916,6 +779,7 @@ const TAMAN = {
     name:          @json($taman->name),
     indicatorMode: @json($taman->indicator_mode ?: 'active_only'),
     activeSensors: @json(array_values($taman->sensor_types ?? [])),
+    controllerType: @json($taman->controller_type),
     deviceToken:   @json($deviceToken),
 };
 const CSRF = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
@@ -1509,45 +1373,6 @@ document.getElementById('btnExportData')?.addEventListener('click', () => {
     window.location.href = `/api/taman/${TAMAN.id}/export.csv`;
 });
 
-// ── Sensor Config Wizard ───────────────────────────────────
-const sensorConfigModal = document.getElementById('sensorConfigModal');
-const configWizardSteps = Array.from(document.querySelectorAll('[data-sensor-step]'));
-let currentConfigStep = 1;
-
-const updateSensorWizardStep = (n) => {
-    currentConfigStep = n;
-    configWizardSteps.forEach(s => s.classList.toggle('active', Number(s.dataset.sensorStep) === n));
-};
-
-const refreshSensorConfigSummary = () => {
-    const selected = Array.from(document.querySelectorAll('#sensorConfigForm input[name="sensor_types[]"]:checked')).map(i => i.value);
-    const summary = document.getElementById('sensorConfigSummary');
-    if (!summary) return;
-    if (!selected.length) { summary.innerHTML = '<div class="wizard-summary-empty">Belum ada sensor dipilih.</div>'; return; }
-    const labels = { moisture:'Kelembapan', temperature:'Suhu', ph:'pH', ec:'EC' };
-    const rows = selected.map(t => {
-        const model = document.querySelector(`#sensorConfigForm select[name="sensor_models[${t}]"]`)?.value || 'Belum dipilih';
-        return `<div class="wizard-summary-item"><span>${labels[t]||t}</span><strong>${model}</strong></div>`;
-    }).join('');
-    const ctrl = document.querySelector('#sensorConfigForm select[name="controller_type"]')?.value || 'esp32';
-    summary.innerHTML = `<div class="wizard-summary-item"><span>Sensor</span><strong>${selected.length} tipe aktif</strong></div>${rows}<div class="wizard-summary-item"><span>Board</span><strong>${ctrl.toUpperCase()}</strong></div>`;
-};
-
-document.querySelectorAll('.btn-sensor-step-next').forEach(b => b.addEventListener('click', () => { if (currentConfigStep < 3) updateSensorWizardStep(currentConfigStep + 1); refreshSensorConfigSummary(); }));
-document.querySelectorAll('.btn-sensor-step-prev').forEach(b => b.addEventListener('click', () => { if (currentConfigStep > 1) updateSensorWizardStep(currentConfigStep - 1); }));
-document.querySelectorAll('#sensorConfigForm input[name="sensor_types[]"]').forEach(cb => cb.addEventListener('change', () => {
-    const sel = Array.from(document.querySelectorAll('#sensorConfigForm input[name="sensor_types[]"]:checked')).map(i => i.value);
-    document.querySelectorAll('#sensorConfigForm [data-sensor-row]').forEach(r => { r.style.display = sel.includes(r.dataset.sensorRow) ? 'block' : 'none'; });
-    refreshSensorConfigSummary();
-}));
-
-document.getElementById('btnEditSensorConfig')?.addEventListener('click', () => {
-    updateSensorWizardStep(1); refreshSensorConfigSummary();
-    sensorConfigModal?.classList.add('active'); document.body.style.overflow = 'hidden';
-});
-document.getElementById('closeSensorConfigModal')?.addEventListener('click', () => { sensorConfigModal?.classList.remove('active'); document.body.style.overflow = ''; });
-sensorConfigModal?.addEventListener('click', e => { if (e.target === sensorConfigModal) { sensorConfigModal.classList.remove('active'); document.body.style.overflow = ''; } });
-
 // ── Connect Sensor Modal & Claim Token Pairing ────────────
 const connectSensorModal = document.getElementById('connectSensorModal');
 const closeConnectSensor = () => { connectSensorModal?.classList.remove('active'); document.body.style.overflow = ''; };
@@ -1600,7 +1425,7 @@ document.getElementById('btnCopyToken')?.addEventListener('click', () => {
 document.getElementById('confirmConnectSensor')?.addEventListener('click', async () => {
     const sensorId = document.getElementById('sensorIdInput')?.value.trim();
     if (!sensorId) return showToast('Masukkan Sensor ID terlebih dahulu.', 'error');
-    const boardType = document.querySelector('#sensorConfigForm select[name="controller_type"]')?.value || null;
+    const boardType = TAMAN.controllerType || null;
     closeConnectSensor();
     showToast('Menyimpan Node ID...');
     try {
@@ -1619,7 +1444,6 @@ document.getElementById('confirmConnectSensor')?.addEventListener('click', async
 
 document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
-        sensorConfigModal?.classList.remove('active');
         connectSensorModal?.classList.remove('active');
         document.body.style.overflow = '';
     }
@@ -2362,6 +2186,19 @@ document.addEventListener('keydown', e => {
     border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 14px;
 }
+.nx-hardware-grid .nx-sensor-spec-box {
+    gap: 1rem;
+    min-height: 92px;
+    padding: 1rem 1.15rem;
+    border-radius: 12px;
+}
+.nx-hardware-grid .spec-content {
+    min-width: 0;
+}
+.nx-hardware-grid .spec-content strong,
+.nx-hardware-grid .spec-content span {
+    overflow-wrap: anywhere;
+}
 .spec-icon {
     width: 36px;
     height: 36px;
@@ -2496,14 +2333,12 @@ document.addEventListener('keydown', e => {
     border-color: var(--border-glass);
 }
 
-#sensorConfigModal .web3-modal-box,
 #connectSensorModal .web3-modal-box {
     background: var(--bg-secondary);
     border-color: var(--border-glass);
     color: var(--text-pure);
 }
 
-#sensorConfigModal .text-white,
 #connectSensorModal .text-white {
     color: var(--text-pure) !important;
 }

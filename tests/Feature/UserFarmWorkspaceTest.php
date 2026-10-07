@@ -112,7 +112,7 @@ class UserFarmWorkspaceTest extends TestCase
         $this->assertDatabaseHas('tamans', ['id' => $taman->id, 'user_id' => $owner->id, 'name' => $taman->name]);
     }
 
-    public function test_owner_can_view_sensor_configuration_summary_on_detail_page(): void
+    public function test_owner_detail_page_shows_fixed_hardware_specs_without_sensor_configuration_modal(): void
     {
         $owner = User::factory()->create(['role' => 'user']);
         $taman = Taman::create([
@@ -138,8 +138,14 @@ class UserFarmWorkspaceTest extends TestCase
         $this->actingAs($owner)
             ->get(route('taman.show', $taman))
             ->assertOk()
-            ->assertSee('Kelembapan')
-            ->assertSee('SEN0193')
+            ->assertSee('Capacitive V2.0')
+            ->assertSee('GPIO 34 / D34')
+            ->assertSee('HD-38')
+            ->assertSee('GPIO 35 / D35')
+            ->assertSee('Normally Closed')
+            ->assertSee('GPIO 2 / D2')
+            ->assertDontSee('sensorConfigModal', false)
+            ->assertDontSee('btnEditSensorConfig', false)
             ->assertSee('ESP32')
             ->assertSee('Wireless (WiFi)');
     }
