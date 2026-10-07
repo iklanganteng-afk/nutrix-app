@@ -61,7 +61,6 @@ Firmware: `iot_firmware/nutrix_esp32_firmware.ino`
 | **Sensor Capacitive V2.0** | **Baris D34** | `AOUT`→**S**, `VCC`→**V**, `GND`→**G** | ADC1_CH6 (GPIO 34) | Sensor kelembapan kapasitif (bebas korosi) |
 | **Sensor Resistive HD-38** | **Baris D35** | `AO`→**S**, `VCC`→**V**, `GND`→**G** | ADC1_CH7 (GPIO 35) | Sensor kelembapan resistif komparasi |
 | **Modul Relay Songle SRD-05VDC** | **Baris D2 [S]**<br>Header Daya **5V** & **GND** | `IN`→**D2 [S]**<br>`VCC`→**5V (Daya Shield)**<br>`GND`→**GND Shield** | Digital Output (GPIO 2, Active-LOW) | Saklar pengaman Solenoid Valve NC AC 220V |
-| **Buzzer Aktif 5V** | **Baris D27** | `SIG`→**S**, `VCC`→**V**, `GND`→**G** | Digital Output (GPIO 27) | Alarm saat kelembapan tanah kering kritis |
 
 ---
 
@@ -146,15 +145,14 @@ Jika Anda ingin membersihkan data simulasi/testing, mengganti perangkat fisik ES
 1. **Kelembapan Tanah < 30% (Kering Kritis)**:
    - Server Railway merespon paket telemetri dengan instruksi `water_valve: "ON"` selama 10 detik.
    - ESP32 mengaktifkan **Relay GPIO 2 (Shield D2 [S])** untuk membuka Solenoid Valve NC.
-   - Buzzer GPIO 27 berbunyi sebagai notifikasi pembukaan katup.
-   - Aktivitas otomatis tercatat di tab riwayat dashboard pengguna.
+   - Status relay berubah menjadi ON dan aktivitas otomatis tercatat di tab riwayat dashboard pengguna.
 
 2. **Kelembapan Tanah ≥ 30% (Optimal)**:
    - Solenoid Valve tetap dalam posisi STANDBY (tertutup rapat tanpa konsumsi listrik koil).
 
 3. **Indikator Aktuasi & Relay**:
    - Modul Relay Songle dilengkapi LED indikator fisik di modulnya yang menyala saat relay terpicu aktif (LOW).
-   - Buzzer aktif (GPIO 27) memberikan konfirmasi suara saat ESP32 berhasil terhubung dan saat aktuasi katup dilakukan.
+   - ESP32 otomatis mematikan relay kembali setelah durasi irigasi selesai.
 
 ---
 
