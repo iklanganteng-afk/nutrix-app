@@ -160,14 +160,20 @@
                         <small class="nx-token-desc" data-i18n="iot-firmware-subtitle">Kode Arduino (.ino) sudah diselaraskan dengan Solenoid Valve NC (GPIO 2) & Dual Sensor (D34/D35).</small>
                     </div>
                     <div class="d-flex align-items-center flex-wrap gap-2">
-                        <button type="button" class="nx-action-btn secondary py-1 px-3" style="font-size:0.82rem;" onclick="copyFirmwareCode()">
-                            <i class="bi bi-clipboard-check me-1"></i> <span data-i18n="iot-btn-copy-all-code">Salin Semua Kode</span>
+                        <button type="button" class="nx-action-btn secondary py-1 px-2" style="font-size:0.82rem;" onclick="copyFirmwareCode()" title="Salin seluruh isi kode">
+                            <i class="bi bi-clipboard-check me-1"></i> <span data-i18n="iot-btn-copy-all-code">Salin Kode</span>
                         </button>
-                        <button type="button" class="nx-action-btn secondary py-1 px-3" style="font-size:0.82rem;" onclick="downloadFirmwareFile('ino')">
-                            <i class="bi bi-download me-1"></i> <span data-i18n="iot-btn-download-ino">Unduh .INO</span>
+                        <button type="button" class="nx-action-btn secondary py-1 px-2" style="font-size:0.82rem;" onclick="downloadFirmwareFile('ino')" title="Unduh sketch Arduino .ino">
+                            <i class="bi bi-download me-1"></i> <span data-i18n="iot-btn-download-ino">.INO</span>
                         </button>
-                        <button type="button" class="nx-action-btn secondary py-1 px-3" style="font-size:0.82rem;" onclick="downloadFirmwareFile('md')">
-                            <i class="bi bi-markdown me-1"></i> <span data-i18n="iot-btn-download-md">Unduh .MD</span>
+                        <button type="button" class="nx-action-btn secondary py-1 px-2" style="font-size:0.82rem;" onclick="downloadFirmwareFile('md')" title="Unduh dokumentasi Markdown .md">
+                            <i class="bi bi-markdown me-1"></i> <span data-i18n="iot-btn-download-md">.MD</span>
+                        </button>
+                        <button type="button" class="nx-action-btn secondary py-1 px-2" style="font-size:0.82rem;" onclick="downloadFirmwareFile('json')" title="Unduh paket konfigurasi & kode JSON">
+                            <i class="bi bi-filetype-json me-1"></i> <span>.JSON</span>
+                        </button>
+                        <button type="button" class="nx-action-btn secondary py-1 px-2" id="btnToggleMaximizeFirmware" style="font-size:0.82rem;" onclick="toggleMaximizeFirmware()" title="Perbesar / Perkecil Tampilan">
+                            <i class="bi bi-arrows-fullscreen me-1" id="iconMaximizeFirmware"></i> <span id="textMaximizeFirmware">Maximize</span>
                         </button>
                     </div>
                 </div>
@@ -858,15 +864,18 @@
             </ol>
             <div class="pt-2 border-top border-secondary border-opacity-25 d-flex align-items-center justify-content-between flex-wrap gap-2">
                 <span class="text-white small fw-semibold"><i class="bi bi-cpu me-1 text-mint"></i> Butuh kode sketch ESP32?</span>
-                <div class="d-flex gap-1">
+                <div class="d-flex gap-1 flex-wrap">
                     <button type="button" class="btn btn-sm btn-outline-mint py-1 px-2" style="font-size:0.75rem;" onclick="copyFirmwareCode()">
                         <i class="bi bi-clipboard me-1"></i> Salin Kode
                     </button>
                     <button type="button" class="btn btn-sm btn-outline-light py-1 px-2" style="font-size:0.75rem;" onclick="downloadFirmwareFile('ino')">
-                        <i class="bi bi-download me-1"></i> Unduh .INO
+                        <i class="bi bi-download me-1"></i> .INO
                     </button>
                     <button type="button" class="btn btn-sm btn-outline-info py-1 px-2" style="font-size:0.75rem;" onclick="downloadFirmwareFile('md')">
                         <i class="bi bi-markdown me-1"></i> .MD
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-warning py-1 px-2" style="font-size:0.75rem;" onclick="downloadFirmwareFile('json')">
+                        <i class="bi bi-filetype-json me-1"></i> .JSON
                     </button>
                 </div>
             </div>
@@ -928,6 +937,26 @@ function toggleFirmwarePreview() {
     }
 }
 
+function toggleMaximizeFirmware() {
+    const codeBlock = document.getElementById('firmwareCodeBlock');
+    const panel = document.getElementById('firmwareCodePanel');
+    const icon = document.getElementById('iconMaximizeFirmware');
+    const text = document.getElementById('textMaximizeFirmware');
+    if (!codeBlock) return;
+
+    const isMax = codeBlock.classList.toggle('is-maximized');
+    if (isMax) {
+        codeBlock.style.maxHeight = '75vh';
+        if (icon) icon.className = 'bi bi-fullscreen-exit me-1';
+        if (text) text.textContent = 'Minimize';
+        codeBlock.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+        codeBlock.style.maxHeight = '360px';
+        if (icon) icon.className = 'bi bi-arrows-fullscreen me-1';
+        if (text) text.textContent = 'Maximize';
+    }
+}
+
 function copyFirmwareCode() {
     const code = RAW_FIRMWARE_CODE || document.getElementById('firmwareCodeBlock')?.textContent || '';
     if (!code) {
@@ -961,6 +990,25 @@ function downloadFirmwareFile(format = 'ino') {
     if (format === 'md') {
         filename = 'NUTRIX_ESP32_FIRMWARE.md';
         fileContent = `# Sistem IoT Nutrix — Firmware ESP32\n\nTanggal Unduh: ${new Date().toISOString()}\nTarget Board: DOIT ESP32 DEVKIT V1\nTarget Pinout: \n- Capacitive Soil Sensor V2.0: GPIO 34 (Shield D34)\n- Resistive Soil Sensor HD-38: GPIO 35 (Shield D35)\n- Solenoid Valve NC AC 220V (Relay Songle Active-LOW): GPIO 2 (Shield D2)\n\n\`\`\`cpp\n${code}\n\`\`\`\n`;
+    } else if (format === 'json') {
+        filename = 'nutrix_firmware_package.json';
+        mimeType = 'application/json';
+        const jsonPkg = {
+            project: "NUTRIX SMART AGRICULTURE",
+            device_token: TAMAN.deviceToken || "",
+            taman_id: TAMAN.id,
+            taman_name: TAMAN.name,
+            exported_at: new Date().toISOString(),
+            hardware: {
+                board: "ESP32 Dev Module",
+                pin_capacitive: 34,
+                pin_resistive: 35,
+                pin_relay_solenoid: 2,
+                solenoid_valve: "Normally Closed (NC) AC 220V Bertekanan"
+            },
+            firmware_source_ino: code
+        };
+        fileContent = JSON.stringify(jsonPkg, null, 2);
     }
 
     const blob = new Blob([fileContent], { type: `${mimeType};charset=utf-8` });
