@@ -1789,24 +1789,27 @@ document.addEventListener('keydown', e => {
     cursor: pointer;
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     border: none;
+    text-decoration: none;
 }
 .nx-action-btn.primary {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    color: #ffffff;
-    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+    background: linear-gradient(135deg, var(--color-mint) 0%, #059669 100%);
+    color: #ffffff !important;
+    box-shadow: 0 4px 14px var(--glow-ambient);
 }
 .nx-action-btn.primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
+    box-shadow: 0 6px 20px var(--border-glow);
 }
 .nx-action-btn.secondary {
-    background: rgba(255, 255, 255, 0.05);
-    color: #f8fafc;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--bg-emerald);
+    color: var(--text-pure) !important;
+    border: 1px solid var(--border-subtle);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }
 .nx-action-btn.secondary:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.2);
+    background: color-mix(in srgb, var(--color-mint) 12%, var(--bg-emerald));
+    border-color: var(--color-mint);
+    color: var(--color-mint) !important;
     transform: translateY(-1px);
 }
 
@@ -2086,40 +2089,48 @@ document.addEventListener('keydown', e => {
     justify-content: center;
     gap: 6px;
     padding: 12px 6px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--bg-emerald);
+    border: 1px solid var(--border-subtle);
     border-radius: 14px;
     cursor: pointer;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    color: #cbd5e1;
+    color: var(--text-body);
 }
 .nx-strip-btn i {
     font-size: 1.25rem;
     transition: transform 0.2s;
+    color: var(--color-mint);
 }
 .nx-strip-btn span {
     font-size: 0.72rem;
     font-weight: 600;
     text-align: center;
     white-space: nowrap;
+    color: var(--text-body);
 }
 .nx-strip-btn:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.2);
+    background: color-mix(in srgb, var(--color-mint) 12%, var(--bg-emerald));
+    border-color: var(--color-mint);
     transform: translateY(-2px);
-    color: #ffffff;
+    color: var(--color-mint);
+}
+.nx-strip-btn:hover span {
+    color: var(--color-mint);
 }
 .nx-strip-btn:hover i {
     transform: scale(1.15);
 }
 .nx-strip-btn.highlight {
-    background: rgba(16, 185, 129, 0.12);
-    border-color: rgba(16, 185, 129, 0.35);
-    color: #34d399;
+    background: color-mix(in srgb, var(--color-mint) 15%, var(--bg-emerald));
+    border-color: var(--color-mint);
+    color: var(--color-mint);
+}
+.nx-strip-btn.highlight span {
+    color: var(--color-mint);
 }
 .nx-strip-btn.highlight:hover {
-    background: rgba(16, 185, 129, 0.22);
-    border-color: rgba(16, 185, 129, 0.5);
+    background: color-mix(in srgb, var(--color-mint) 25%, var(--bg-emerald));
+    border-color: var(--color-mint);
 }
 .nx-strip-btn.is-disabled {
     opacity: 0.45;
@@ -2454,6 +2465,35 @@ document.addEventListener('keydown', e => {
 .nutrix-iot-wrap .nx-hint-badge[data-severity="watch"],
 .nutrix-iot-wrap .nx-hint-badge[data-severity="warn"] {
     color: #d97706;
+}
+
+/* ── High-Contrast Guarantee across Light & Dark Themes (DKV Rules) ── */
+.nutrix-iot-wrap .nx-action-btn.secondary {
+    background: var(--bg-emerald) !important;
+    color: var(--text-pure) !important;
+    border: 1px solid var(--border-glass) !important;
+}
+
+.nutrix-iot-wrap .nx-action-btn.secondary:hover {
+    background: color-mix(in srgb, var(--color-mint) 15%, var(--bg-emerald)) !important;
+    border-color: var(--color-mint) !important;
+    color: var(--color-mint) !important;
+}
+
+.nutrix-iot-wrap .nx-meta-badge {
+    background: var(--bg-emerald);
+    border-color: var(--border-glass);
+    color: var(--text-pure);
+}
+
+.nutrix-iot-wrap .nx-token-box {
+    background: var(--bg-emerald);
+    border-color: var(--border-glass);
+}
+
+.nutrix-iot-wrap .nx-sensor-spec-box {
+    background: var(--bg-emerald);
+    border-color: var(--border-glass);
 }
 
 #sensorConfigModal .web3-modal-box,
