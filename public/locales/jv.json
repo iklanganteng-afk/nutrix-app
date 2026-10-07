@@ -576,5 +576,19 @@
     "wizard-select-sensors": "Pilih sensor sing arep ditambahake",
     "wizard-selected-sensors": "{count} jinis sensor dipilih",
     "wizard-sensor": "Sensor",
-    "wizard-summary": "Ringkesan konfigurasi"
+    "wizard-summary": "Ringkesan konfigurasi",
+    "iot-token-badge": "TOKEN PAIRING ESP32 NIRKABEL",
+    "iot-token-connected-title": "Node ESP32 Nyambung karo Token Iki",
+    "iot-token-ready-title": "Token Siap Digunakake kanggo ESP32",
+    "iot-token-connected-desc": "ESP32 lagi ngirim telemetri langsung nganggo token iki.",
+    "iot-token-ready-desc": "Salin token iki kanggo portal WiFi ESP32, utawa undhuh/salin kode firmware ing ngisor iki.",
+    "iot-btn-copy-token": "Salin Token",
+    "iot-btn-view-firmware": "Deleng Kode Firmware",
+    "iot-btn-close-firmware": "Tutup Kode Firmware",
+    "iot-firmware-title": "Kode Sumber Firmware ESP32 (Siap Flash)",
+    "iot-firmware-subtitle": "Kode Arduino (.ino) wis diselarasake karo Solenoid Valve NC (GPIO 2) & Sensor Loro (D34/D35).",
+    "iot-btn-copy-all-code": "Salin Kabeh Kode",
+    "iot-btn-download-ino": "Undhuh .INO",
+    "iot-btn-download-md": "Undhuh .MD",
+    "iot-firmware-ready-note": "Siap Auto-Pairing: Sampeyan bisa langsung flash liwat Arduino IDE tanpa ngowahi kode."
 }

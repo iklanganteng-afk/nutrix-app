@@ -576,5 +576,19 @@
     "wizard-select-sensors": "اختر المستشعرات المراد إضافتها",
     "wizard-selected-sensors": "تم اختيار {count} من أنواع المستشعرات",
     "wizard-sensor": "المستشعرات",
-    "wizard-summary": "ملخص الإعداد"
+    "wizard-summary": "ملخص الإعداد",
+    "iot-token-badge": "رمز اقتران ESP32 اللاسلكي",
+    "iot-token-connected-title": "عقدة ESP32 متصلة بهذا الرمز",
+    "iot-token-ready-title": "الرمز جاهز للاستخدام مع ESP32",
+    "iot-token-connected-desc": "تقوم ESP32 ببث القياس المباشر باستخدام هذا الرمز.",
+    "iot-token-ready-desc": "انسخ هذا الرمز لبوابة WiFi الخاصة بـ ESP32، أو قم بتنزيل/نسخ كود البرنامج الثابت أدناه.",
+    "iot-btn-copy-token": "نسخ الرمز",
+    "iot-btn-view-firmware": "عرض كود البرنامج الثابت",
+    "iot-btn-close-firmware": "إغلاق كود البرنامج الثابت",
+    "iot-firmware-title": "الكود المصدري لبرنامج ESP32 الثابت (جاهز للتثبيت)",
+    "iot-firmware-subtitle": "تمت مزامنة كود Arduino (.ino) مع صمام الملف اللولبي NC (GPIO 2) والمستشعر المزدوج (D34/D35).",
+    "iot-btn-copy-all-code": "نسخ جميع الأكواد",
+    "iot-btn-download-ino": "تنزيل .INO",
+    "iot-btn-download-md": "تنزيل .MD",
+    "iot-firmware-ready-note": "جاهز للاقتران التلقائي: يمكنك التثبيت مباشرة عبر Arduino IDE دون تغيير الكود."
 }

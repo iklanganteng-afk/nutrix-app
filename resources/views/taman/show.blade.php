@@ -120,55 +120,64 @@
     @endphp
 
     @if($activeToken)
-        <div class="p-3 mb-4 rounded-3 border border-success" style="background: linear-gradient(135deg, rgba(16,185,129,0.12) 0%, rgba(6,78,59,0.25) 100%);">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <div>
-                    <span class="badge bg-mint text-dark fw-bold mb-1"><i class="bi bi-key-fill me-1"></i> TOKEN PAIRING ESP32 WIRELESS</span>
-                    <h5 class="text-white mb-0 fw-bold">{{ $isConnected ? 'Node ESP32 Terhubung dengan Token Ini' : 'Token Siap Digunakan untuk ESP32' }}</h5>
-                    <small class="text-muted">{{ $isConnected ? 'ESP32 sedang mengirim telemetri streaming menggunakan token ini.' : 'Salin token ini untuk portal WiFi ESP32, atau langsung unduh/salin kode firmware di bawah.' }}</small>
+        <div class="nx-token-pairing-card mb-4">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div class="nx-token-info">
+                    <span class="nx-badge-glow is-live mb-2 d-inline-flex align-items-center">
+                        <i class="bi bi-key-fill me-1"></i> <span data-i18n="iot-token-badge">TOKEN PAIRING ESP32 WIRELESS</span>
+                    </span>
+                    <h5 class="nx-token-title mb-1 fw-bold">
+                        <span data-i18n="{{ $isConnected ? 'iot-token-connected-title' : 'iot-token-ready-title' }}">
+                            {{ $isConnected ? 'Node ESP32 Terhubung dengan Token Ini' : 'Token Siap Digunakan untuk ESP32' }}
+                        </span>
+                    </h5>
+                    <p class="nx-token-desc mb-0">
+                        <span data-i18n="{{ $isConnected ? 'iot-token-connected-desc' : 'iot-token-ready-desc' }}">
+                            {{ $isConnected ? 'ESP32 sedang mengirim telemetri streaming menggunakan token ini.' : 'Salin token ini untuk portal WiFi ESP32, atau langsung unduh/salin kode firmware di bawah.' }}
+                        </span>
+                    </p>
                 </div>
                 <div class="d-flex align-items-center flex-wrap gap-2">
-                    <span class="px-3 py-2 rounded bg-black border border-mint text-mint fw-bold font-monospace fs-5">
-                        {{ $activeToken }}
-                    </span>
-                    <button type="button" class="btn btn-outline-mint" onclick="navigator.clipboard.writeText('{{ $activeToken }}'); alert('Token berhasil disalin: {{ $activeToken }}');">
-                        <i class="bi bi-clipboard me-1"></i> Salin Token
+                    <div class="nx-token-box" title="Device Claim Token">
+                        <span class="nx-token-text font-monospace">{{ $activeToken }}</span>
+                    </div>
+                    <button type="button" class="nx-action-btn secondary" onclick="navigator.clipboard.writeText('{{ $activeToken }}'); alert('Token berhasil disalin: {{ $activeToken }}');">
+                        <i class="bi bi-clipboard me-1"></i> <span data-i18n="iot-btn-copy-token">Salin Token</span>
                     </button>
-                    <button type="button" class="btn btn-sm btn-mint text-dark fw-bold" onclick="toggleFirmwarePreview()">
-                        <i class="bi bi-code-slash me-1"></i> <span id="btnFirmwareToggleText">Lihat Kode Firmware</span>
+                    <button type="button" class="nx-action-btn primary" onclick="toggleFirmwarePreview()">
+                        <i class="bi bi-code-slash me-1"></i> <span id="btnFirmwareToggleText" data-i18n="iot-btn-view-firmware">Lihat Kode Firmware</span>
                     </button>
                 </div>
             </div>
 
             {{-- Collapsible Firmware Code & Download Panel --}}
-            <div id="firmwareCodePanel" class="mt-3 pt-3 border-top border-success border-opacity-25" style="display: none;">
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+            <div id="firmwareCodePanel" class="nx-firmware-panel mt-3 pt-3" style="display: none;">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                     <div>
-                        <strong class="text-white d-block" style="font-size:0.92rem;">
-                            <i class="bi bi-file-earmark-code text-mint me-1"></i> Source Code Firmware ESP32 (Ready-to-Flash)
+                        <strong class="nx-firmware-heading d-block">
+                            <i class="bi bi-file-earmark-code text-mint me-1"></i> <span data-i18n="iot-firmware-title">Source Code Firmware ESP32 (Ready-to-Flash)</span>
                         </strong>
-                        <small class="text-muted">Kode Arduino (.ino) sudah diselaraskan dengan Solenoid Valve NC (GPIO 2) & Dual Sensor (D34/D35).</small>
+                        <small class="nx-token-desc" data-i18n="iot-firmware-subtitle">Kode Arduino (.ino) sudah diselaraskan dengan Solenoid Valve NC (GPIO 2) & Dual Sensor (D34/D35).</small>
                     </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <button type="button" class="btn btn-sm btn-outline-mint" onclick="copyFirmwareCode()">
-                            <i class="bi bi-clipboard-check me-1"></i> Salin Semua Kode
+                    <div class="d-flex align-items-center flex-wrap gap-2">
+                        <button type="button" class="nx-action-btn secondary py-1 px-3" style="font-size:0.82rem;" onclick="copyFirmwareCode()">
+                            <i class="bi bi-clipboard-check me-1"></i> <span data-i18n="iot-btn-copy-all-code">Salin Semua Kode</span>
                         </button>
-                        <button type="button" class="btn btn-sm btn-outline-light" onclick="downloadFirmwareFile('ino')">
-                            <i class="bi bi-download me-1"></i> Unduh .INO
+                        <button type="button" class="nx-action-btn secondary py-1 px-3" style="font-size:0.82rem;" onclick="downloadFirmwareFile('ino')">
+                            <i class="bi bi-download me-1"></i> <span data-i18n="iot-btn-download-ino">Unduh .INO</span>
                         </button>
-                        <button type="button" class="btn btn-sm btn-outline-info" onclick="downloadFirmwareFile('md')">
-                            <i class="bi bi-markdown me-1"></i> Unduh .MD
+                        <button type="button" class="nx-action-btn secondary py-1 px-3" style="font-size:0.82rem;" onclick="downloadFirmwareFile('md')">
+                            <i class="bi bi-markdown me-1"></i> <span data-i18n="iot-btn-download-md">Unduh .MD</span>
                         </button>
                     </div>
                 </div>
 
-                <div class="position-relative mt-2">
-                    <pre id="firmwareCodeBlock" class="p-3 rounded text-light font-monospace small mb-0" 
-                         style="background: #0b1210; border: 1px solid rgba(16,185,129,0.3); max-height: 340px; overflow-y: auto; font-size: 0.8rem; line-height: 1.45; white-space: pre;">{{ $firmwareCode ?? '' }}</pre>
+                <div class="position-relative">
+                    <pre id="firmwareCodeBlock" class="nx-code-viewer p-3 rounded font-monospace small mb-0">{{ $firmwareCode ?? '' }}</pre>
                 </div>
-                <div class="mt-2 d-flex justify-content-between align-items-center text-muted small" style="font-size: 0.76rem;">
-                    <span><i class="bi bi-check-circle-fill text-mint me-1"></i> Auto-Pairing Ready: Anda bisa langsung flash via Arduino IDE tanpa perlu ubah kode.</span>
-                    <span class="text-secondary">Path: <code>iot_firmware/nutrix_esp32_firmware/nutrix_esp32_firmware.ino</code></span>
+                <div class="mt-2 d-flex justify-content-between align-items-center flex-wrap gap-2 nx-token-desc" style="font-size: 0.78rem;">
+                    <span><i class="bi bi-check-circle-fill text-mint me-1"></i> <span data-i18n="iot-firmware-ready-note">Auto-Pairing Ready: Anda bisa langsung flash via Arduino IDE tanpa perlu ubah kode.</span></span>
+                    <span class="font-monospace">Path: <code>iot_firmware/nutrix_esp32_firmware/nutrix_esp32_firmware.ino</code></span>
                 </div>
             </div>
         </div>
@@ -864,17 +873,24 @@
         </div>
 
         {{-- Fallback / Manual Node ID --}}
-        <div class="border-top border-secondary pt-3 mt-3">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <label for="sensorIdInput" class="text-white small mb-0 fw-semibold">Label Sensor Node ID (Opsional)</label>
-                <small class="text-muted">Untuk penamaan di Serial Monitor</small>
+        <div class="border-top border-secondary border-opacity-25 pt-3 mt-3">
+            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-1">
+                <label for="sensorIdInput" class="text-white small mb-0 fw-semibold">
+                    <i class="bi bi-tag-fill text-mint me-1"></i> Label Sensor Node ID (Opsional)
+                </label>
+                <small class="text-muted" style="font-size:0.75rem;">Sesuaikan dengan kolom ID Sensor di portal 192.168.4.1</small>
             </div>
-            <div class="input-group mb-3">
-                <input type="text" id="sensorIdInput" class="auth-input mb-0" placeholder="ESP32-NODE-01" value="{{ $sensorId ?? 'ESP32-NODE-01' }}" autocomplete="off">
-                <button type="button" class="btn btn-connect-node px-3" id="confirmConnectSensor">
+            <div class="d-flex gap-2 mb-2">
+                <input type="text" id="sensorIdInput" class="auth-input font-monospace mb-0 flex-grow-1" 
+                       placeholder="NUTRIX-DUAL-01" value="{{ $sensorId ?? 'NUTRIX-DUAL-01' }}" autocomplete="off"
+                       style="background: var(--bg-obsidian); color: var(--color-mint); border: 1px solid var(--border-subtle); border-radius: 8px;">
+                <button type="button" class="btn btn-connect-node px-3 text-nowrap" id="confirmConnectSensor" style="border-radius: 8px;">
                     <i class="bi bi-check-lg me-1"></i> Simpan ID
                 </button>
             </div>
+            <small class="text-muted d-block" style="font-size:0.75rem;">
+                Nilai ini default-nya <code>NUTRIX-DUAL-01</code> sesuai firmware. Jika diubah, samakan juga di portal ESP32.
+            </small>
         </div>
     </div>
 </div>
@@ -944,7 +960,7 @@ function downloadFirmwareFile(format = 'ino') {
 
     if (format === 'md') {
         filename = 'NUTRIX_ESP32_FIRMWARE.md';
-        fileContent = `# Sistem IoT Nutrix — Firmware ESP32\n\nTanggal Unduh: ${new Date().toISOString()}\nTarget Board: DOIT ESP32 DEVKIT V1\nTarget Pinout: \n- Capacitive Soil Sensor V2.0: GPIO 34 (Shield D34)\n- Resistive Soil Sensor HD-38: GPIO 35 (Shield D35)\n- Solenoid Valve NC AC 220V (Relay Songle): GPIO 2 (Shield D2)\n- Buzzer: GPIO 27 (Shield D27)\n\n\`\`\`cpp\n${code}\n\`\`\`\n`;
+        fileContent = `# Sistem IoT Nutrix — Firmware ESP32\n\nTanggal Unduh: ${new Date().toISOString()}\nTarget Board: DOIT ESP32 DEVKIT V1\nTarget Pinout: \n- Capacitive Soil Sensor V2.0: GPIO 34 (Shield D34)\n- Resistive Soil Sensor HD-38: GPIO 35 (Shield D35)\n- Solenoid Valve NC AC 220V (Relay Songle Active-LOW): GPIO 2 (Shield D2)\n\n\`\`\`cpp\n${code}\n\`\`\`\n`;
     }
 
     const blob = new Blob([fileContent], { type: `${mimeType};charset=utf-8` });

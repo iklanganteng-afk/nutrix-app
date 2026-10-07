@@ -576,5 +576,19 @@
     "wizard-select-sensors": "Pilih sensor yang akan ditambahkan",
     "wizard-selected-sensors": "{count} tipe sensor terpilih",
     "wizard-sensor": "Sensor",
-    "wizard-summary": "Ringkasan konfigurasi"
+    "wizard-summary": "Ringkasan konfigurasi",
+    "iot-token-badge": "TOKEN PAIRING ESP32 WIRELESS",
+    "iot-token-connected-title": "Node ESP32 Terhubung dengan Token Ini",
+    "iot-token-ready-title": "Token Siap Digunakan untuk ESP32",
+    "iot-token-connected-desc": "ESP32 sedang mengirim telemetri streaming menggunakan token ini.",
+    "iot-token-ready-desc": "Salin token ini untuk portal WiFi ESP32, atau langsung unduh/salin kode firmware di bawah.",
+    "iot-btn-copy-token": "Salin Token",
+    "iot-btn-view-firmware": "Lihat Kode Firmware",
+    "iot-btn-close-firmware": "Tutup Kode Firmware",
+    "iot-firmware-title": "Source Code Firmware ESP32 (Ready-to-Flash)",
+    "iot-firmware-subtitle": "Kode Arduino (.ino) sudah diselaraskan dengan Solenoid Valve NC (GPIO 2) & Dual Sensor (D34/D35).",
+    "iot-btn-copy-all-code": "Salin Semua Kode",
+    "iot-btn-download-ino": "Unduh .INO",
+    "iot-btn-download-md": "Unduh .MD",
+    "iot-firmware-ready-note": "Auto-Pairing Ready: Anda bisa langsung flash via Arduino IDE tanpa perlu ubah kode."
 }

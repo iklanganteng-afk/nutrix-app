@@ -576,5 +576,19 @@
     "wizard-select-sensors": "追加するセンサーを選択",
     "wizard-selected-sensors": "{count}種類のセンサーを選択",
     "wizard-sensor": "センサー",
-    "wizard-summary": "構成概要"
+    "wizard-summary": "構成概要",
+    "iot-token-badge": "ワイヤレスESP32ペアリングトークン",
+    "iot-token-connected-title": "このトークンで接続中のESP32ノード",
+    "iot-token-ready-title": "ESP32用トークンの準備完了",
+    "iot-token-connected-desc": "ESP32はこのトークンを使用してライブテレメトリを送信しています。",
+    "iot-token-ready-desc": "ESP32のWiFiポータル用にこのトークンをコピーするか、ファームウェアコードをダウンロード/コピーしてください。",
+    "iot-btn-copy-token": "トークンをコピー",
+    "iot-btn-view-firmware": "ファームウェアコードを表示",
+    "iot-btn-close-firmware": "ファームウェアコードを閉じる",
+    "iot-firmware-title": "ESP32ファームウェアソースコード (即時フラッシュ可能)",
+    "iot-firmware-subtitle": "Arduino (.ino) コードは電磁弁NC (GPIO 2) とデュアルセンサー (D34/D35) に同期済みです。",
+    "iot-btn-copy-all-code": "すべてのコードをコピー",
+    "iot-btn-download-ino": ".INOをダウンロード",
+    "iot-btn-download-md": ".MDをダウンロード",
+    "iot-firmware-ready-note": "自動ペアリング対応: コードを変更することなくArduino IDEから直接フラッシュできます。"
 }

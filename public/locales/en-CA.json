@@ -576,5 +576,19 @@
     "wizard-select-sensors": "Select sensors to add",
     "wizard-selected-sensors": "{count} sensor types selected",
     "wizard-sensor": "Sensors",
-    "wizard-summary": "Configuration summary"
+    "wizard-summary": "Configuration summary",
+    "iot-token-badge": "WIRELESS ESP32 PAIRING TOKEN",
+    "iot-token-connected-title": "ESP32 Node Connected with This Token",
+    "iot-token-ready-title": "Token Ready for ESP32",
+    "iot-token-connected-desc": "ESP32 is actively streaming live telemetry using this token.",
+    "iot-token-ready-desc": "Copy this token for the ESP32 WiFi portal, or download/copy the firmware code below.",
+    "iot-btn-copy-token": "Copy Token",
+    "iot-btn-view-firmware": "View Firmware Code",
+    "iot-btn-close-firmware": "Close Firmware Code",
+    "iot-firmware-title": "ESP32 Firmware Source Code (Ready-to-Flash)",
+    "iot-firmware-subtitle": "Arduino (.ino) code synchronized with Solenoid Valve NC (GPIO 2) & Dual Sensors (D34/D35).",
+    "iot-btn-copy-all-code": "Copy All Code",
+    "iot-btn-download-ino": "Download .INO",
+    "iot-btn-download-md": "Download .MD",
+    "iot-firmware-ready-note": "Auto-Pairing Ready: You can flash directly via Arduino IDE without altering code."
 }

@@ -576,5 +576,19 @@
     "wizard-select-sensors": "Pilih sensor untuk ditambah",
     "wizard-selected-sensors": "{count} jenis sensor dipilih",
     "wizard-sensor": "Sensor",
-    "wizard-summary": "Ringkasan konfigurasi"
+    "wizard-summary": "Ringkasan konfigurasi",
+    "iot-token-badge": "TOKEN PAIRING ESP32 WIRELESS",
+    "iot-token-connected-title": "Nod ESP32 Disambungkan dengan Token Ini",
+    "iot-token-ready-title": "Token Sedia Digunakan untuk ESP32",
+    "iot-token-connected-desc": "ESP32 sedang menghantar telemetri penstriman menggunakan token ini.",
+    "iot-token-ready-desc": "Salin token ini untuk portal WiFi ESP32, atau muat turun/salin kod perisian tegar di bawah.",
+    "iot-btn-copy-token": "Salin Token",
+    "iot-btn-view-firmware": "Lihat Kod Perisian Tegar",
+    "iot-btn-close-firmware": "Tutup Kod Perisian Tegar",
+    "iot-firmware-title": "Kod Sumber Perisian Tegar ESP32 (Sedia Flash)",
+    "iot-firmware-subtitle": "Kod Arduino (.ino) diselaraskan dengan Solenoid Valve NC (GPIO 2) & Sensor Dwi (D34/D35).",
+    "iot-btn-copy-all-code": "Salin Semua Kod",
+    "iot-btn-download-ino": "Muat Turun .INO",
+    "iot-btn-download-md": "Muat Turun .MD",
+    "iot-firmware-ready-note": "Sedia Auto-Pairing: Anda boleh terus flash melalui Arduino IDE tanpa mengubah kod."
 }
