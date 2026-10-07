@@ -1538,11 +1538,13 @@
 
                     </div>
 
-                    <div class="split-hero-data-row"><span data-i18n="hero-soil-status">Soil Status</span><strong id="heroSensorStatus">Optimal</strong></div>
+                    <div class="split-hero-data-row"><span data-i18n="hero-soil-status">Status Lahan</span><strong id="heroSensorStatus">Optimal</strong></div>
 
-                    <div class="split-hero-data-row"><span data-i18n="hero-ph">pH Level</span><strong id="heroSensorPh">6.8</strong></div>
+                    <div class="split-hero-data-row"><span>Capacitive V2.0</span><strong id="heroSensorPh">68% VWC</strong></div>
 
-                    <div class="split-hero-data-row"><span data-i18n="hero-moisture">Soil Moisture</span><strong id="heroSensorMoisture">65%</strong></div>
+                    <div class="split-hero-data-row"><span>Resistive HD-38</span><strong id="heroSensorMoisture">62% VWC</strong></div>
+
+                    <div class="split-hero-data-row"><span>Solenoid Valve</span><strong id="heroSensorValve" style="color: var(--color-accent-highlight);">Standby (NC)</strong></div>
 
                 </div>
 
@@ -1734,11 +1736,11 @@
 
                     <div class="col-lg-7">
 
-                        <span class="badge-web3 mb-3" style="background: var(--bg-primary); color: var(--text-muted); border-color: var(--border-subtle);" data-i18n="arch-core-badge">Core Engine</span>
+                        <span class="badge-web3 mb-3" style="background: var(--bg-primary); color: var(--text-muted); border-color: var(--border-subtle);" data-i18n="arch-core-badge">Dual-Sensor Engine</span>
 
-                        <h2 class="display-5 fw-bold mb-3" style="font-family: 'Cinzel', serif;" data-i18n="arch-npk-title">NPK Precision Matrix</h2>
+                        <h2 class="display-5 fw-bold mb-3" style="font-family: 'Cinzel', serif;" data-i18n="arch-npk-title">Dual Soil Moisture Sensing</h2>
 
-                        <p class="lead" style="color: var(--text-muted);" data-i18n="arch-npk-description">By analyzing Electrical Conductivity (EC), pH, and Moisture, NUTRIX uses advanced mathematical mapping to estimate NPK levels without expensive electrochemical sensors.</p>
+                        <p class="lead" style="color: var(--text-muted);" data-i18n="arch-npk-description">Menggabungkan Sensor Capacitive V2.0 (anti-korosi) dan Resistive HD-38 untuk konsensus kelembapan tanah presisi tinggi tanpa risiko salah baca.</p>
 
                         <span class="mt-3 d-inline-block fw-bold" style="color: var(--color-accent-highlight);"><i class="bi bi-arrow-right"></i> <span data-i18n="arch-details">Click for Details</span></span>
 
@@ -1746,7 +1748,7 @@
 
                     <div class="col-md-5 col-lg-5 text-center d-none d-md-block mt-3 mt-md-0">
 
-                        <i class="bi bi-cpu display-1 opacity-50" style="color: var(--color-accent-highlight);"></i>
+                        <i class="bi bi-droplet-half display-1 opacity-50" style="color: var(--color-accent-highlight);"></i>
 
                     </div>
 
@@ -1762,11 +1764,11 @@
 
                     <div class="col-md-7 col-lg-7">
 
-                        <span class="badge-web3 mb-3" style="background: var(--bg-primary); color: var(--text-muted); border-color: var(--border-subtle);" data-i18n="arch-hardware-badge">Hardware</span>
+                        <span class="badge-web3 mb-3" style="background: var(--bg-primary); color: var(--text-muted); border-color: var(--border-subtle);" data-i18n="arch-hardware-badge">Hardware & Aktuator</span>
 
-                        <h2 class="display-5 fw-bold mb-3" style="font-family: 'Cinzel', serif;" data-i18n="arch-rs-title">RS-485 Modbus</h2>
+                        <h2 class="display-5 fw-bold mb-3" style="font-family: 'Cinzel', serif;" data-i18n="arch-rs-title">ESP32 & Solenoid Valve</h2>
 
-                        <p class="lead" style="color: var(--text-muted);" data-i18n="arch-rs-description">Industrial-grade 4-wire transmission architecture guarantees high stability across massive agricultural fields, eliminating signal degradation.</p>
+                        <p class="lead" style="color: var(--text-muted);" data-i18n="arch-rs-description">Kontroler ESP32 memproses data sensor dan menggerakkan Solenoid Valve via Relay untuk irigasi otomatis maupun manual real-time dari cloud.</p>
 
                         <span class="mt-3 d-inline-block fw-bold" style="color: var(--color-accent-highlight);"><i class="bi bi-arrow-right"></i> <span data-i18n="arch-details">Click for Details</span></span>
 
@@ -1774,7 +1776,7 @@
 
                     <div class="col-md-5 col-lg-5 text-center d-none d-md-block mt-3 mt-md-0">
 
-                        <i class="bi bi-router display-1 opacity-50" style="color: var(--color-accent-highlight);"></i>
+                        <i class="bi bi-cpu display-1 opacity-50" style="color: var(--color-accent-highlight);"></i>
 
                     </div>
 
@@ -2363,7 +2365,7 @@
 
                 <h2 class="faq-title" data-i18n="faq-title">Frequently Asked Questions</h2>
 
-                <p class="faq-desc" data-i18n="faq-desc">Everything you need to know about the NUTRIX precision hardware and IoT mesh network.</p>
+                <p class="faq-desc" data-i18n="faq-desc">Semua yang perlu Anda ketahui tentang sistem Dual Sensor Kelembapan (Capacitive & Resistive), mikrokontroler ESP32, dan kontrol otomatisasi Solenoid Valve.</p>
 
             </div>
 
@@ -2371,41 +2373,41 @@
 
                 <div class="faq-item">
 
-                    <button class="faq-q" data-i18n="faq-q1">How does NUTRIX transmit data if my field has no 4G or Wi-Fi?</button>
+                    <button class="faq-q" data-i18n="faq-q1">Bagaimana cara kerja sistem otomatisasi Solenoid Valve pada Nutrix?</button>
 
-                    <div class="faq-a"><p data-i18n="faq-a1">NUTRIX leverages long-range LoRaWAN and sub-GHz mesh radio protocols.</p></div>
-
-                </div>
-
-                <div class="faq-item">
-
-                    <button class="faq-q" data-i18n="faq-q2">Is the sensor hardware weatherproof for harsh tropical conditions?</button>
-
-                    <div class="faq-a"><p data-i18n="faq-a2">Yes. NUTRIX enclosures are certified IP67 weatherproof.</p></div>
+                    <div class="faq-a"><p data-i18n="faq-a1">ESP32 membaca data dari sensor Capacitive V2.0 dan Resistive HD-38 secara real-time. Jika konsensus kelembapan tanah di bawah ambang batas (30% VWC), mikrokontroler ESP32 secara otomatis memicu relay untuk membuka Solenoid Valve selama 5 detik, kemudian mengaktifkan cooldown demi efisiensi air.</p></div>
 
                 </div>
 
                 <div class="faq-item">
 
-                    <button class="faq-q" data-i18n="faq-q3">How long does the battery last and what powers each field probe?</button>
+                    <button class="faq-q" data-i18n="faq-q2">Mengapa Nutrix menggunakan kombinasi Dual Sensor (Capacitive & Resistive)?</button>
 
-                    <div class="faq-a"><p data-i18n="faq-a3">Each field node integrates high-efficiency monocrystalline solar cells.</p></div>
-
-                </div>
-
-                <div class="faq-item">
-
-                    <button class="faq-q" data-i18n="faq-q4">Can telemetry data be exported or integrated with third-party software?</button>
-
-                    <div class="faq-a"><p data-i18n="faq-a4">Absolutely. The NUTRIX dashboard provides instant CSV/Excel export.</p></div>
+                    <div class="faq-a"><p data-i18n="faq-a2">Sensor Capacitive V2.0 sangat sensitif terhadap dinamika mikro tanah dan tahan korosi, sedangkan Resistive HD-38 bertindak sebagai penyeimbang dan peredam noise (damping factor). Algoritma konsensus menggabungkan keduanya sehingga sistem kebal terhadap pembacaan palsu (false triggers).</p></div>
 
                 </div>
 
                 <div class="faq-item">
 
-                    <button class="faq-q" data-i18n="faq-q5">How soon can a farm realize tangible fertilizer cost savings?</button>
+                    <button class="faq-q" data-i18n="faq-q3">Bagaimana mikrokontroler ESP32 terhubung dan mengirim data ke Dashboard?</button>
 
-                    <div class="faq-a"><p data-i18n="faq-a5">Growers typically witness a 25% to 35% reduction in the first cycle.</p></div>
+                    <div class="faq-a"><p data-i18n="faq-a3">ESP32 dilengkapi sistem pairing pintar WiFiManager (Access Point mandiri 'NUTRIX-ESP32-PAIR'). Setelah terhubung ke WiFi lokal/hotspot, data telemetri kedua sensor dikirimkan ke server web melalui protokol HTTP Secure (HTTPS) setiap 10 detik.</p></div>
+
+                </div>
+
+                <div class="faq-item">
+
+                    <button class="faq-q" data-i18n="faq-q4">Apakah Solenoid Valve bisa dikendalikan secara manual dari Dashboard?</button>
+
+                    <div class="faq-a"><p data-i18n="faq-a4">Bisa. Selain irigasi otomatis di tingkat mikrokontroler (Edge Computing), pengguna juga dapat menekan tombol 'Siram Sekarang' langsung dari dashboard web untuk membuka katup solenoid secara manual selama durasi yang ditentukan.</p></div>
+
+                </div>
+
+                <div class="faq-item">
+
+                    <button class="faq-q" data-i18n="faq-q5">Apakah solenoid valve tetap bekerja otomatis jika koneksi internet terputus?</button>
+
+                    <div class="faq-a"><p data-i18n="faq-a5">Ya. Logika auto-irigasi tertanam langsung di dalam firmware ESP32 (on-device edge intelligence). Meskipun jaringan internet atau hotspot terputus sementara, solenoid valve tetap akan menyiram otomatis saat tanah terdeteksi kering.</p></div>
 
                 </div>
 
@@ -2685,7 +2687,7 @@
 
         const closeArchModal = document.getElementById('closeArchModal');
 
-        const architectureIcons = { npk: 'bi-cpu', rs485: 'bi-router' };
+        const architectureIcons = { npk: 'bi-droplet-half', rs485: 'bi-cpu' };
 
 
 
@@ -5169,187 +5171,187 @@
 
     (function() {
 
-        // --- 15 Pertanyaan Terkurasi: IoT, NPK, Pertanian Presisi & Nutrix ---
+        // --- 15 Pertanyaan Terkurasi: IoT, Dual Sensor Kelembapan, ESP32, Solenoid Valve & Nutrix ---
 
         const quizBank = [
 
             {
 
-                q: "Apa fungsi utama unsur Nitrogen (N) bagi pertumbuhan tanaman?",
+                q: "Apa dua sensor kelembapan tanah yang digunakan dalam sistem IoT Nutrix?",
 
-                opts: ["Mempercepat pembentukan bunga & buah", "Merangsang pertumbuhan vegetatif dan klorofil daun", "Memperkuat daya tahan batang terhadap hama", "Membantu penyerapan air di perakaran"],
-
-                ans: 1,
-
-                exp: "Nitrogen (N) adalah komponen inti klorofil yang sangat krusial untuk pertumbuhan daun hijau dan proses fotosintesis."
-
-            },
-
-            {
-
-                q: "Unsur hara 'Fosfor' (P) pada pupuk NPK terutama berperan penting dalam...",
-
-                opts: ["Perkembangan akar yang kuat serta pembungaan", "Mengatur penguapan air melalui stomata", "Mencegah daun cepat menguning", "Meningkatkan rasa manis pada hasil panen"],
+                opts: ["Capacitive Soil Moisture V2.0 & Resistive HD-38", "Sensor NPK & pH meter digital", "Ultrasonic Distance & Barometer BMP280", "PIR Sensor & LDR"],
 
                 ans: 0,
 
-                exp: "Fosfor (P) berfungsi merangsang pembelahan sel, pemanjangan perakaran bibit muda, dan mempercepat fase pembungaan."
+                exp: "Nutrix mengintegrasikan Sensor Capacitive V2.0 (tahan korosi) dan Resistive HD-38 sebagai arsitektur dual sensor presisi."
 
             },
 
             {
 
-                q: "Peran utama Kalium (K) pada tanaman budidaya adalah...",
+                q: "Mengapa Sensor Capacitive V2.0 lebih unggul dibanding sensor resistif biasa dalam pemakaian jangka panjang?",
 
-                opts: ["Membuat daun tanaman menjadi ungu gelap", "Regulasi osmotik, transportasi nutrisi, dan imunitas tanaman", "Menggantikan peran cahaya matahari", "Menurunkan kadar gula buah"],
+                opts: ["Harganya jauh lebih murah", "Mengukur dielektrik tanah tanpa kontak listrik langsung sehingga bebas korosi", "Dapat mendeteksi cahaya matahari", "Membunuh bakteri patogen tanah"],
 
                 ans: 1,
 
-                exp: "Kalium (K) bertindak sebagai aktivator berbagai enzim, mengatur pembukaan stomata, dan menguatkan daya tahan tanaman terhadap penyakit."
+                exp: "Sensor kapasitif mengukur permitivitas dielektrik tanah tanpa mengalirkan arus langsung ke probe, sehingga lapisan tembaga tidak mengalami korosi oksidasi."
 
             },
 
             {
 
-                q: "Mengapa pemantauan pH tanah penting dalam pertanian presisi?",
+                q: "Apa fungsi utama Sensor Resistive HD-38 dalam arsitektur Dual-Sensor Nutrix?",
 
-                opts: ["pH tidak berpengaruh pada ketersediaan pupuk", "pH tanah menentukan ketersediaan hara yang dapat diserap oleh akar", "Semakin asam tanah, semakin subur tanaman", "pH netral selalu membunuh bakteri baik"],
+                opts: ["Sebagai cadangan saat baterai habis", "Sebagai penyeimbang dan peredam fluktuasi/noise (damping factor) dari sensor kapasitif", "Mengeluarkan suara alarm saat tanah kering", "Mengukur kecepatan angin di lahan"],
 
                 ans: 1,
 
-                exp: "Pada pH tanah yang terlalu asam (< 5.5) atau terlalu basa (> 7.5), unsur hara seperti P, N, dan mikro terkunci dan tidak dapat diserap akar."
+                exp: "Sensor resistif bertindak sebagai jangkar penyeimbang (damping factor) dan validasi silang (cross-validation) untuk mencegah pembacaan palsu (false trigger)."
 
             },
 
             {
 
-                q: "Sensor apa yang digunakan oleh NUTRIX untuk membaca kadar kelembaban tanah secara otomatis?",
+                q: "Bagaimana cara kerja aktuator Solenoid Valve pada sistem Nutrix?",
 
-                opts: ["Soil Moisture Sensor (Kapasitif / Resistif)", "Ultrasonic Distance Sensor", "Barometer BMP280", "PIR Motion Sensor"],
+                opts: ["Sebagai pompa pengisap air sumur", "Sebagai katup saklar elektromagnetik untuk membuka/menutup aliran pipa air irigasi secara presisi", "Sebagai sensor pengukur suhu air", "Sebagai pengaduk pupuk cair otomatis"],
+
+                ans: 1,
+
+                exp: "Solenoid Valve adalah katup elektromagnetik Normally Closed (NC) yang membuka aliran air saat dialiri arus via relay dan menutup rapat saat dinonaktifkan."
+
+            },
+
+            {
+
+                q: "Kapan ESP32 Nutrix secara otomatis memicu Solenoid Valve untuk menyiram tanah?",
+
+                opts: ["Hanya setiap jam 12 malam", "Saat rata-rata konsensus kelembapan tanah drop di bawah ambang batas (30% VWC)", "Setiap kali ada orang mendekati kebun", "Saat sinyal WiFi terputus"],
+
+                ans: 1,
+
+                exp: "ESP32 secara otonom memonitor konsensus kelembapan; jika < 30% VWC, relay aktif selama 5 detik untuk irigasi otomatis."
+
+            },
+
+            {
+
+                q: "Mengapa setelah menyiram otomatis, sistem Nutrix menerapkan jeda Cooldown (60 detik)?",
+
+                opts: ["Agar modul ESP32 tidak panas", "Memberi waktu air meresap ke pori tanah dan mencegah saklar relay hidup-mati berulang (anti-chattering)", "Menunggu kuota internet diperbarui", "Membiarkan solenoid beristirahat semalaman"],
+
+                ans: 1,
+
+                exp: "Mekanisme cooldown memberi waktu infiltrasi air ke rizosfer sekaligus melindungi solenoid dan relay dari siklus switching berlebih (chattering)."
+
+            },
+
+            {
+
+                q: "Mikrokontroler utama yang mengendalikan seluruh sistem akuisisi sensor dan aktuator Nutrix adalah...",
+
+                opts: ["Raspberry Pi 4", "ESP32 Dev Module dengan WiFi & Bluetooth bawaan", "Arduino Uno R3", "STM8 8-bit MCU"],
+
+                ans: 1,
+
+                exp: "ESP32 digunakan karena memiliki ADC multi-channel berpresisi tinggi, konektivitas WiFi bawaan, performa dual-core 240MHz, serta efisiensi daya."
+
+            },
+
+            {
+
+                q: "Apa jenis logika kontrol relay yang digunakan untuk mengaktifkan Solenoid Valve pada Nutrix?",
+
+                opts: ["Active-HIGH", "Active-LOW (sinyal LOW menyalakan relay/membuka valve)", "PWM frekuensi tinggi", "Logika analog 0-10V"],
+
+                ans: 1,
+
+                exp: "Modul relay yang digunakan adalah Active-LOW; saat ESP32 memberi logika LOW, koil relay bekerja dan membuka Solenoid Valve."
+
+            },
+
+            {
+
+                q: "Pin GPIO berapa pada ESP32 yang dialokasikan khusus untuk membaca sinyal analog Capacitive V2.0?",
+
+                opts: ["GPIO 34 (ADC1_CH6)", "GPIO 13", "GPIO 0", "GPIO 1"],
 
                 ans: 0,
 
-                exp: "Soil Moisture Sensor membaca kadar air dalam matriks tanah secara realtime agar penyiraman berlangsung presisi."
+                exp: "Sensor Capacitive V2.0 disambungkan ke GPIO 34 (ADC1_CH6) yang merupakan pin ADC khusus input analog murni tanpa interferensi WiFi."
 
             },
 
             {
 
-                q: "Protokol transmisi data ringan yang populer digunakan pada perangkat IoT pertanian adalah...",
+                q: "Apa keuntungan arsitektur 'Edge Computing' pada firmware ESP32 Nutrix?",
 
-                opts: ["FTP", "MQTT / HTTP REST", "Telnet", "SMTP"],
+                opts: ["Tidak perlu kabel listrik sama sekali", "Penyiraman otomatis tetap berjalan mandiri di kebun meskipun koneksi internet/cloud terputus", "Membuat tanaman tumbuh 10 kali lebih cepat", "Menghapus kebutuhan pipa air"],
 
                 ans: 1,
 
-                exp: "MQTT dan HTTP REST API sangat efisien untuk mengirimkan telemetri sensor dengan konsumsi daya dan bandwidth rendah."
+                exp: "Dengan edge computing, logika keputusan irigasi dieksekusi langsung di chip ESP32 sehingga kebun tetap tersiram otomatis walau internet offline."
 
             },
 
             {
 
-                q: "Jika daun tanaman muda berwarna pucat atau menguning (klorosis) mulai dari daun tua, tanaman kemungkinan kekurangan...",
+                q: "Apa nama portal Access Point mandiri yang dipancarkan ESP32 saat proses pairing WiFi pertama kali?",
 
-                opts: ["Nitrogen (N)", "Boron (B)", "Kalsium (Ca)", "Tembaga (Cu)"],
+                opts: ["NUTRIX-ESP32-PAIR", "FREE-WIFI-FARM", "ARDUINO-SETUP-99", "SMART-VALVE-AP"],
 
                 ans: 0,
 
-                exp: "Nitrogen bersifat mobile; saat defisiensi, tanaman merelokasi N dari daun tua ke daun muda sehingga daun tua menguning lebih dulu."
+                exp: "ESP32 memancarkan hotspot 'NUTRIX-ESP32-PAIR' dengan IP 192.168.4.1 untuk memudahkan petani mendaftarkan WiFi dan Token tanpa coding ulang."
 
             },
 
             {
 
-                q: "Apa keuntungan utama sistem irigasi tetes (drip irrigation) presisi?",
+                q: "Pin GPIO berapa pada ESP32 yang dialokasikan khusus untuk membaca sinyal Sensor Resistive HD-38?",
 
-                opts: ["Menghabiskan lebih banyak air", "Mengalirkan air & pupuk cair langsung ke perakaran dengan efisiensi tinggi", "Membuat daun selalu basah kuyup", "Menaikkan kelembaban udara berlebihan"],
+                opts: ["GPIO 35 (ADC1_CH7)", "GPIO 21", "GPIO 16", "GPIO 2"],
 
-                ans: 1,
+                ans: 0,
 
-                exp: "Drip irrigation meminimalkan penguapan dan mengalirkan nutrisi langsung ke zona perakaran aktif (fertigasi presisi)."
-
-            },
-
-            {
-
-                q: "Suhu tanah yang ideal untuk sebagian besar tanaman hortikultura tropis berkisar antara...",
-
-                opts: ["5°C - 12°C", "20°C - 30°C", "45°C - 55°C", "0°C - 5°C"],
-
-                ans: 1,
-
-                exp: "Suhu tanah 20°C - 30°C mengoptimalkan metabolisme akar, penyerapan hara, dan aktivitas mikroorganisme tanah yang menguntungkan."
+                exp: "Sensor Resistive HD-38 dihubungkan ke GPIO 35 (ADC1_CH7) di blok ADC1 yang stabil saat transmisi WiFi aktif."
 
             },
 
             {
 
-                q: "Konsep utama 'Smart Farming 4.0' adalah...",
+                q: "Apa singkatan dari VWC yang ditampilkan pada pembacaan kelembapan tanah Nutrix?",
 
-                opts: ["Mengganti semua petani dengan robot semata", "Pemanfaatan IoT, analitik data, dan sensor cerdas untuk efisiensi & hasil optimal", "Pertanian tradisional tanpa listrik sama sekali", "Penebangan hutan untuk lahan masif"],
+                opts: ["Voltage Wave Control", "Volumetric Water Content (Kadar Air Volumetrik dalam %)", "Variable Water Cycle", "Virtual Wireless Connection"],
 
                 ans: 1,
 
-                exp: "Smart Farming 4.0 mengintegrasikan sensor, otomatisasi, dan data-driven insight untuk meningkatkan hasil panen secara berkelanjutan."
+                exp: "VWC (% Volumetric Water Content) adalah rasio volume air terhadap total volume tanah, standar emas ilmiah pengukuran kelembapan tanah."
 
             },
 
             {
 
-                q: "Apa dampak dari kelebihan dosis pupuk kimia sintetis secara berlebihan pada tanah?",
+                q: "Berapa interval waktu default pengiriman telemetri data ESP32 ke server Web Nutrix?",
 
-                opts: ["Tanah menjadi semakin gembur", "Kerusakan struktur tanah, salinitas meningkat, dan membunuh mikroba tanah", "Tanaman kebal terhadap segala hama", "pH tanah selalu stabil 7.0"],
+                opts: ["Setiap 1 jam", "Setiap 10 detik secara real-time", "Hanya seminggu sekali", "Setiap 1 mili-detik"],
 
                 ans: 1,
 
-                exp: "Over-fertilization menyebabkan akumulasi garam kimia (salinitas tinggi) yang dapat membakar akar tanaman dan mematikan mikroflora tanah."
+                exp: "Firmware Nutrix membaca filter ADC dan mengirim data telemetri ke endpoint REST API server setiap 10 detik (10000 ms)."
 
             },
 
             {
 
-                q: "Sensor NPK optik/konduktivitas tanah dalam sistem cerdas berfungsi untuk...",
+                q: "Selain irigasi otomatis, apa fitur kontrol aktuator yang dapat dilakukan pengguna melalui Web Dashboard Nutrix?",
 
-                opts: ["Mendeteksi intensitas sinar matahari", "Memperkirakan konsentrasi ion Nitrogen, Fosfor, dan Kalium di perakaran", "Mengusir burung pengganggu", "Mengukur kecepatan angin"],
-
-                ans: 1,
-
-                exp: "Sensor NPK mendeteksi kadar konsentrasi hara esensial dalam larutan tanah untuk rekomendasi pemupukan tepat takaran."
-
-            },
-
-            {
-
-                q: "Apa singkatan dari IoT dalam konteks platform NUTRIX?",
-
-                opts: ["Internet of Tools", "Internet of Things", "Input Output Testing", "Integrated Operating Task"],
+                opts: ["Mengubah jenis tanah secara fisik", "Perintah Siram Manual Real-Time (Cloud Override) via tombol dashboard", "Mengganti pipa secara otomatis", "Mematikan listrik PLN jarak jauh"],
 
                 ans: 1,
 
-                exp: "Internet of Things (IoT) adalah jaringan objek fisik yang terhubung ke internet dan saling bertukar data telemetri."
-
-            },
-
-            {
-
-                q: "Bahan organik seperti kompos berfungsi krusial untuk tanah karena...",
-
-                opts: ["Membuat tanah menjadi padat dan kedap air", "Memperbaiki struktur remah tanah, kapasitas simpan air, dan biologi tanah", "Menghilangkan semua cacing tanah", "Menghentikan pertumbuhan akar"],
-
-                ans: 1,
-
-                exp: "Kompos menyumbang humus yang memperbaiki porositas tanah, menahan kelembaban, dan menjadi rumah mikroba bermanfaat."
-
-            },
-
-            {
-
-                q: "Tujuan utama pemanfaatan dashboard telemetri NUTRIX bagi pembudidaya adalah...",
-
-                opts: ["Hanya sebagai hiasan tampilan layar", "Memantau kondisi lahan secara real-time dan mengambil keputusan secara presisi", "Membatasi konektivitas ke kebun", "Meningkatkan biaya operasional tanpa data"],
-
-                ans: 1,
-
-                exp: "Dashboard NUTRIX memberikan visibilitas real-time terhadap suhu, kelembaban, dan kondisi tanah demi pengambilan keputusan budidaya yang akurat."
+                exp: "Pengguna dapat memicu perintah siram manual langsung dari dashboard web Nutrix, yang diteruskan ke ESP32 untuk membuka Solenoid Valve."
 
             }
 

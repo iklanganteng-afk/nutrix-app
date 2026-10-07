@@ -18,36 +18,36 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const architectureTranslations = {
         'en-GB': {
-            npk: { title: 'NPK Precision Matrix', desc: 'The core engine processes raw telemetry from conventional sensors. Multiple linear regression maps EC, pH, and temperature into estimated nitrogen, phosphorus, and potassium levels.', impact: 'Reduces reliance on costly electrochemical NPK sensors and lowers physical maintenance demands.' },
-            rs485: { title: 'RS-485 Modbus Architecture', desc: 'An industrial wired communication topology using differential signalling and four data wires designed to resist electromagnetic interference.', impact: 'Maintains stable, packet-loss-resistant data transmission across large fields, with cable runs of up to 1.2 km between nodes.' }
+            npk: { title: 'Dual-Sensor Soil Moisture Engine', desc: 'The core engine processes telemetry from Capacitive V2.0 (corrosion-free) and Resistive HD-38 sensors simultaneously. A trimmed-mean consensus filter ensures hyper-accurate soil moisture evaluation.', impact: 'Eliminates false irrigation triggers and provides scientific-grade volumetric water content readings.' },
+            rs485: { title: 'ESP32 & Solenoid Valve Automation', desc: 'An autonomous edge-computing node powered by the ESP32. It controls a Normally Closed (NC) Solenoid Valve via an Active-LOW relay module for closed-loop automatic and cloud-directed irrigation.', impact: 'Ensures water conservation with intelligent 60-second cooldown cycles and reliable fail-safe operation.' }
         },
         'en-US': {
-            npk: { title: 'NPK Precision Matrix', desc: 'The core engine processes raw telemetry from conventional sensors. Multiple linear regression maps EC, pH, and temperature into estimated nitrogen, phosphorus, and potassium levels.', impact: 'Reduces dependence on expensive electrochemical NPK sensors and lowers physical maintenance needs.' },
-            rs485: { title: 'RS-485 Modbus Architecture', desc: 'An industrial wired communication topology using differential signaling and four data wires built to resist electromagnetic interference.', impact: 'Maintains stable, packet-loss-resistant data transmission across large fields, with cable runs up to 1.2 km between nodes.' }
+            npk: { title: 'Dual-Sensor Soil Moisture Engine', desc: 'The core engine processes telemetry from Capacitive V2.0 (corrosion-free) and Resistive HD-38 sensors simultaneously. A trimmed-mean consensus filter ensures hyper-accurate soil moisture evaluation.', impact: 'Eliminates false irrigation triggers and provides scientific-grade volumetric water content readings.' },
+            rs485: { title: 'ESP32 & Solenoid Valve Automation', desc: 'An autonomous edge-computing node powered by the ESP32. It controls a Normally Closed (NC) Solenoid Valve via an Active-LOW relay module for closed-loop automatic and cloud-directed irrigation.', impact: 'Ensures water conservation with intelligent 60-second cooldown cycles and reliable fail-safe operation.' }
         },
         'en-CA': {
-            npk: { title: 'NPK Precision Matrix', desc: 'The core engine processes field telemetry from conventional sensors. It maps EC, pH, and temperature into estimated nitrogen, phosphorus, and potassium levels.', impact: 'Reduces dependence on costly electrochemical NPK sensors and simplifies long-term maintenance.' },
-            rs485: { title: 'RS-485 Modbus Architecture', desc: 'An industrial four-wire communication topology using differential signalling to withstand electromagnetic interference.', impact: 'Keeps data transmission stable across large farms, supporting cable runs of up to 1.2 km between nodes.' }
+            npk: { title: 'Dual-Sensor Soil Moisture Engine', desc: 'The core engine processes field telemetry from Capacitive V2.0 and Resistive HD-38 sensors. An advanced statistical consensus algorithm combines both probes for robust moisture measurement.', impact: 'Avoids false sensor triggers and delivers accurate volumetric water content data.' },
+            rs485: { title: 'ESP32 & Solenoid Valve Automation', desc: 'An edge controller built on the ESP32 platform managing a Normally Closed (NC) Solenoid Valve via relay, enabling both local automatic watering and remote cloud control.', impact: 'Maximizes irrigation efficiency while preventing over-watering with built-in cooldowns.' }
         },
         id: {
-            npk: { title: 'Matriks Presisi NPK', desc: 'Mesin inti memproses telemetri mentah dari sensor konvensional. Regresi linear berganda memetakan EC, pH, dan suhu menjadi estimasi kadar nitrogen, fosfor, dan kalium.', impact: 'Mengurangi ketergantungan pada sensor NPK elektrokimia yang mahal dan menurunkan kebutuhan perawatan fisik.' },
-            rs485: { title: 'Arsitektur RS-485 Modbus', desc: 'Topologi komunikasi kabel industri dengan sinyal diferensial dan empat kabel data yang tahan terhadap gangguan elektromagnetik.', impact: 'Menjaga transmisi data tetap stabil tanpa packet-loss di lahan luas, dengan jarak kabel hingga 1,2 km antar node.' }
+            npk: { title: 'Mesin Dual-Sensor Kelembapan Tanah', desc: 'Sistem inti memproses telemetri dari Sensor Capacitive V2.0 (tahan korosi) dan Resistive HD-38 secara bersamaan. Filter trimmed-mean menghasilkan konsensus kelembapan tanah yang presisi dan stabil.', impact: 'Mencegah pembacaan palsu (false trigger) dan menyajikan data kadar air volumetrik (VWC %) tingkat ilmiah.' },
+            rs485: { title: 'Otomatisasi ESP32 & Solenoid Valve', desc: 'Node edge computing berbasis ESP32 yang mengendalikan Solenoid Valve (Normally Closed) melalui modul relay Active-LOW untuk irigasi otomatis di kebun maupun perintah manual dari cloud.', impact: 'Menghemat air dengan algoritma penyiraman otomatis cerdas berdurasi 5 detik dan cooldown 60 detik.' }
         },
         jv: {
-            npk: { title: 'Matriks Presisi NPK', desc: 'Mesin inti ngolah telemetri mentah saka sensor konvensional. Regresi linear majemuk nggambarake EC, pH, lan suhu dadi perkiraan nitrogen, fosfor, lan kalium.', impact: 'Nyuda ketergantungan marang sensor NPK elektrokimia sing larang lan nyuda kabutuhan perawatan fisik.' },
-            rs485: { title: 'Arsitektur RS-485 Modbus', desc: 'Topologi komunikasi kabel industri nganggo sinyal diferensial lan papat kabel data sing tahan gangguan elektromagnetik.', impact: 'Njaga transmisi data stabil tanpa packet-loss ing lahan amba, kanthi jarak kabel nganti 1,2 km antar node.' }
+            npk: { title: 'Mesin Dual-Sensor Kelembapan Lemah', desc: 'Sistem inti ngolah telemetri saka Sensor Capacitive V2.0 (anti-karat) lan Resistive HD-38 bebarengan kanthi filter konsensus ilmiah kanggo ngukur banyu lemah kanthi akurat.', impact: 'Nyegah salah waca sensor lan menehi data kelembapan banyu volumetrik (VWC %) sing stabil.' },
+            rs485: { title: 'Otomatisasi ESP32 & Solenoid Valve', desc: 'Node ESP32 sing ngatur katup banyu Solenoid Valve liwat relay Active-LOW kanggo nyiram tanduran kanthi otomatis utawa manual saka dashboard.', impact: 'Ngirit banyu kanthi setelan siram otomatis 5 detik lan jeda cooldown 60 detik sing aman.' }
         },
         ja: {
-            npk: { title: 'NPK精密マトリクス', desc: 'コアエンジンは従来センサーのテレメトリを処理し、EC、pH、温度から窒素・リン・カリウム濃度を推定します。', impact: '高価な電気化学式NPKセンサーへの依存を減らし、物理的な保守負担を軽減します。' },
-            rs485: { title: 'RS-485 Modbusアーキテクチャ', desc: '差動信号と4本のデータ線を使用する産業用有線通信トポロジーで、電磁干渉に強い設計です。', impact: '広い農地でも安定したデータ通信を維持し、ノード間最大1.2kmの配線に対応します。' }
+            npk: { title: '土壌水分デュアルセンサーエンジン', desc: '耐腐食性の静電容量式V2.0と抵抗式HD-38センサーのテレメトリを同時に処理し、高精度な土壌水分コンセンサスを算出します。', impact: '誤検知を防ぎ、学術レベルの体積含水率（VWC %）データを提供します。' },
+            rs485: { title: 'ESP32とソレノイドバルブ自動化', desc: 'ESP32がActive-LOWリレーを介してノーマリークローズ（NC）ソレノイドバルブを制御し、ローカル自動灌漑および遠隔手動散水を実現します。', impact: '5秒間の自動散水と60秒のクールダウン機能により、節水と安全な運用を両立します。' }
         },
         ar: {
-            npk: { title: 'مصفوفة NPK الدقيقة', desc: 'يعالج المحرك الأساسي بيانات المستشعرات التقليدية، ويربط التوصيل الكهربائي ودرجة الحموضة والحرارة لتقدير مستويات النيتروجين والفوسفور والبوتاسيوم.', impact: 'يقلل الاعتماد على مستشعرات NPK الكهروكيميائية المكلفة ويخفف متطلبات الصيانة.' },
-            rs485: { title: 'بنية RS-485 Modbus', desc: 'طوبولوجيا اتصال سلكية صناعية تستخدم الإشارة التفاضلية وأربعة أسلاك بيانات لمقاومة التداخل الكهرومغناطيسي.', impact: 'تحافظ على نقل بيانات مستقر عبر الحقول الواسعة، مع مسافة كابل تصل إلى 1.2 كم بين العقد.' }
+            npk: { title: 'محرك قياس رطوبة التربة المزدوج', desc: 'يعالج النظام القياسات الآنية من مستشعر السعة V2.0 ومستشعر المقاومة HD-38 بالتوازي مع خوارزمية توافقية لتقدير رطوبة التربة بدقة فائقة.', impact: 'يمنع القراءات الخاطئة ويوفر بيانات علمية دقيقة لمحتوى الماء الحجمي.' },
+            rs485: { title: 'أتمتة ESP32 وصمام الملف اللولبي', desc: 'وحدة حوسبة حافة تعتمد على ESP32 للتحكم في صمام الملف اللولبي (Solenoid Valve) عبر ريلاي للري التلقائي والتحكم اليدوي من السحابة.', impact: 'يوفر استهلاك المياه بفضل دورات الري التلقائي الذكية وفترات الانتظار الآمنة.' }
         },
         ms: {
-            npk: { title: 'Matriks Ketepatan NPK', desc: 'Enjin teras memproses telemetri daripada penderia konvensional, lalu memetakan EC, pH dan suhu kepada anggaran nitrogen, fosforus dan kalium.', impact: 'Mengurangkan kebergantungan pada penderia NPK elektrokimia yang mahal serta beban penyelenggaraan fizikal.' },
-            rs485: { title: 'Seni Bina RS-485 Modbus', desc: 'Topologi komunikasi berwayar industri menggunakan isyarat pembezaan dan empat wayar data yang tahan gangguan elektromagnet.', impact: 'Mengekalkan penghantaran data yang stabil di ladang luas dengan kabel sehingga 1.2 km antara nod.' }
+            npk: { title: 'Enjin Dwi-Penderia Kelembapan Tanah', desc: 'Sistem teras memproses telemetri penderia Capacitive V2.0 (tahan karat) dan Resistive HD-38 secara serentak untuk konsensus kelembapan tanah yang stabil dan jitu.', impact: 'Menghalang pencetusan palsu dan memberikan data kandungan air volumetrik (VWC %) berketepatan tinggi.' },
+            rs485: { title: 'Automasi ESP32 & Injap Solenoid', desc: 'Nod pengkomputeran pinggir ESP32 yang mengawal Injap Solenoid melalui geganti Active-LOW untuk pengairan automatik serta kawalan manual dari papan pemuka awan.', impact: 'Menjimatkan air melalui algoritma siraman automatik 5 saat dan tempoh bertenang 60 saat.' }
         }
     };
     // Expose dictionary globally so inline scripts (simulator etc.) can access it
