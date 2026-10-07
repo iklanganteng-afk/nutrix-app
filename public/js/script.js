@@ -345,10 +345,10 @@ document.addEventListener("DOMContentLoaded", function () {
     /* ========================================================
        1. HERO 2.5D KINEMATICS LERP (MetaMask Smooth Scroll)
        ======================================================== */
-    const heroLogo = document.querySelector('#hero-center-logo, #hero-logo');
-    const heroCard = document.querySelector('.hero-center-card');
-    const heroText = document.querySelector('.hero-kinetic-text');
-    const heroWrapper = document.querySelector('.hero-wrapper');
+    const heroLogo = document.querySelector('.welcome-page #hero-center-logo, .welcome-page #hero-logo');
+    const heroCard = document.querySelector('.welcome-page .hero-center-card');
+    const heroText = document.querySelector('.welcome-page .hero-kinetic-text');
+    const heroWrapper = document.querySelector('.welcome-page .hero-wrapper');
 
     let targetRotateX = 0, targetRotateY = 0, targetScale = 1, targetOpacity = 1;
     let currentRotateX = 0, currentRotateY = 0, currentScale = 1, currentOpacity = 1;
@@ -374,11 +374,13 @@ document.addEventListener("DOMContentLoaded", function () {
             const fadeThreshold = Math.max(1, heroHeight - window.innerHeight);
             const fadeProgress = Math.min(1, Math.max(0, (scrollY - fadeThreshold) / Math.max(1, window.innerHeight * 0.65)));
 
-            if (heroText && window.innerWidth > 992) {
-                const subtleY = Math.min(60, scrollY * 0.15);
-                heroText.style.transform = `translateY(-${subtleY}px)`;
-            } else if (heroText) {
-                heroText.style.transform = 'none';
+            if (heroText) {
+                const language = document.documentElement.lang || 'id';
+                const direction = language === 'ar' ? 1 : -1;
+                const slideProgress = Math.min(1, Math.max(0, scrollY / Math.max(1, heroHeight * 0.72)));
+                const slideDistance = window.innerWidth + heroText.getBoundingClientRect().width;
+                const subtleY = window.innerWidth > 992 ? Math.min(24, scrollY * 0.04) : 0;
+                heroText.style.transform = `translate3d(${direction * slideDistance * slideProgress}px, -${subtleY}px, 0)`;
             }
 
             targetScale = 1 + (scrollY * 0.0008);
@@ -390,6 +392,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 scrollFrame = requestAnimationFrame(updateHeroFromScroll);
             }
         }, { passive: true });
+
+        document.addEventListener('nutrix:languagechange', updateHeroFromScroll);
+        window.addEventListener('resize', updateHeroFromScroll, { passive: true });
 
         updateHeroFromScroll();
 

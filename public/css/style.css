@@ -1275,6 +1275,11 @@ body {
     color: var(--text-title);
 }
 
+.welcome-page #team .bento-card h5 {
+    overflow-wrap: anywhere;
+    text-wrap: balance;
+}
+
 /* PERBAIKAN: Membatasi ukuran foto profil agar tidak memenuhi layar */
 .team-avatar {
     width: 110px;

@@ -1042,6 +1042,18 @@
 
             animation: authSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 
+            direction: ltr;
+
+            text-align: left;
+
+        }
+
+        #twibbonModal[dir="rtl"] .twibbon-modal-box {
+
+            direction: rtl;
+
+            text-align: right;
+
         }
 
 
@@ -1800,11 +1812,9 @@
 
                 <div class="bento-card text-center position-relative">
 
-                    <img src="{{ asset('assets/Iklil.jpeg') }}" class="team-avatar" alt="Iklil">
+                    <img src="{{ asset('assets/Iklil.jpeg') }}" class="team-avatar" alt="Iklil Naufal Triputra Ridzki">
 
-                    <h5 style="font-family: 'Cinzel', serif;" class="fw-bold mt-2">Iklil Naufal T.R.</h5>
-
-                    <p class="mb-2 fw-semibold" style="color: var(--color-accent-highlight);"><small data-i18n="role-iot">IoT Developer</small></p>
+                    <h5 style="font-family: 'Cinzel', serif;" class="fw-bold mt-2">Iklil Naufal Triputra Ridzki</h5>
 
                     <button class="btn btn-sm btn-outline-secondary w-100 profile-toggle" type="button" data-profile-target="#desc-iklil" aria-controls="desc-iklil" aria-expanded="false" style="color: var(--text-body); border-color: var(--border-subtle);">
 
@@ -1818,9 +1828,8 @@
 
                         <div class="card card-body p-3" style="background: var(--bg-primary); border: 1px solid var(--border-subtle); border-radius: 12px;">
 
-                            <p class="mb-1" style="color: var(--text-body);"><strong>Rank:</strong> <span style="color: var(--color-amber);">#8</span> (Semester 4)</p>
-
-                            <p class="mb-0" style="color: var(--text-body);"><strong>Target:</strong> Geophysics Engineering</p>
+                            <p class="mb-0" style="color: var(--text-body);" data-i18n="team-contribution-iklil">Mengembangkan sekitar 90% website dan sistem IoT, termasuk logika keputusan ESP; menyusun template awal laporan proyek dan ikut mengecat kerangka kayu.</p>
+                            <p class="mt-2 mb-0 small" style="color: var(--text-muted);" data-i18n="team-target-iklil">Target jurusan: Teknik Geofisika</p>
 
                         </div>
 
@@ -1836,11 +1845,9 @@
 
                 <div class="bento-card text-center position-relative">
 
-                    <img src="{{ asset('assets/Fabiel.jpeg') }}" class="team-avatar" alt="Fabiel">
+                    <img src="{{ asset('assets/Fabiel.jpeg') }}" class="team-avatar" alt="Fabiel Syaindra Putradima">
 
-                    <h5 style="font-family: 'Cinzel', serif;" class="fw-bold mt-2">Fabiel Syaindra P.</h5>
-
-                    <p class="mb-2 fw-semibold" style="color: var(--color-accent-highlight);"><small data-i18n="role-hardware">Hardware Specialist</small></p>
+                    <h5 style="font-family: 'Cinzel', serif;" class="fw-bold mt-2">Fabiel Syaindra Putradima</h5>
 
                     <button class="btn btn-sm btn-outline-secondary w-100 profile-toggle" type="button" data-profile-target="#desc-fabiel" aria-controls="desc-fabiel" aria-expanded="false" style="color: var(--text-body); border-color: var(--border-subtle);">
 
@@ -1852,9 +1859,8 @@
 
                         <div class="card card-body p-3" style="background: var(--bg-primary); border: 1px solid var(--border-subtle); border-radius: 12px;">
 
-                            <p class="mb-1" style="color: var(--text-body);"><strong>Rank:</strong> <span style="color: var(--color-amber);">#1</span> (Semester 4)</p>
-
-                            <p class="mb-0" style="color: var(--text-body);"><strong>Target:</strong> Civil Engineering</p>
+                            <p class="mb-0" style="color: var(--text-body);" data-i18n="team-contribution-fabiel">Membantu prototipe web awal yang tidak dipakai pada versi final, serta mengerjakan kerangka kayu dan casing ESP bersama Farrel dan Ciko.</p>
+                            <p class="mt-2 mb-0 small" style="color: var(--text-muted);" data-i18n="team-target-fabiel">Target jurusan: Teknik Sipil</p>
 
                         </div>
 
@@ -1870,11 +1876,9 @@
 
                 <div class="bento-card text-center position-relative">
 
-                    <img src="{{ asset('assets/Chicco.jpeg') }}" class="team-avatar" alt="Chicco">
+                    <img src="{{ asset('assets/Chicco.jpeg') }}" class="team-avatar" alt="Fiorano Chicco Jevon Soeyono">
 
-                    <h5 style="font-family: 'Cinzel', serif;" class="fw-bold mt-2">Fiorano Chicco J.S.</h5>
-
-                    <p class="mb-2 fw-semibold" style="color: var(--color-accent-highlight);"><small data-i18n="role-leader">Project Leader</small></p>
+                    <h5 style="font-family: 'Cinzel', serif;" class="fw-bold mt-2">Fiorano Chicco Jevon Soeyono</h5>
 
                     <button class="btn btn-sm btn-outline-secondary w-100 profile-toggle" type="button" data-profile-target="#desc-chicco" aria-controls="desc-chicco" aria-expanded="false" style="color: var(--text-body); border-color: var(--border-subtle);">
 
@@ -1886,9 +1890,8 @@
 
                         <div class="card card-body p-3" style="background: var(--bg-primary); border: 1px solid var(--border-subtle); border-radius: 12px;">
 
-                            <p class="mb-1" style="color: var(--text-body);"><strong>Rank:</strong> <span style="color: var(--color-amber);">#2</span> (Semester 4)</p>
-
-                            <p class="mb-0" style="color: var(--text-body);"><strong>Target:</strong> Water Resources Engineering</p>
+                            <p class="mb-0" style="color: var(--text-body);" data-i18n="team-contribution-fiorano">Merangkai hardware, mendukung pengadaan komponen dan fasilitas kerja, menyusun konsep serta kerangka kayu, dan memodifikasi casing ESP bersama Farrel dan Fabiel.</p>
+                            <p class="mt-2 mb-0 small" style="color: var(--text-muted);" data-i18n="team-target-fiorano">Target jurusan: Teknik Sumber Daya Air</p>
 
                         </div>
 
@@ -1904,11 +1907,9 @@
 
                 <div class="bento-card text-center position-relative">
 
-                    <img src="{{ asset('assets/Hafizh.jpeg') }}" class="team-avatar" alt="Hafizh">
+                    <img src="{{ asset('assets/Hafizh.jpeg') }}" class="team-avatar" alt="Hafizh Maulia">
 
                     <h5 style="font-family: 'Cinzel', serif;" class="fw-bold mt-2">Hafizh Maulia</h5>
-
-                    <p class="mb-2 fw-semibold" style="color: var(--color-accent-highlight);"><small data-i18n="role-ui">UI & Documentation</small></p>
 
                     <button class="btn btn-sm btn-outline-secondary w-100 profile-toggle" type="button" data-profile-target="#desc-hafizh" aria-controls="desc-hafizh" aria-expanded="false" style="color: var(--text-body); border-color: var(--border-subtle);">
 
@@ -1920,9 +1921,8 @@
 
                         <div class="card card-body p-3" style="background: var(--bg-primary); border: 1px solid var(--border-subtle); border-radius: 12px;">
 
-                            <p class="mb-1" style="color: var(--text-body);"><strong>Rank:</strong> <span style="color: var(--color-amber);">#36</span> (Semester 4)</p>
-
-                            <p class="mb-0" style="color: var(--text-body);"><strong>Target:</strong> Civil Engineering</p>
+                            <p class="mb-0" style="color: var(--text-body);" data-i18n="team-contribution-hafizh">Menyusun laporan proyek, meneliti toko dan kebutuhan komponen, serta ikut membantu pengecatan kerangka kayu.</p>
+                            <p class="mt-2 mb-0 small" style="color: var(--text-muted);" data-i18n="team-target-hafizh">Target jurusan: Teknik Sipil</p>
 
                         </div>
 
@@ -1938,11 +1938,9 @@
 
                 <div class="bento-card text-center position-relative">
 
-                    <img src="{{ asset('assets/Farrel.jpeg') }}" class="team-avatar" alt="Farrel">
+                    <img src="{{ asset('assets/Farrel.jpeg') }}" class="team-avatar" alt="Gabriel Muhammad Farrel">
 
-                    <h5 style="font-family: 'Cinzel', serif;" class="fw-bold mt-2">Gabriel M. Farrel</h5>
-
-                    <p class="mb-2 fw-semibold" style="color: var(--color-accent-highlight);"><small data-i18n="role-engineer">Hardware Engineer</small></p>
+                    <h5 style="font-family: 'Cinzel', serif;" class="fw-bold mt-2">Gabriel Muhammad Farrel</h5>
 
                     <button class="btn btn-sm btn-outline-secondary w-100 profile-toggle" type="button" data-profile-target="#desc-farrel" aria-controls="desc-farrel" aria-expanded="false" style="color: var(--text-body); border-color: var(--border-subtle);">
 
@@ -1954,9 +1952,8 @@
 
                         <div class="card card-body p-3" style="background: var(--bg-primary); border: 1px solid var(--border-subtle); border-radius: 12px;">
 
-                            <p class="mb-1" style="color: var(--text-body);"><strong>Rank:</strong> <span style="color: var(--color-amber);">#32</span> (Semester 4)</p>
-
-                            <p class="mb-0" style="color: var(--text-body);"><strong>Target:</strong> Electrical Engineering</p>
+                            <p class="mb-0" style="color: var(--text-body);" data-i18n="team-contribution-farrel">Merangkai hardware, menyediakan fasilitas kerja, membantu pengadaan komponen dan pembuatan kerangka kayu, serta mendukung kebutuhan tim. Ikut memodifikasi casing ESP bersama Ciko dan Fabiel.</p>
+                            <p class="mt-2 mb-0 small" style="color: var(--text-muted);" data-i18n="team-target-farrel">Target jurusan: Teknik Elektro</p>
 
                         </div>
 
@@ -4098,6 +4095,20 @@
 
     twibbonFrameImg.src = "{{ asset('assets/Twibbon/Twibbon Nutrix Transparent.png') }}";
 
+    function syncTwibbonDirection(language = document.documentElement.lang) {
+
+        twibbonModal.dir = language === 'ar' ? 'rtl' : 'ltr';
+
+    }
+
+    syncTwibbonDirection();
+
+    document.addEventListener('nutrix:languagechange', (event) => {
+
+        syncTwibbonDirection(event.detail?.language);
+
+    });
+
 
 
     let userPhotoImg = null;
@@ -4137,6 +4148,8 @@
 
 
     function openTwibbonModal() {
+
+        syncTwibbonDirection();
 
         twibbonModal.style.display = 'flex';
 
