@@ -25,6 +25,7 @@
 #define PIN_RESISTIVE    35     // Sensor Resistive HD-38 (ADC1_CH7) -> Baris D35 [S]
 #define PIN_RELAY        2      // Modul Relay Songle SRD-05VDC Solenoid NC AC 220V (Active-LOW) -> Baris D2 [S]
 #define PIN_BUZZER       27     // Buzzer Indikator -> Baris D27 [S]
+#define PIN_BOOT_BUTTON  0      // Tombol BOOT bawaan ESP32 — tahan 3 detik saat booting untuk reset WiFi
 
 // ── 2. KALIBRASI ADC SENSOR ILMIAH (2-Point Calibration) ───────────────────
 // Sensor Capacitive V2.0 (Kering di Udara = Tinggi, Basah di Air = Rendah)
@@ -60,6 +61,8 @@ int getFilteredADC(int pin);
 float calculateVWC(int rawADC, int dryVal, int wetVal);
 void bacaSensorDanKirimKeWeb();
 void beepSuccess();
+void beepError();
+void beepPortalActive();
 
 void setup() {
     Serial.begin(115200);
@@ -88,29 +91,79 @@ void setup() {
     preferences.getString("token", "").toCharArray(custom_device_token, sizeof(custom_device_token));
     preferences.getString("sensor", "NUTRIX-DUAL-01").toCharArray(custom_sensor_id, sizeof(custom_sensor_id));
 
+    // ── TAHAP 2: Deteksi Tombol BOOT untuk Reset WiFi ──────────────────────
+    // Tahan tombol BOOT (GPIO 0) selama 3 detik saat ESP32 baru menyala
+    // untuk menghapus semua credential WiFi tersimpan dan membuka portal baru.
+    pinMode(PIN_BOOT_BUTTON, INPUT_PULLUP);
+    bool resetRequested = false;
+
+    if (digitalRead(PIN_BOOT_BUTTON) == LOW) { // Tombol sedang ditekan
+        Serial.println("[BOOT] Tombol BOOT terdeteksi ditekan. Tahan 3 detik untuk reset WiFi...");
+        unsigned long pressStart = millis();
+        while (digitalRead(PIN_BOOT_BUTTON) == LOW) {
+            if (millis() - pressStart > 3000) {
+                resetRequested = true;
+                break;
+            }
+            delay(50);
+        }
+    }
+
     // WiFiManager menyimpan kredensial jaringan di NVS ESP32.
     WiFi.mode(WIFI_STA);
     WiFi.setHostname(DEVICE_HOSTNAME);
 
     WiFiManager wm;
-    wm.setConfigPortalTimeout(180);
+    wm.setConnectRetries(3);        // Coba konek 3x sebelum menyerah
+    wm.setCleanConnect(true);       // Disconnect dulu sebelum konek baru
+
+    // Jika tombol BOOT ditahan 3 detik → hapus semua credential WiFi tersimpan
+    if (resetRequested) {
+        Serial.println("[RESET] ══════════════════════════════════════════════");
+        Serial.println("[RESET] MENGHAPUS SEMUA CREDENTIAL WIFI TERSIMPAN!");
+        Serial.println("[RESET] Portal konfigurasi akan terbuka dari awal.");
+        Serial.println("[RESET] ══════════════════════════════════════════════");
+        wm.resetSettings();  // Hapus SSID + Password dari NVS WiFiManager
+        // Buzzer: 3 beep panjang sebagai konfirmasi reset
+        for (int i = 0; i < 3; i++) {
+            digitalWrite(PIN_BUZZER, HIGH); delay(300);
+            digitalWrite(PIN_BUZZER, LOW);  delay(200);
+        }
+    }
+
     WiFiManagerParameter custom_token("device_token", "Token Pairing dari Dashboard", custom_device_token, sizeof(custom_device_token));
     WiFiManagerParameter custom_sensor("sensor_id", "ID Sensor ESP32", custom_sensor_id, sizeof(custom_sensor_id));
     wm.addParameter(&custom_token);
     wm.addParameter(&custom_sensor);
 
-    const bool wifiConnected = strlen(custom_device_token) > 0
-        ? wm.autoConnect("NUTRIX-ESP32-PAIR")
-        : wm.startConfigPortal("NUTRIX-ESP32-PAIR");
-    if (!wifiConnected) {
-        Serial.println("[ERROR] Wi-Fi belum dikonfigurasi. Nyalakan ulang untuk membuka portal pairing.");
-        digitalWrite(PIN_RELAY, HIGH);
-        delay(2000);
-        ESP.restart();
+    // ── TAHAP 1: Loop Koneksi Robust (tanpa restart, tanpa timeout) ────────
+    // autoConnect() secara otomatis:
+    // 1. Coba konek ke WiFi terakhir yang tersimpan di NVS
+    // 2. Jika gagal → buka portal AP "NUTRIX-ESP32-PAIR" di 192.168.4.1
+    // 3. User masukkan SSID + Password + Token → WiFiManager konek
+    // Tidak ada timeout dan tidak ada ESP.restart() — loop sampai berhasil.
+    bool wifiConnected = false;
+    int retryCount = 0;
+    while (!wifiConnected) {
+        retryCount++;
+        Serial.printf("\n[WIFI] ── Percobaan koneksi ke-%d ──\n", retryCount);
+        Serial.println("[WIFI] Mencoba WiFi tersimpan / membuka portal konfigurasi...");
+        Serial.println("[WIFI] Konek ke hotspot 'NUTRIX-ESP32-PAIR' lalu buka 192.168.4.1");
+
+        beepPortalActive(); // Beep sinyal bahwa portal siap
+
+        wifiConnected = wm.autoConnect("NUTRIX-ESP32-PAIR");
+
+        if (!wifiConnected) {
+            Serial.println("[WIFI] Koneksi gagal. Mencoba ulang dalam 5 detik...");
+            beepError();
+            delay(5000);
+        }
     }
 
     secureClient.setInsecure();
 
+    // Simpan token dan sensor_id dari parameter portal ke Preferences
     strncpy(custom_device_token, custom_token.getValue(), sizeof(custom_device_token) - 1);
     custom_device_token[sizeof(custom_device_token) - 1] = '\0';
     strncpy(custom_sensor_id, custom_sensor.getValue(), sizeof(custom_sensor_id) - 1);
@@ -118,8 +171,11 @@ void setup() {
     preferences.putString("token", custom_device_token);
     preferences.putString("sensor", custom_sensor_id);
 
-    Serial.println("[WIFI] Terhubung ke jaringan. Token pairing tersimpan secara lokal.");
-    Serial.print("[WIFI] IP ESP32: "); Serial.println(WiFi.localIP());
+    Serial.println("\n[WIFI] ✓ Terhubung ke jaringan! Token pairing tersimpan secara lokal.");
+    Serial.printf("[WIFI] SSID    : %s\n", WiFi.SSID().c_str());
+    Serial.printf("[WIFI] IP ESP32: %s\n", WiFi.localIP().toString().c_str());
+    Serial.printf("[WIFI] RSSI    : %d dBm\n", WiFi.RSSI());
+    Serial.printf("[TOKEN] Device : %s\n", custom_device_token);
     beepSuccess();
 }
 
@@ -292,4 +348,18 @@ void bacaSensorDanKirimKeWeb() {
 void beepSuccess() {
     digitalWrite(PIN_BUZZER, HIGH); delay(80); digitalWrite(PIN_BUZZER, LOW); delay(80);
     digitalWrite(PIN_BUZZER, HIGH); delay(80); digitalWrite(PIN_BUZZER, LOW);
+}
+
+// Beep error: 3 beep cepat pendek — sinyal koneksi gagal
+void beepError() {
+    for (int i = 0; i < 3; i++) {
+        digitalWrite(PIN_BUZZER, HIGH); delay(50);
+        digitalWrite(PIN_BUZZER, LOW);  delay(50);
+    }
+}
+
+// Beep portal aktif: 1 beep panjang — sinyal portal AP terbuka, siap dikonfigurasi
+void beepPortalActive() {
+    digitalWrite(PIN_BUZZER, HIGH); delay(500);
+    digitalWrite(PIN_BUZZER, LOW);
 }
