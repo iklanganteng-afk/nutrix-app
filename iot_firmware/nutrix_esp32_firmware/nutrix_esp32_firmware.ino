@@ -10,6 +10,7 @@
  * - Calibrated 2-Point Linear Transfer Function (ADC to VWC %)
  * - Network Identity: Hostname "Kelompok-Nutrix" (mDNS & DHCP)
  * - Zero Ghost Data Architecture: Authenticated Cloud Transmission
+ * - Auto-Irrigation: Solenoid valve otomatis menyala saat kelembapan < threshold
  * ==============================================================================
  */
 
@@ -54,6 +55,12 @@ String relayState = "off";
 unsigned long previousMillis = 0;
 const long telemetryInterval = 5000; // Kirim tiap 5 detik
 
+// ── 4. KONFIGURASI AUTO-IRIGASI OTOMATIS ───────────────────────────────────
+const float AUTO_IRRIGATION_THRESHOLD  = 30.0;   // Kelembapan < 30% VWC = tanah kering, siram otomatis
+const int   AUTO_IRRIGATION_DURATION   = 5;       // Durasi siram otomatis (detik)
+const unsigned long AUTO_IRRIGATION_COOLDOWN = 60000; // Jeda minimum 60 detik antar auto-irigasi
+unsigned long lastAutoIrrigationMillis = 0;
+
 // ── PROTOTYPE HELPER FUNCTIONS ─────────────────────────────────────────────
 int getFilteredADC(int pin);
 float calculateVWC(int rawADC, int dryVal, int wetVal);
@@ -69,6 +76,7 @@ void setup() {
     Serial.printf("Sensor 1    : Capacitive V2.0  (GPIO %d -> D34)\n", PIN_CAPACITIVE);
     Serial.printf("Sensor 2    : Resistive HD-38  (GPIO %d -> D35)\n", PIN_RESISTIVE);
     Serial.printf("Actuator    : Relay Solenoid   (GPIO %d -> D2)\n", PIN_RELAY);
+    Serial.printf("Auto-Irigasi: Threshold < %.0f%% VWC, Durasi %d detik\n", AUTO_IRRIGATION_THRESHOLD, AUTO_IRRIGATION_DURATION);
 
     // Setup Pin Output
     pinMode(PIN_RELAY, OUTPUT);
@@ -85,14 +93,12 @@ void setup() {
     preferences.getString("token", "").toCharArray(custom_device_token, sizeof(custom_device_token));
     preferences.getString("sensor", "NUTRIX-DUAL-01").toCharArray(custom_sensor_id, sizeof(custom_sensor_id));
 
+    // WiFiManager menyimpan kredensial jaringan di NVS ESP32.
     WiFi.mode(WIFI_STA);
     WiFi.setHostname(DEVICE_HOSTNAME);
 
     WiFiManager wm;
-    wm.setConnectRetries(3);        // Coba konek 3x sebelum menyerah
-    wm.setCleanConnect(true);       // Disconnect WiFi lama secara bersih
-    wm.setConfigPortalBlocking(true); // Tunggu sampai konfigurasi selesai
-
+    wm.setConfigPortalTimeout(180);
     WiFiManagerParameter custom_token("device_token", "Token Pairing dari Dashboard", custom_device_token, sizeof(custom_device_token));
     WiFiManagerParameter custom_sensor("sensor_id", "ID Sensor ESP32", custom_sensor_id, sizeof(custom_sensor_id));
     wm.addParameter(&custom_token);
@@ -102,35 +108,29 @@ void setup() {
     Serial.println("[WIFI] Jika belum terhubung, hubungkan HP/Laptop ke hotspot 'NUTRIX-ESP32-PAIR'");
     Serial.println("[WIFI] Lalu buka http://192.168.4.1 untuk daftarkan WiFi dan Token.");
 
-    // autoConnect() otomatis:
-    // 1. Mencoba konek ke WiFi terakhir yang tersimpan.
-    // 2. Jika tidak ada / gagal, otomatis memancarkan hotspot "NUTRIX-ESP32-PAIR"
-    // 3. Begitu user isi data baru & tekan Save, langsung beralih ke mode mencari WiFi
-    bool wifiConnected = wm.autoConnect("NUTRIX-ESP32-PAIR");
+    // Logika koneksi WiFi yang sudah terbukti berhasil:
+    // - Jika token sudah ada di memori → langsung autoConnect (coba WiFi tersimpan, fallback ke portal)
+    // - Jika token belum ada → buka portal konfigurasi langsung
+    const bool wifiConnected = strlen(custom_device_token) > 0
+        ? wm.autoConnect("NUTRIX-ESP32-PAIR")
+        : wm.startConfigPortal("NUTRIX-ESP32-PAIR");
 
-    while (!wifiConnected) {
-        Serial.println("[WIFI] Koneksi belum berhasil. Membuka portal konfigurasi kembali...");
-        delay(3000);
-        wifiConnected = wm.autoConnect("NUTRIX-ESP32-PAIR");
+    if (!wifiConnected) {
+        Serial.println("[ERROR] Wi-Fi belum dikonfigurasi. Nyalakan ulang untuk membuka portal pairing.");
+        digitalWrite(PIN_RELAY, HIGH);
+        delay(2000);
+        ESP.restart();
     }
-
-    // PAKSA MATIKAN ACCESS POINT (HOTSPOT) agar sinyal NUTRIX-ESP32-PAIR benar-benar padam
-    WiFi.softAPdisconnect(true);
-    WiFi.mode(WIFI_STA);
 
     secureClient.setInsecure();
 
-    // Simpan token dan sensor_id yang baru dimasukkan dari portal ke Flash Memory (Preferences)
-    if (strlen(custom_token.getValue()) > 0) {
-        strncpy(custom_device_token, custom_token.getValue(), sizeof(custom_device_token) - 1);
-        custom_device_token[sizeof(custom_device_token) - 1] = '\0';
-        preferences.putString("token", custom_device_token);
-    }
-    if (strlen(custom_sensor.getValue()) > 0) {
-        strncpy(custom_sensor_id, custom_sensor.getValue(), sizeof(custom_sensor_id) - 1);
-        custom_sensor_id[sizeof(custom_sensor_id) - 1] = '\0';
-        preferences.putString("sensor", custom_sensor_id);
-    }
+    // Simpan token dan sensor_id yang baru dimasukkan dari portal ke Flash Memory
+    strncpy(custom_device_token, custom_token.getValue(), sizeof(custom_device_token) - 1);
+    custom_device_token[sizeof(custom_device_token) - 1] = '\0';
+    strncpy(custom_sensor_id, custom_sensor.getValue(), sizeof(custom_sensor_id) - 1);
+    custom_sensor_id[sizeof(custom_sensor_id) - 1] = '\0';
+    preferences.putString("token", custom_device_token);
+    preferences.putString("sensor", custom_sensor_id);
 
     Serial.println("\n[WIFI] =======================================================");
     Serial.println("[WIFI] ✓ BERHASIL TERHUBUNG KE JARINGAN!");
@@ -138,7 +138,7 @@ void setup() {
     Serial.printf("[WIFI] IP Address ESP32  : %s\n", WiFi.localIP().toString().c_str());
     Serial.printf("[WIFI] Kuat Sinyal (RSSI): %d dBm\n", WiFi.RSSI());
     Serial.printf("[TOKEN] Device Token Aktif: %s\n", custom_device_token);
-    Serial.println("[WIFI] Mode Hotspot (AP) telah DIMATIKAN. Sistem aktif!");
+    Serial.println("[WIFI] Sistem IoT aktif! Auto-irigasi diaktifkan.");
     Serial.println("=======================================================\n");
 }
 
@@ -221,6 +221,28 @@ void bacaSensorDanKirimKeWeb() {
     Serial.printf("[SENSOR 2 - RESISTIVE  D35] Raw: %4d | Volt: %.2fV | VWC: %.1f%%\n", rawResistive, voltResistive, vwcResistive);
     Serial.printf("[KONSENSUS FINAL] Rata-rata: %.1f%% | Deviasi: %.1f%%\n", avgMoisture, deviation);
 
+    // ── AUTO-IRIGASI OTOMATIS ──────────────────────────────────────────────
+    // Jika kelembapan rata-rata di bawah threshold DAN sudah melewati cooldown,
+    // solenoid valve otomatis menyala untuk menyiram tanaman.
+    unsigned long now = millis();
+    if (avgMoisture < AUTO_IRRIGATION_THRESHOLD &&
+        (now - lastAutoIrrigationMillis >= AUTO_IRRIGATION_COOLDOWN)) {
+
+        Serial.printf(">>> [AUTO-IRIGASI] Kelembapan %.1f%% < %.0f%% — MENYIRAM OTOMATIS %d DETIK <<<\n",
+                      avgMoisture, AUTO_IRRIGATION_THRESHOLD, AUTO_IRRIGATION_DURATION);
+
+        digitalWrite(PIN_RELAY, LOW);   // ON Relay (Solenoid Valve Terbuka → air mengalir)
+        relayState = "on";
+
+        delay(AUTO_IRRIGATION_DURATION * 1000);
+
+        digitalWrite(PIN_RELAY, HIGH);  // OFF Relay (Solenoid Valve Tertutup → air berhenti)
+        relayState = "off";
+        lastAutoIrrigationMillis = millis();
+
+        Serial.println(">>> [AUTO-IRIGASI] PENYIRAMAN OTOMATIS SELESAI <<<");
+    }
+
     // 4. Siapkan Payload JSON Komprehensif
     StaticJsonDocument<768> jsonDoc;
     jsonDoc["device_token"]     = custom_device_token;
@@ -280,7 +302,7 @@ void bacaSensorDanKirimKeWeb() {
 
             if (valveCmd && commandId && String(valveCmd) == "ON" && durationSec > 0 && String(commandId) != lastExecutedCommandId) {
                 durationSec = constrain(durationSec, 1, 10);
-                Serial.printf(">>> [AKTUATOR] MENJALANKAN IRIGASI: %d DETIK <<<\n", durationSec);
+                Serial.printf(">>> [AKTUATOR MANUAL] MENJALANKAN IRIGASI: %d DETIK <<<\n", durationSec);
                 digitalWrite(PIN_RELAY, LOW); // ON Relay (Solenoid Valve Terbuka)
                 relayState = "on";
 
@@ -291,7 +313,7 @@ void bacaSensorDanKirimKeWeb() {
                 lastExecutedCommandId = commandId;
                 pendingCommandId = commandId;
                 pendingCommandStatus = "executed";
-                Serial.println(">>> [AKTUATOR] IRIGASI SELESAI <<<");
+                Serial.println(">>> [AKTUATOR MANUAL] IRIGASI SELESAI <<<");
             } else {
                 digitalWrite(PIN_RELAY, HIGH);
                 relayState = "off";
